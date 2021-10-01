@@ -1,11 +1,6 @@
 package org.opentripplanner.netex.mapping;
 
-import org.opentripplanner.model.FeedScopedId;
-import org.opentripplanner.model.GroupOfStations;
-import org.opentripplanner.model.MultiModalStation;
-import org.opentripplanner.model.Station;
-import org.opentripplanner.model.StopCollection;
-import org.opentripplanner.model.WgsCoordinate;
+import org.opentripplanner.model.*;
 import org.opentripplanner.model.impl.EntityById;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.rutebanken.netex.model.GroupOfStopPlaces;
@@ -39,21 +34,23 @@ class GroupOfStationsMapper {
     }
 
     GroupOfStations map(GroupOfStopPlaces groupOfStopPlaces) {
-        GroupOfStations groupOfStations = new GroupOfStations(
-            idFactory.createId(groupOfStopPlaces.getId())
-        );
-        groupOfStations.setName(groupOfStopPlaces.getName().getValue());
-        WgsCoordinate coordinate = WgsCoordinateMapper.mapToDomain(groupOfStopPlaces.getCentroid());
-
-        if (coordinate == null) {
-            // TODO OTP2 - This should be an data import issue
-            LOG.warn(
-                    "MultiModal station {} does not contain any coordinates.",
-                    groupOfStations.getId()
-            );
+        GroupOfStations groupOfStations = new GroupOfStations(idFactory.createId(groupOfStopPlaces.getId()));
+        if (groupOfStopPlaces.getName() != null) {
+            groupOfStations.setName(groupOfStopPlaces.getName().getValue());
         }
-        else {
-            groupOfStations.setCoordinate(coordinate);
+        if (groupOfStopPlaces.getCentroid() != null) {
+
+            WgsCoordinate coordinate = WgsCoordinateMapper.mapToDomain(groupOfStopPlaces.getCentroid());
+
+            if (coordinate == null) {
+                // TODO OTP2 - This should be an data import issue
+                LOG.warn(
+                        "MultiModal station {} does not contain any coordinates.",
+                        groupOfStations.getId()
+                );
+            } else {
+                groupOfStations.setCoordinate(coordinate);
+            }
         }
 
         connectChildStation(groupOfStopPlaces, groupOfStations);

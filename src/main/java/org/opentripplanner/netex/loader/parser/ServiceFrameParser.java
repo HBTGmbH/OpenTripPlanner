@@ -1,5 +1,6 @@
 package org.opentripplanner.netex.loader.parser;
 
+import com.esotericsoftware.minlog.Log;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMapById;
 import org.opentripplanner.util.OTPFeature;
@@ -140,9 +141,13 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
         for (JAXBElement<?> stopAssignment : stopAssignments.getStopAssignment()) {
             if (stopAssignment.getValue() instanceof PassengerStopAssignment) {
                 var assignment = (PassengerStopAssignment) stopAssignment.getValue();
-                String quayRef = assignment.getQuayRef().getRef();
                 String stopPointRef = assignment.getScheduledStopPointRef().getValue().getRef();
-                quayIdByStopPointRef.put(stopPointRef, quayRef);
+                if(assignment.getQuayRef() != null){
+                    String quayRef = assignment.getQuayRef().getRef();
+                    quayIdByStopPointRef.put(stopPointRef, quayRef);
+                } else {
+                    warnOnMissingMapping(LOG, assignment.getQuayRef());
+                }
             }
             else if (stopAssignment.getValue() instanceof FlexibleStopAssignment) {
                 if(OTPFeature.FlexRouting.isOn()) {

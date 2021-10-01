@@ -1,5 +1,6 @@
 package org.opentripplanner.datastore.file;
 
+import java.nio.charset.StandardCharsets;
 import org.opentripplanner.datastore.CompositeDataSource;
 import org.opentripplanner.datastore.DataSource;
 import org.opentripplanner.datastore.FileType;
@@ -77,7 +78,7 @@ public class ZipFileDataSource extends AbstractFileDataSource implements Composi
 
         try {
             // The get name on ZipFile returns the full path, we want just the name.
-            this.zipFile = new ZipFile(file, ZipFile.OPEN_READ);
+            this.zipFile = new ZipFile(file, ZipFile.OPEN_READ, StandardCharsets.ISO_8859_1);
 
             Enumeration<? extends ZipEntry> entries = zipFile.entries();
 

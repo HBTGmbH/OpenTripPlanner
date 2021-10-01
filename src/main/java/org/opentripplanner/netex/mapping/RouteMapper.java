@@ -12,6 +12,7 @@ import org.opentripplanner.model.impl.EntityById;
 import org.opentripplanner.netex.index.api.NetexEntityIndexReadOnlyView;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.rutebanken.netex.model.AllVehicleModesOfTransportEnumeration;
+import org.rutebanken.netex.model.AuthorityRefStructure;
 import org.rutebanken.netex.model.FlexibleLine_VersionStructure;
 import org.rutebanken.netex.model.Line_VersionStructure;
 import org.rutebanken.netex.model.Network;
@@ -108,6 +109,11 @@ class RouteMapper {
      * a dummy agency is created and returned.
      */
     private Agency findOrCreateAuthority(Line_VersionStructure line) {
+        if (line.getAuthorityRef() != null) {
+        String authorityRef = line.getAuthorityRef().getRef();
+            Agency agency = agenciesById.get(idFactory.createId(authorityRef));
+            if(agency != null) return agency;
+        }
         String groupRef = line.getRepresentedByGroupRef().getRef();
 
         // Find authority, first in *GroupOfLines* and then if not found look in *Network*
