@@ -1,17 +1,6 @@
 package org.opentripplanner.netex.mapping;
 
-import static org.opentripplanner.model.PickDrop.COORDINATE_WITH_DRIVER;
-import static org.opentripplanner.model.PickDrop.NONE;
-import static org.opentripplanner.model.PickDrop.SCHEDULED;
-
 import jakarta.xml.bind.JAXBElement;
-import java.math.BigInteger;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
-import javax.annotation.Nullable;
 import org.opentripplanner.framework.i18n.I18NString;
 import org.opentripplanner.framework.i18n.NonLocalizedString;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
@@ -26,20 +15,17 @@ import org.opentripplanner.transit.model.site.GroupStop;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.model.timetable.Trip;
-import org.rutebanken.netex.model.DestinationDisplay;
-import org.rutebanken.netex.model.DestinationDisplay_VersionStructure;
-import org.rutebanken.netex.model.FlexibleLine;
-import org.rutebanken.netex.model.JourneyPattern_VersionStructure;
-import org.rutebanken.netex.model.LineRefStructure;
-import org.rutebanken.netex.model.MultilingualString;
-import org.rutebanken.netex.model.PointInLinkSequence_VersionedChildStructure;
-import org.rutebanken.netex.model.Route;
-import org.rutebanken.netex.model.ServiceJourney;
-import org.rutebanken.netex.model.StopPointInJourneyPattern;
-import org.rutebanken.netex.model.TimetabledPassingTime;
-import org.rutebanken.netex.model.VersionOfObjectRefStructure;
-import org.rutebanken.netex.model.Via_VersionedChildStructure;
-import org.rutebanken.netex.model.Vias_RelStructure;
+import org.rutebanken.netex.model.*;
+
+import javax.annotation.Nullable;
+import java.math.BigInteger;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import static org.opentripplanner.model.PickDrop.*;
 
 /**
  * This maps a list of TimetabledPassingTimes to a list of StopTimes. It also makes sure the
@@ -128,14 +114,17 @@ class StopTimesMapper {
 
       StopPointInJourneyPattern stopPoint = findStopPoint(pointInJourneyPattern, journeyPattern);
 
-      if (
-        stopPoint != null &&
-        (isFalse(stopPoint.isForAlighting()) && isFalse(stopPoint.isForBoarding()))
-      ) {
-        continue;
-      }
+        StopLocation stop = lookUpStopLocation(stopPoint);
 
-      StopLocation stop = lookUpStopLocation(stopPoint);
+        if (
+                stopPoint != null &&
+                        stop == null &&
+                        isFalse(stopPoint.isForAlighting()) &&
+                        isFalse(stopPoint.isForBoarding())
+        ) {
+            continue;
+        }
+
       if (stop == null) {
         issueStore.add(
           "JourneyPatternStopNotFound",
