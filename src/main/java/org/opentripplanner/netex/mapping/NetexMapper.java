@@ -67,6 +67,7 @@ public class NetexMapper {
   private final Set<String> ferryIdsNotAllowedForBicycle;
   private final double maxStopToShapeSnapDistance;
   private final boolean noTransfersOnIsolatedStops;
+  private final QuayMapper quayMapper;
 
   /** Map entries that cross reference entities within a group/operator, for example Interchanges. */
   private GroupNetexMapper groupMapper;
@@ -104,6 +105,7 @@ public class NetexMapper {
     this.maxStopToShapeSnapDistance = maxStopToShapeSnapDistance;
     this.calendarServiceBuilder = new CalendarServiceBuilder(idFactory);
     this.tripCalendarBuilder = new TripCalendarBuilder(this.calendarServiceBuilder, issueStore);
+    this.quayMapper = new QuayMapper(idFactory, issueStore);
   }
 
   /**
@@ -303,6 +305,7 @@ public class NetexMapper {
       idFactory,
       currentNetexIndex.getQuayById(),
       tariffZoneMapper,
+      quayMapper,
       zoneId,
       issueStore,
       noTransfersOnIsolatedStops
