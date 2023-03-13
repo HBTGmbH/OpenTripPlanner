@@ -77,6 +77,7 @@ public class StopAndStationMapperTest {
       MappingSupport.ID_FACTORY,
       new HierarchicalVersionMapById<>(),
       null,
+      new QuayMapper(MappingSupport.ID_FACTORY, DataImportIssueStore.NOOP),
       DEFAULT_TIME_ZONE,
       DataImportIssueStore.NOOP,
       false
@@ -157,6 +158,7 @@ public class StopAndStationMapperTest {
       MappingSupport.ID_FACTORY,
       quaysById,
       null,
+      new QuayMapper(MappingSupport.ID_FACTORY, DataImportIssueStore.NOOP),
       DEFAULT_TIME_ZONE,
       DataImportIssueStore.NOOP,
       false
@@ -226,6 +228,7 @@ public class StopAndStationMapperTest {
       MappingSupport.ID_FACTORY,
       new HierarchicalVersionMapById<>(),
       null,
+      new QuayMapper(MappingSupport.ID_FACTORY, DataImportIssueStore.NOOP),
       DEFAULT_TIME_ZONE,
       DataImportIssueStore.NOOP,
       isolated
