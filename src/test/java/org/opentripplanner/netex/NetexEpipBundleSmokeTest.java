@@ -132,7 +132,7 @@ class NetexEpipBundleSmokeTest {
     assertEquals(53.5515403864306, station.getLat(), 0.000001);
     assertEquals(9.9342956397828, station.getLon(), 0.000001);
     assertEquals("Europe/Berlin", station.getTimezone().toString());
-    assertEquals(1, station.getChildStops().size());
+    assertEquals(3, station.getChildStops().size());
     assertEquals(20, stations.size());
   }
 
