@@ -33,13 +33,13 @@ class StationMapper {
   private final boolean noTransfersOnIsolatedStops;
   private final EntityById<Station> stationsById;
 
-
   StationMapper(
     DataImportIssueStore issueStore,
     FeedScopedIdFactory idFactory,
     ZoneId defaultTimeZone,
     boolean noTransfersOnIsolatedStops,
-    EntityById<Station> stationsById) {
+    EntityById<Station> stationsById
+  ) {
     this.issueStore = issueStore;
     this.idFactory = idFactory;
     this.defaultTimeZone = defaultTimeZone;
@@ -48,7 +48,10 @@ class StationMapper {
   }
 
   Station map(StopPlace stopPlace) {
-    return stationsById.computeIfAbsent(idFactory.createId(stopPlace.getId()), ignored -> mapStopPlaceToStation(stopPlace));
+    return stationsById.computeIfAbsent(
+      idFactory.createId(stopPlace.getId()),
+      ignored -> mapStopPlaceToStation(stopPlace)
+    );
   }
 
   Station mapStopPlaceToStation(StopPlace stopPlace) {
