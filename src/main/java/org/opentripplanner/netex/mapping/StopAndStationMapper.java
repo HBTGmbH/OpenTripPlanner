@@ -72,7 +72,7 @@ class StopAndStationMapper {
     boolean noTransfersOnIsolatedStops
   ) {
     this.stationMapper =
-      new StationMapper(issueStore, idFactory, defaultTimeZone, noTransfersOnIsolatedStops);
+      new StationMapper(issueStore, idFactory, defaultTimeZone, noTransfersOnIsolatedStops, stopModelBuilder.stationById());
     this.quayMapper = new QuayMapper(idFactory, issueStore, stopModelBuilder.regularStopsById());
     this.tariffZoneMapper = tariffZoneMapper;
     this.quayIndex = quayIndex;
@@ -94,7 +94,7 @@ class StopAndStationMapper {
     var transitMode = stopPlaceTypeMapper.map(selectedStopPlace);
 
     // Loop through all versions of the StopPlace in order to collect all quays, even if they
-    // were deleted in never versions of the StopPlace
+    // were deleted in newer versions of the StopPlace
     for (StopPlace stopPlace : stopPlaceAllVersions) {
       for (Quay quay : listOfQuays(stopPlace)) {
         addStopToParentIfNotPresent(quay, station, fareZones, transitMode, selectedStopPlace);

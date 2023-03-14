@@ -62,7 +62,7 @@ class QuayMapper {
     );
     return quay == null
       ? null
-      : regularStopIndex.computeIfAbsent(idFactory.createId(quay.getId()), q -> map(parameters));
+      : regularStopIndex.computeIfAbsent(idFactory.createId(quay.getId()), ignored -> map(parameters));
   }
 
   private RegularStop map(MappingParameters parameters) {
