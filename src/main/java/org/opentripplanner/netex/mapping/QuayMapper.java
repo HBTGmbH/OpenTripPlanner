@@ -1,8 +1,6 @@
 package org.opentripplanner.netex.mapping;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import javax.annotation.Nullable;
 import org.opentripplanner.framework.geometry.WgsCoordinate;
 import org.opentripplanner.framework.i18n.NonLocalizedString;
@@ -11,7 +9,7 @@ import org.opentripplanner.netex.issues.QuayWithoutCoordinates;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.opentripplanner.netex.mapping.support.NetexMainAndSubMode;
 import org.opentripplanner.transit.model.basic.Accessibility;
-import org.opentripplanner.transit.model.framework.FeedScopedId;
+import org.opentripplanner.transit.model.framework.EntityById;
 import org.opentripplanner.transit.model.site.FareZone;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.Station;
@@ -24,7 +22,7 @@ class QuayMapper {
 
   private final FeedScopedIdFactory idFactory;
 
-  private final Map<FeedScopedId, RegularStop> mappedQuays = new HashMap<>();
+  private final EntityById<RegularStop> regularStopIndex;
 
   private record MappingParameters(
     Quay quay,
@@ -34,9 +32,14 @@ class QuayMapper {
     Accessibility wheelchair
   ) {}
 
-  QuayMapper(FeedScopedIdFactory idFactory, DataImportIssueStore issueStore) {
+  QuayMapper(
+    FeedScopedIdFactory idFactory,
+    DataImportIssueStore issueStore,
+    EntityById<RegularStop> regularStopIndex
+  ) {
     this.idFactory = idFactory;
     this.issueStore = issueStore;
+    this.regularStopIndex = regularStopIndex;
   }
 
   /**
@@ -59,7 +62,7 @@ class QuayMapper {
     );
     return quay == null
       ? null
-      : mappedQuays.computeIfAbsent(idFactory.createId(quay.getId()), q -> map(parameters));
+      : regularStopIndex.computeIfAbsent(idFactory.createId(quay.getId()), q -> map(parameters));
   }
 
   private RegularStop map(MappingParameters parameters) {
