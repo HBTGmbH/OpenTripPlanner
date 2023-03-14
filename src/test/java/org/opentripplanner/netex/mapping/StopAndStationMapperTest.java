@@ -208,7 +208,7 @@ public class StopAndStationMapperTest {
   }
 
   @ParameterizedTest
-  @CsvSource(value = { "true", "false" })
+  @CsvSource(value = {"true", "false"})
   public void testMapIsolatedStopPlace(boolean isolated) {
     Collection<StopPlace> stopPlaces = new ArrayList<>();
     StopPlace stopPlace;
@@ -314,11 +314,11 @@ public class StopAndStationMapperTest {
       wheelchairAccessibility,
       () ->
         "wheelchairAccessibility should be " +
-        expected +
-        " found " +
-        wheelchairAccessibility +
-        " for quayId = " +
-        quayId
+          expected +
+          " found " +
+          wheelchairAccessibility +
+          " for quayId = " +
+          quayId
     );
   }
 
