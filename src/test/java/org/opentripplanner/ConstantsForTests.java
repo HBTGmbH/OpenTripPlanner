@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +85,8 @@ public class ConstantsForTests {
 
   private static final String NETEX_NORDIC_FILENAME = "netex_minimal.zip";
   private static final String NETEX_EPIP_DIR = "src/test/resources/netex/epip/";
-  private static final String NETEX_EPIP_DATA_DIR = NETEX_EPIP_DIR + "netex_epip_minimal/NeTEx_20230203_OTP/";
+  private static final String NETEX_EPIP_DATA_DIR =
+    NETEX_EPIP_DIR + "netex_epip_minimal/NeTEx_20230203_OTP/";
   private static final String NETEX_EPIP_FILENAME = "netex_epip_minimal.zip";
 
   /* Stuttgart area, Germany */
@@ -149,6 +152,12 @@ public class ConstantsForTests {
     var dataSource = new ZipFileDataSource(netexZipFile, FileType.NETEX);
     var configuredDataSource = new ConfiguredDataSource<>(dataSource, buildConfig.netexDefaults);
     return new NetexConfigure(buildConfig).netexBundle(configuredDataSource);
+  }
+
+  public static void cleanupNetexEpipTestZip() {
+    try {
+      Files.deleteIfExists(Path.of(NETEX_EPIP_DIR + NETEX_EPIP_FILENAME));
+    } catch (IOException ignored) {}
   }
 
   /**
@@ -404,14 +413,14 @@ public class ConstantsForTests {
       System.out.println("Output to Zip : " + zipFile);
       FileInputStream in = null;
 
-      for (String file: fileList) {
+      for (String file : fileList) {
         System.out.println("File Added : " + file);
         ZipEntry ze = new ZipEntry(source + File.separator + file);
         zos.putNextEntry(ze);
         try {
           in = new FileInputStream(sourceFolder + File.separator + file);
           int len;
-          while ((len = in .read(buffer)) > 0) {
+          while ((len = in.read(buffer)) > 0) {
             zos.write(buffer, 0, len);
           }
         } finally {
@@ -421,7 +430,6 @@ public class ConstantsForTests {
 
       zos.closeEntry();
       System.out.println("Folder successfully compressed");
-
     } catch (IOException ex) {
       ex.printStackTrace();
     } finally {
@@ -441,7 +449,7 @@ public class ConstantsForTests {
 
     if (node.isDirectory()) {
       String[] subNode = node.list();
-      for (String filename: subNode) {
+      for (String filename : subNode) {
         generateFileList(new File(node, filename), fileList, sourceFolder);
       }
     }
