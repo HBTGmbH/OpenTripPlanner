@@ -30,6 +30,8 @@ import org.rutebanken.netex.model.OperatingPeriod_VersionStructure;
 import org.rutebanken.netex.model.Operator;
 import org.rutebanken.netex.model.Quay;
 import org.rutebanken.netex.model.Route;
+import org.rutebanken.netex.model.RouteLink;
+import org.rutebanken.netex.model.RoutePoint;
 import org.rutebanken.netex.model.ServiceJourney;
 import org.rutebanken.netex.model.ServiceJourneyInterchange;
 import org.rutebanken.netex.model.ServiceLink;
@@ -37,8 +39,8 @@ import org.rutebanken.netex.model.StopPlace;
 import org.rutebanken.netex.model.TariffZone_VersionStructure;
 
 /**
- * This class holds indexes of Netex objects for lookup during the NeTEx import using the {@link
- * NetexEntityIndexReadOnlyView}.
+ * This class holds indexes of Netex objects for lookup during the NeTEx import using the
+ * {@link NetexEntityIndexReadOnlyView}.
  * <p>
  * A NeTEx import is grouped into several levels: <em>shard data</em>, <em>group of shared
  * data</em>, and <em>single files</em>. We create a hierarchy of {@code NetexImportDataIndex} to
@@ -53,16 +55,17 @@ import org.rutebanken.netex.model.TariffZone_VersionStructure;
  * <em>group of shared data</em> as parent. The <em>single files</em> object is thrown away when
  * the file is loaded.
  * <p>
- * This hierarchy make it possible to override values in child instances of the {@code
- * NetexImportDataIndex} and save memory during the load operation, because data not needed any more
- * can be thrown away.
+ * This hierarchy make it possible to override values in child instances of the
+ * {@code NetexImportDataIndex} and save memory during the load operation, because data not needed
+ * any more can be thrown away.
  * <p>
- * The hierarchy implementation is delegated to the {@link org.opentripplanner.netex.index.hierarchy.AbstractHierarchicalMap}
- * and the {@link HierarchicalElement} classes.
+ * The hierarchy implementation is delegated to the
+ * {@link org.opentripplanner.netex.index.hierarchy.AbstractHierarchicalMap} and the
+ * {@link HierarchicalElement} classes.
  * <p/>
- * The mapping code should not insert entities, so an instance of this class implements the {@link
- * NetexEntityIndexReadOnlyView} which is passed to the mapping code for translation into OTP domain
- * model objects.
+ * The mapping code should not insert entities, so an instance of this class implements the
+ * {@link NetexEntityIndexReadOnlyView} which is passed to the mapping code for translation into OTP
+ * domain model objects.
  */
 public class NetexEntityIndex {
 
@@ -94,6 +97,8 @@ public class NetexEntityIndex {
   public final HierarchicalMapById<ServiceJourney> serviceJourneyById;
   public final HierarchicalMapById<ServiceJourneyInterchange> serviceJourneyInterchangeById;
   public final HierarchicalMapById<ServiceLink> serviceLinkById;
+  public final HierarchicalMapById<RoutePoint> routePointById;
+  public final HierarchicalMapById<RouteLink> routeLinkById;
   public final HierarchicalVersionMapById<StopPlace> stopPlaceById;
   public final HierarchicalVersionMapById<TariffZone_VersionStructure> tariffZonesById;
   public final HierarchicalMapById<Branding> brandingById;
@@ -137,6 +142,8 @@ public class NetexEntityIndex {
     this.routeById = new HierarchicalMapById<>();
     this.serviceJourneyById = new HierarchicalMapById<>();
     this.serviceLinkById = new HierarchicalMapById<>();
+    this.routePointById = new HierarchicalMapById<>();
+    this.routeLinkById = new HierarchicalMapById<>();
     this.serviceJourneyInterchangeById = new HierarchicalMapById<>();
     this.stopPlaceById = new HierarchicalVersionMapById<>();
     this.tariffZonesById = new HierarchicalVersionMapById<>();
@@ -178,6 +185,8 @@ public class NetexEntityIndex {
     this.routeById = new HierarchicalMapById<>(parent.routeById);
     this.serviceJourneyById = new HierarchicalMapById<>(parent.serviceJourneyById);
     this.serviceLinkById = new HierarchicalMapById<>(parent.serviceLinkById);
+    this.routePointById = new HierarchicalMapById<>(parent.routePointById);
+    this.routeLinkById = new HierarchicalMapById<>(parent.routeLinkById);
     this.serviceJourneyInterchangeById =
       new HierarchicalMapById<>(parent.serviceJourneyInterchangeById);
     this.stopPlaceById = new HierarchicalVersionMapById<>(parent.stopPlaceById);
@@ -346,6 +355,16 @@ public class NetexEntityIndex {
       @Override
       public ReadOnlyHierarchicalMapById<ServiceLink> getServiceLinkById() {
         return serviceLinkById;
+      }
+
+      @Override
+      public ReadOnlyHierarchicalMapById<RoutePoint> getRoutePointById() {
+        return routePointById;
+      }
+
+      @Override
+      public ReadOnlyHierarchicalMapById<RouteLink> getRouteLinkById() {
+        return routeLinkById;
       }
 
       @Override

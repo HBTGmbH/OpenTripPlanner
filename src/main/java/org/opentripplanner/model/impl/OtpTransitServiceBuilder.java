@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.ext.flex.trip.FlexTrip;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.gtfs.mapping.StaySeatedNotAllowed;
@@ -111,6 +112,7 @@ public class OtpTransitServiceBuilder {
   private final EntityById<GroupOfRoutes> groupOfRouteById = new EntityById<>();
 
   private final DataImportIssueStore issueStore;
+  private Multimap<FeedScopedId, List<LineString>> hopGeometriesByRouteId = ArrayListMultimap.create();
 
   public OtpTransitServiceBuilder(DataImportIssueStore issueStore) {
     this.stopModelBuilder = StopModel.of();
@@ -226,6 +228,8 @@ public class OtpTransitServiceBuilder {
   public Multimap<StopPattern, TripPattern> getTripPatterns() {
     return tripPatterns;
   }
+
+  public Multimap<FeedScopedId, List<LineString>> getHopGeometriesByRouteId() { return hopGeometriesByRouteId; }
 
   public EntityById<FlexTrip<?, ?>> getFlexTripsById() {
     return flexTripsById;

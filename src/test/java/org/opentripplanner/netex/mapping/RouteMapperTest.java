@@ -59,6 +59,7 @@ public class RouteMapperTest {
       new EntityById<>(),
       ArrayListMultimap.create(),
       new EntityById<>(),
+      ArrayListMultimap.create(),
       netexEntityIndex.readOnlyView(),
       ZoneId.systemDefault().getId(),
       EMPTY_FERRY_WITHOUT_BICYCLE_IDS
@@ -99,6 +100,7 @@ public class RouteMapperTest {
       transitBuilder.getBrandingsById(),
       transitBuilder.getGroupsOfRoutesByRouteId(),
       transitBuilder.getGroupOfRouteById(),
+      transitBuilder.getHopGeometriesByRouteId(),
       netexIndex.readOnlyView(),
       TransitModelForTest.TIME_ZONE_ID,
       EMPTY_FERRY_WITHOUT_BICYCLE_IDS
@@ -113,8 +115,8 @@ public class RouteMapperTest {
   public void mapRouteWithColor() {
     NetexEntityIndex netexEntityIndex = new NetexEntityIndex();
     Line line = createExampleLine();
-    byte[] color = new byte[] { 127, 0, 0 };
-    byte[] textColor = new byte[] { 0, 127, 0 };
+    byte[] color = new byte[]{127, 0, 0};
+    byte[] textColor = new byte[]{0, 127, 0};
     line.setPresentation(new PresentationStructure().withColour(color).withTextColour(textColor));
 
     RouteMapper routeMapper = new RouteMapper(
@@ -125,6 +127,7 @@ public class RouteMapperTest {
       new EntityById<>(),
       ArrayListMultimap.create(),
       new EntityById<>(),
+      ArrayListMultimap.create(),
       netexEntityIndex.readOnlyView(),
       ZoneId.systemDefault().getId(),
       EMPTY_FERRY_WITHOUT_BICYCLE_IDS
@@ -150,6 +153,7 @@ public class RouteMapperTest {
       new EntityById<>(),
       ArrayListMultimap.create(),
       new EntityById<>(),
+      ArrayListMultimap.create(),
       netexEntityIndex.readOnlyView(),
       ZoneId.systemDefault().getId(),
       Set.of(FERRY_WITHOUT_BICYCLES_ID)
@@ -175,6 +179,7 @@ public class RouteMapperTest {
       new EntityById<>(),
       ArrayListMultimap.create(),
       new EntityById<>(),
+      ArrayListMultimap.create(),
       netexEntityIndex.readOnlyView(),
       ZoneId.systemDefault().getId(),
       EMPTY_FERRY_WITHOUT_BICYCLE_IDS
@@ -206,6 +211,7 @@ public class RouteMapperTest {
       transitBuilder.getBrandingsById(),
       ArrayListMultimap.create(),
       new EntityById<>(),
+      ArrayListMultimap.create(),
       netexIndex.readOnlyView(),
       TransitModelForTest.TIME_ZONE_ID,
       EMPTY_FERRY_WITHOUT_BICYCLE_IDS
@@ -241,6 +247,7 @@ public class RouteMapperTest {
       transitBuilder.getBrandingsById(),
       transitBuilder.getGroupsOfRoutesByRouteId(),
       transitBuilder.getGroupOfRouteById(),
+      transitBuilder.getHopGeometriesByRouteId(),
       netexIndex.readOnlyView(),
       TransitModelForTest.TIME_ZONE_ID,
       EMPTY_FERRY_WITHOUT_BICYCLE_IDS

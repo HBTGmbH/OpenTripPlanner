@@ -407,6 +407,7 @@ public class NetexMapper {
       transitBuilder.getBrandingsById(),
       transitBuilder.getGroupsOfRoutesByRouteId(),
       transitBuilder.getGroupOfRouteById(),
+      transitBuilder.getHopGeometriesByRouteId(),
       currentNetexIndex,
       currentNetexIndex.getTimeZone(),
       ferryIdsNotAllowedForBicycle

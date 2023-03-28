@@ -26,6 +26,10 @@ import org.rutebanken.netex.model.Network;
 import org.rutebanken.netex.model.NetworksInFrame_RelStructure;
 import org.rutebanken.netex.model.PassengerStopAssignment;
 import org.rutebanken.netex.model.Route;
+import org.rutebanken.netex.model.RouteLink;
+import org.rutebanken.netex.model.RouteLinksInFrame_RelStructure;
+import org.rutebanken.netex.model.RoutePoint;
+import org.rutebanken.netex.model.RoutePointsInFrame_RelStructure;
 import org.rutebanken.netex.model.RoutesInFrame_RelStructure;
 import org.rutebanken.netex.model.ServiceLink;
 import org.rutebanken.netex.model.ServiceLinksInFrame_RelStructure;
@@ -63,6 +67,10 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
 
   private final Collection<ServiceLink> serviceLinks = new ArrayList<>();
 
+  private final Collection<RoutePoint> routePoints = new ArrayList<>();
+
+  private final Collection<RouteLink> routeLinks = new ArrayList<>();
+
   private final NoticeParser noticeParser = new NoticeParser();
 
   ServiceFrameParser(ReadOnlyHierarchicalMapById<FlexibleStopPlace> flexibleStopPlaceById) {
@@ -86,6 +94,8 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
     parseJourneyPatterns(frame.getJourneyPatterns());
     parseDestinationDisplays(frame.getDestinationDisplays());
     parseServiceLinks(frame.getServiceLinks());
+    parseRoutePoints(frame.getRoutePoints());
+    parseRouteLinks(frame.getRouteLinks());
 
     // Keep list sorted alphabetically
     warnOnMissingMapping(LOG, frame.getCommonSections());
@@ -100,8 +110,6 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
     warnOnMissingMapping(LOG, frame.getLineNetworks());
     warnOnMissingMapping(LOG, frame.getLogicalDisplays());
     warnOnMissingMapping(LOG, frame.getPassengerInformationEquipments());
-    warnOnMissingMapping(LOG, frame.getRouteLinks());
-    warnOnMissingMapping(LOG, frame.getRoutePoints());
     warnOnMissingMapping(LOG, frame.getRoutingConstraintZones());
     warnOnMissingMapping(LOG, frame.getScheduledStopPoints());
     warnOnMissingMapping(LOG, frame.getServiceExclusions());
@@ -133,6 +141,8 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
     index.flexibleStopPlaceByStopPointRef.addAll(flexibleStopPlaceByStopPointRef);
     index.routeById.addAll(routes);
     index.serviceLinkById.addAll(serviceLinks);
+    index.routePointById.addAll(routePoints);
+    index.routeLinkById.addAll(routeLinks);
 
     // update references
     index.networkIdByGroupOfLineId.addAll(networkIdByGroupOfLineId);
@@ -262,5 +272,17 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
     if (serviceLinks == null) return;
 
     this.serviceLinks.addAll(serviceLinks.getServiceLink());
+  }
+
+  private void parseRoutePoints(RoutePointsInFrame_RelStructure routePoints){
+    if (routePoints == null) return;
+
+    this.routePoints.addAll(routePoints.getRoutePoint());
+  }
+
+  private void parseRouteLinks(RouteLinksInFrame_RelStructure routeLinks){
+    if(routeLinks == null) return;
+
+    this.routeLinks.addAll(routeLinks.getRouteLink());
   }
 }

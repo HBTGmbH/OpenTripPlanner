@@ -4,8 +4,10 @@ import com.google.common.collect.Multimap;
 import jakarta.xml.bind.annotation.adapters.HexBinaryAdapter;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import javax.annotation.Nullable;
+import org.locationtech.jts.geom.LineString;
 import org.opentripplanner.framework.i18n.NonLocalizedString;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.netex.index.api.NetexEntityIndexReadOnlyView;
@@ -47,6 +49,7 @@ class RouteMapper {
   private final NetexEntityIndexReadOnlyView netexIndex;
   private final AuthorityToAgencyMapper authorityMapper;
   private final Set<String> ferryIdsNotAllowedForBicycle;
+  private final Multimap<FeedScopedId, List<LineString>> hopGeometriesByRouteId;
 
   RouteMapper(
     DataImportIssueStore issueStore,
@@ -56,6 +59,7 @@ class RouteMapper {
     EntityById<Branding> brandingsById,
     Multimap<FeedScopedId, GroupOfRoutes> groupsOfLinesByRouteId,
     EntityById<GroupOfRoutes> groupOfRoutesById,
+    Multimap<FeedScopedId, List<LineString>> hopGeometriesByRouteId,
     NetexEntityIndexReadOnlyView netexIndex,
     String timeZone,
     Set<String> ferryIdsNotAllowedForBicycle
@@ -70,6 +74,7 @@ class RouteMapper {
     this.netexIndex = netexIndex;
     this.authorityMapper = new AuthorityToAgencyMapper(idFactory, timeZone);
     this.ferryIdsNotAllowedForBicycle = ferryIdsNotAllowedForBicycle;
+    this.hopGeometriesByRouteId = hopGeometriesByRouteId;
   }
 
   Route mapRoute(Line_VersionStructure line) {
@@ -134,6 +139,8 @@ class RouteMapper {
 
     return builder.build();
   }
+
+
 
   private Collection<GroupOfRoutes> getGroupOfRoutes(Line_VersionStructure line) {
     // Relation can be set both on Line or on GroupOfLines
