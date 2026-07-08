@@ -6,7 +6,6 @@ import org.opentripplanner.core.framework.deduplicator.DeduplicatorService;
 import org.opentripplanner.transit.repository.MutableTimetableSnapshot;
 import org.opentripplanner.transit.service.DefaultTransitService;
 import org.opentripplanner.transit.service.TimetableRepository;
-import org.opentripplanner.updater.trip.TimetableSnapshotManager;
 import org.opentripplanner.updater.trip.patterncache.TripPatternCache;
 import org.opentripplanner.updater.trip.patterncache.TripPatternIdGenerator;
 
@@ -16,7 +15,6 @@ import org.opentripplanner.updater.trip.patterncache.TripPatternIdGenerator;
  */
 public class GtfsRealTimeTripUpdateAdapter {
 
-  private final TimetableSnapshotManager snapshotManager;
   private final TimetableRepository timetableRepository;
   private final Supplier<LocalDate> localDateNow;
   private final TripPatternCache tripPatternCache;
@@ -28,10 +26,8 @@ public class GtfsRealTimeTripUpdateAdapter {
   public GtfsRealTimeTripUpdateAdapter(
     TimetableRepository timetableRepository,
     DeduplicatorService deduplicator,
-    TimetableSnapshotManager snapshotManager,
     Supplier<LocalDate> localDateNow
   ) {
-    this.snapshotManager = snapshotManager;
     this.timetableRepository = timetableRepository;
     this.localDateNow = localDateNow;
     this.tripPatternCache = new TripPatternCache(new TripPatternIdGenerator());
@@ -47,11 +43,11 @@ public class GtfsRealTimeTripUpdateAdapter {
   public GtfsRealTimeUpdateHandler forUpdate(MutableTimetableSnapshot buffer) {
     var editorService = new DefaultTransitService(timetableRepository, buffer);
     return new GtfsRealTimeUpdateHandler(
-      snapshotManager,
+      buffer,
       localDateNow,
-      new ScheduledTripHandler(editorService, snapshotManager, tripTimesUpdater, tripPatternCache),
-      new NewTripHandler(editorService, snapshotManager, tripTimesUpdater, tripPatternCache),
-      new CanceledTripHandler(editorService, snapshotManager)
+      new ScheduledTripHandler(editorService, buffer, tripTimesUpdater, tripPatternCache),
+      new NewTripHandler(editorService, buffer, tripTimesUpdater, tripPatternCache),
+      new CanceledTripHandler(editorService, buffer)
     );
   }
 }
