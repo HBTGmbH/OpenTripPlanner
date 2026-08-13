@@ -12,7 +12,6 @@ import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.TripIdAndServiceDate;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.transit.service.TransitService;
-import org.opentripplanner.utils.time.ServiceDateUtils;
 
 /**
  * This class is responsible for resolving references to various entities in the transit model for
@@ -39,35 +38,24 @@ public class EntityResolver {
    * EstimatedVehicleJourneyCode (for a trip that was previously added by a real-time message).
    */
   @Nullable
-  public Trip resolveTrip(EstimatedVehicleJourneyWrapper journey) {
-    var vehicleJourneyIdAndServiceDate = journey.vehicleJourneyIdAndServiceDate();
-    if (vehicleJourneyIdAndServiceDate != null) {
-      Trip trip = resolveTrip(vehicleJourneyIdAndServiceDate.vehicleJourneyId());
-      if (trip != null) {
-        return trip;
-      }
+  Trip resolveTrip(EstimatedVehicleJourneyWrapper journey) {
+    var trip = journey.vehicleJourneyIdAndServiceDate().map(v -> resolveTrip(v.vehicleJourneyId()));
+    if (trip.isPresent()) {
+      return trip.get();
     }
 
-    if (journey.datedVehicleJourneyRef() != null) {
-      TripOnServiceDate tripOnServiceDate = transitService.getTripOnServiceDate(
-        resolveId(journey.datedVehicleJourneyRef())
-      );
-
-      if (tripOnServiceDate != null) {
-        return tripOnServiceDate.getTrip();
-      }
+    Optional<TripOnServiceDate> tripOnServiceDate = journey
+      .datedVehicleJourneyRef()
+      .map(jf -> transitService.getTripOnServiceDate(resolveId(jf)));
+    if (tripOnServiceDate.isPresent()) {
+      return tripOnServiceDate.get().getTrip();
     }
 
     // It is possible that the trip has previously been added, resolve the added trip
-    var code = journey.code();
-    if (code != null) {
-      var addedTrip = transitService.getTrip(resolveId(code.asServiceJourneyId()));
-      if (addedTrip != null) {
-        return addedTrip;
-      }
-    }
-
-    return null;
+    return journey
+      .code()
+      .map(c -> transitService.getTrip(resolveId(c.asServiceJourneyId())))
+      .orElse(null);
   }
 
   public TripOnServiceDate resolveTripOnServiceDate(String datedServiceJourneyId) {
@@ -75,14 +63,12 @@ public class EntityResolver {
   }
 
   @Nullable
-  public TripOnServiceDate resolveTripOnServiceDate(
+  TripOnServiceDate resolveTripOnServiceDate(
     VehicleJourneyIdAndServiceDate vehicleJourneyIdAndServiceDate
   ) {
     return resolveTripOnServiceDate(
       vehicleJourneyIdAndServiceDate.vehicleJourneyId(),
-      Optional.ofNullable(vehicleJourneyIdAndServiceDate.serviceDate())
-        .flatMap(ServiceDateUtils::parseStringToOptional)
-        .orElse(null)
+      vehicleJourneyIdAndServiceDate.serviceDate()
     );
   }
 
@@ -105,18 +91,18 @@ public class EntityResolver {
   }
 
   FeedScopedId resolveDatedServiceJourneyId(EstimatedVehicleJourneyWrapper journey) {
-    if (journey.datedVehicleJourneyRef() != null) {
-      return resolveId(journey.datedVehicleJourneyRef());
+    if (journey.datedVehicleJourneyRef().isPresent()) {
+      return resolveId(journey.datedVehicleJourneyRef().get());
     }
 
     // The added TripOnServiceDate is registered under the DatedServiceJourney-normalized id, so the
     // code must be viewed the same way here for the read path to match the write path.
-    var code = journey.code();
-    if (code != null) {
-      return resolveId(code.asDatedServiceJourneyId());
-    }
-
-    return null;
+    return journey
+      .code()
+      .map(estimatedVehicleJourneyCode ->
+        resolveId(estimatedVehicleJourneyCode.asDatedServiceJourneyId())
+      )
+      .orElse(null);
   }
 
   public Trip resolveTrip(String serviceJourneyId) {
@@ -126,9 +112,9 @@ public class EntityResolver {
   /**
    * Resolve a {@link RegularStop} from a scheduled stop point or quay id.
    *
-   * @see org.opentripplanner.transit.service.TimetableRepository#findStopByScheduledStopPoint(FeedScopedId)
+   * @see org.opentripplanner.transit.service.TransitRepository#findStopByScheduledStopPoint(FeedScopedId)
    */
-  public RegularStop resolveQuay(String stopPointRef) {
+  RegularStop resolveQuay(String stopPointRef) {
     var id = resolveId(stopPointRef);
     return transitService
       .findStopByScheduledStopPoint(id)
@@ -138,24 +124,33 @@ public class EntityResolver {
   /**
    * Resolve a {@link Route} from a line id.
    */
-  public Route resolveRoute(String lineRef) {
+  Route resolveRoute(String lineRef) {
     return transitService.getRoute(resolveId(lineRef));
   }
 
-  public Operator resolveOperator(String operatorRef) {
+  Operator resolveOperator(String operatorRef) {
     return transitService.getOperator(resolveId(operatorRef));
   }
 
+  /**
+   * Resolve the service date of a vehicle journey, trying in order:
+   * <ol>
+   *   <li>the service date given by the journey's FramedVehicleJourneyRef -> DataFrameRef,</li>
+   *   <li>the service date of the DatedServiceJourney referenced by the journey's
+   *       DatedVehicleJourneyRef or EstimatedVehicleJourneyCode,</li>
+   *   <li>the date of the aimed departure time at the first call, shifted back by the number of
+   *       days the scheduled trip's first departure lies after midnight (for trips running past
+   *       midnight).</li>
+   * </ol>
+   * Return {@code null} if none of these strategies succeed.
+   */
   @Nullable
-  public LocalDate resolveServiceDate(EstimatedVehicleJourneyWrapper journey) {
-    var vehicleJourneyIdAndServiceDate = journey.vehicleJourneyIdAndServiceDate();
-    if (vehicleJourneyIdAndServiceDate != null) {
-      var serviceDate = Optional.ofNullable(vehicleJourneyIdAndServiceDate.serviceDate())
-        .flatMap(ServiceDateUtils::parseStringToOptional)
-        .orElse(null);
-      if (serviceDate != null) {
-        return serviceDate;
-      }
+  LocalDate resolveServiceDate(EstimatedVehicleJourneyWrapper journey) {
+    var serviceDate = journey
+      .vehicleJourneyIdAndServiceDate()
+      .map(VehicleJourneyIdAndServiceDate::serviceDate);
+    if (serviceDate.isPresent()) {
+      return serviceDate.get();
     }
 
     FeedScopedId datedServiceJourneyId = resolveDatedServiceJourneyId(journey);

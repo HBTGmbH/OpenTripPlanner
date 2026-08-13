@@ -63,6 +63,9 @@ class AddedTripBuilder {
   private final StopTimesMapper stopTimesMapper;
   private final DeduplicatorService deduplicator;
 
+  @Nullable
+  private final String vehicleRef;
+
   AddedTripBuilder(
     EstimatedVehicleJourneyWrapper journey,
     TransitEditorService transitService,
@@ -73,24 +76,25 @@ class AddedTripBuilder {
     this.deduplicator = deduplicator;
     // Verifying values required in SIRI Profile
     // Added ServiceJourneyId
-    EstimatedVehicleJourneyCode code = Objects.requireNonNull(
-      journey.code(),
-      "EstimatedVehicleJourneyCode is required"
-    );
+    EstimatedVehicleJourneyCode code = journey
+      .code()
+      .orElseThrow(() -> new NullPointerException("EstimatedVehicleJourneyCode is required"));
     tripId = entityResolver.resolveId(code.asServiceJourneyId());
     tripOnServiceDateId = entityResolver.resolveId(code.asDatedServiceJourneyId());
 
     // OperatorRef of added trip
-    String operatorRef = Objects.requireNonNull(journey.operatorRef(), "OperatorRef is required");
+    String operatorRef = journey
+      .operatorRef()
+      .orElseThrow(() -> new NullPointerException("OperatorRef is required"));
     operator = entityResolver.resolveOperator(operatorRef);
 
     // DataSource of added trip
-    dataSource = journey.dataSource();
+    dataSource = journey.dataSource().orElse(null);
 
     // LineRef of added trip
-    lineRef = Objects.requireNonNull(journey.lineRef(), "LineRef is required");
+    lineRef = journey.lineRef().orElseThrow(() -> new NullPointerException("LineRef is required"));
 
-    String externalLineRef = Objects.requireNonNullElse(journey.externalLineRef(), lineRef);
+    String externalLineRef = journey.externalLineRef().orElse(lineRef);
     replacedRoute = entityResolver.resolveRoute(externalLineRef);
 
     serviceDate = entityResolver.resolveServiceDate(journey);
@@ -101,9 +105,10 @@ class AddedTripBuilder {
     transitSubMode = resolveTransitSubMode(transitMode, replacedRoute);
 
     isJourneyPredictionInaccurate = journey.isPredictionInaccurate();
-    occupancy = journey.occupancy();
+    occupancy = journey.occupancy().orElse(null);
     cancellation = journey.isCancellation();
     headsign = journey.destinationName();
+    vehicleRef = journey.vehicleRef().orElse(null);
 
     this.calls = journey.calls();
 
@@ -136,7 +141,8 @@ class AddedTripBuilder {
     String shortName,
     String headsign,
     List<TripOnServiceDate> replacedTrips,
-    String dataSource
+    String dataSource,
+    @Nullable String vehicleRef
   ) {
     this.transitService = transitService;
     this.deduplicator = deduplicator;
@@ -159,6 +165,7 @@ class AddedTripBuilder {
     this.headsign = headsign;
     this.replacedTrips = replacedTrips;
     this.dataSource = dataSource;
+    this.vehicleRef = vehicleRef;
     stopTimesMapper = new StopTimesMapper(entityResolver, timeZone);
   }
 
@@ -185,7 +192,7 @@ class AddedTripBuilder {
       }
       route = createRoute(agency);
       isAddedRoute = true;
-      LOG.info("Adding route {} to timetableRepository.", route);
+      LOG.info("Adding route {} to transitRepository.", route);
     }
 
     Trip trip = createTrip(route, calServiceId);
@@ -248,6 +255,7 @@ class AddedTripBuilder {
       );
     }
 
+    builder.withVehicleId(vehicleRef);
     if (cancellation || stopPattern.isAllStopsNonRoutable()) {
       builder.withCanceled();
     }
@@ -362,15 +370,10 @@ class AddedTripBuilder {
   ) {
     List<TripOnServiceDate> listOfReplacedVehicleJourneys = new ArrayList<>();
 
-    String replacedDatedVehicleJourneyRef = journey.replacedDatedVehicleJourneyRef();
-    if (replacedDatedVehicleJourneyRef != null) {
-      var replacedDatedServiceJourney = entityResolver.resolveTripOnServiceDate(
-        replacedDatedVehicleJourneyRef
-      );
-      if (replacedDatedServiceJourney != null) {
-        listOfReplacedVehicleJourneys.add(replacedDatedServiceJourney);
-      }
-    }
+    journey
+      .replacedDatedVehicleJourneyRef()
+      .map(entityResolver::resolveTripOnServiceDate)
+      .ifPresent(listOfReplacedVehicleJourneys::add);
 
     // Add additional replaced service journeys if present.
     journey
