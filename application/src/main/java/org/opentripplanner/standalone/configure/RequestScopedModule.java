@@ -57,6 +57,9 @@ import org.opentripplanner.standalone.config.routerconfig.VectorTileConfig;
 import org.opentripplanner.street.graph.Graph;
 import org.opentripplanner.street.service.StreetLimitationParametersService;
 import org.opentripplanner.transfer.regular.RegularTransferService;
+import org.opentripplanner.transfer.regular.TransferRepository;
+import org.opentripplanner.transfer.regular.TransferRepositorySnapshot;
+import org.opentripplanner.transfer.regular.internal.DefaultTransferService;
 import org.opentripplanner.transit.repository.TimetableRepository;
 import org.opentripplanner.transit.repository.TimetableRepositorySnapshot;
 import org.opentripplanner.transit.service.DefaultTransitService;
@@ -104,6 +107,22 @@ public class RequestScopedModule {
   ) {
     var timetableSnapshot = timetableRepositoryHandle.repositorySnapshot(transactionScope);
     return new DefaultTransitService(transitRepository, timetableSnapshot);
+  }
+
+  /**
+   * The request-scoped {@link RegularTransferService}, backed by the {@link
+   * TransferRepositorySnapshot} resolved under the request's {@link TransactionScope}. One instance
+   * per request, so every transfer read over the request's lifetime sees a consistent view — and a
+   * later transfer commit never mutates an in-flight request's data.
+   */
+  @Provides
+  @HttpRequestScoped
+  static RegularTransferService transferService(
+    RepositoryHandle<TransferRepositorySnapshot, TransferRepository> transferRepositoryHandle,
+    TransactionScope transactionScope
+  ) {
+    var transferSnapshot = transferRepositoryHandle.repositorySnapshot(transactionScope);
+    return new DefaultTransferService(transferSnapshot);
   }
 
   @Provides

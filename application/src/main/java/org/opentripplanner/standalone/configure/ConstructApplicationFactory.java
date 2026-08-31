@@ -68,7 +68,8 @@ import org.opentripplanner.street.graph.Graph;
 import org.opentripplanner.street.linking.VertexLinker;
 import org.opentripplanner.street.service.StreetLimitationParametersServiceModule;
 import org.opentripplanner.transfer.regular.TransferRepository;
-import org.opentripplanner.transfer.regular.configure.TransferServiceModule;
+import org.opentripplanner.transfer.regular.TransferRepositorySnapshot;
+import org.opentripplanner.transfer.regular.configure.TransferRepositoryModule;
 import org.opentripplanner.transit.configure.StaticTransitService;
 import org.opentripplanner.transit.configure.TransitModule;
 import org.opentripplanner.transit.model.calendar.DefaultTripCalendars;
@@ -106,7 +107,7 @@ import org.opentripplanner.warmup.configure.WarmupModule;
     StreetLimitationParametersServiceModule.class,
     TransitModule.class,
     TransitAlertServiceModule.class,
-    TransferServiceModule.class,
+    TransferRepositoryModule.class,
     VehicleParkingServiceModule.class,
     VehicleRentalRepositoryModule.class,
     VehicleRentalServiceModule.class,
@@ -130,6 +131,8 @@ public interface ConstructApplicationFactory {
     RealtimeVehicleRepositorySnapshot,
     RealtimeVehicleRepository
   > realtimeVehicleRepositoryHandle();
+
+  RepositoryHandle<TransferRepositorySnapshot, TransferRepository> transferRepositoryHandle();
   VehicleRentalRepository vehicleRentalRepository();
   VehicleRentalService vehicleRentalService();
   VehicleParkingRepository vehicleParkingRepository();

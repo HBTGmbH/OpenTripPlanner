@@ -8,6 +8,8 @@ import org.opentripplanner.framework.transaction.api.WriteContext;
 import org.opentripplanner.service.realtimevehicles.RealtimeVehicleRepository;
 import org.opentripplanner.service.realtimevehicles.RealtimeVehicleRepositorySnapshot;
 import org.opentripplanner.street.graph.Graph;
+import org.opentripplanner.transfer.regular.TransferRepository;
+import org.opentripplanner.transfer.regular.TransferRepositorySnapshot;
 import org.opentripplanner.transit.repository.TimetableRepository;
 import org.opentripplanner.transit.repository.TimetableRepositorySnapshot;
 import org.opentripplanner.transit.service.TransitRepository;
@@ -42,9 +44,9 @@ public class GraphWriterService<C> implements WriteToGraphCallback<C> {
 
   /**
    * Create the bridge for the transit write domain. Each task checks out the mutable
-   * realtime-timetable repository for the current transaction. The realtime-vehicle repository is
-   * resolved lazily: only tasks that actually apply vehicle updates cause a new vehicle snapshot
-   * to be published at commit.
+   * realtime-timetable repository for the current transaction. The realtime-vehicle and transfer
+   * repositories are resolved lazily: only tasks that actually apply vehicle or transfer updates
+   * cause a new snapshot of the respective repository to be published at commit.
    */
   public static GraphWriterService<TransitRealTimeUpdateContext> forTransitDomain(
     UpdateManager updateManager,
@@ -53,13 +55,15 @@ public class GraphWriterService<C> implements WriteToGraphCallback<C> {
       RealtimeVehicleRepositorySnapshot,
       RealtimeVehicleRepository
     > realtimeVehicleHandle,
+    RepositoryHandle<TransferRepositorySnapshot, TransferRepository> transferHandle,
     TransitRepository transitRepository
   ) {
     return new GraphWriterService<>(updateManager, ctx ->
       new DefaultTransitRealTimeUpdateContext(
         transitRepository,
         ctx.repository(timetableHandle),
-        () -> ctx.repository(realtimeVehicleHandle)
+        () -> ctx.repository(realtimeVehicleHandle),
+        () -> ctx.repository(transferHandle)
       )
     );
   }

@@ -2,6 +2,7 @@ package org.opentripplanner.updater;
 
 import java.util.function.Supplier;
 import org.opentripplanner.service.realtimevehicles.RealtimeVehicleRepository;
+import org.opentripplanner.transfer.regular.TransferRepository;
 import org.opentripplanner.transit.repository.TimetableRepository;
 import org.opentripplanner.transit.service.DefaultTransitService;
 import org.opentripplanner.transit.service.TransitRepository;
@@ -21,6 +22,12 @@ public class DefaultTransitRealTimeUpdateContext implements TransitRealTimeUpdat
   private final Supplier<RealtimeVehicleRepository> realtimeVehicleRepository;
 
   /**
+   * Resolved lazily so that tasks that never touch the regular transfers do not cause a needless
+   * transfer snapshot to be created and published at commit.
+   */
+  private final Supplier<TransferRepository> transferRepository;
+
+  /**
    * The context needs the mutable repository so that entity lookups (trips, routes, patterns) see
    * all in-progress real-time additions that have not yet been committed to a published snapshot.
    * <p>
@@ -38,11 +45,13 @@ public class DefaultTransitRealTimeUpdateContext implements TransitRealTimeUpdat
   public DefaultTransitRealTimeUpdateContext(
     TransitRepository transitRepository,
     TimetableRepository timetableRepository,
-    Supplier<RealtimeVehicleRepository> realtimeVehicleRepository
+    Supplier<RealtimeVehicleRepository> realtimeVehicleRepository,
+    Supplier<TransferRepository> transferRepository
   ) {
     this.timetableRepository = timetableRepository;
     this.transitService = new DefaultTransitService(transitRepository, timetableRepository);
     this.realtimeVehicleRepository = realtimeVehicleRepository;
+    this.transferRepository = transferRepository;
   }
 
   /**
@@ -52,6 +61,10 @@ public class DefaultTransitRealTimeUpdateContext implements TransitRealTimeUpdat
     this(transitRepository, null, () -> {
       throw new UnsupportedOperationException(
         "The realtime-vehicle repository is not available in this test context"
+      );
+    }, () -> {
+      throw new UnsupportedOperationException(
+        "The transfer repository is not available in this test context"
       );
     });
   }
@@ -64,6 +77,11 @@ public class DefaultTransitRealTimeUpdateContext implements TransitRealTimeUpdat
   @Override
   public RealtimeVehicleRepository realtimeVehicleRepository() {
     return realtimeVehicleRepository.get();
+  }
+
+  @Override
+  public TransferRepository transferRepository() {
+    return transferRepository.get();
   }
 
   @Override

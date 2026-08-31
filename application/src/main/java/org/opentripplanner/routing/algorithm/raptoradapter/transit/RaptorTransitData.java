@@ -74,6 +74,31 @@ public class RaptorTransitData {
     );
   }
 
+  /**
+   * Makes a shallow copy of the {@link RaptorTransitData} but substitutes the
+   * {@code transfersByStopIndex} with the given list. This is used to compose the request's
+   * realtime {@link RaptorTransitData} (produced by the timetable repository) with the
+   * per-request transfer snapshot's transfers, so a request sees the realtime transfers rather than
+   * the scheduled ones shared by reference from the base data.
+   * <p>
+   * The {@code transferCache} is shared by reference on purpose: it is keyed on the
+   * {@code transfersByStopIndex} instance identity (see {@code RaptorRequestTransferCacheKey}), so
+   * substituting the list naturally causes a cache miss and a fresh {@code RaptorTransferIndex}
+   * build for the new transfers.
+   */
+  public RaptorTransitData(RaptorTransitData raptorTransitData, List<List<PathTransfer>> transfersByStopIndex) {
+    this(
+      raptorTransitData.tripPatternsRunningOnDate,
+      transfersByStopIndex,
+      raptorTransitData.transferService,
+      raptorTransitData.siteRepository,
+      raptorTransitData.transferCache,
+      raptorTransitData.constrainedTransfers,
+      raptorTransitData.transferIndexGenerator,
+      raptorTransitData.stopBoardAlightTransferCosts
+    );
+  }
+
   public RaptorTransitData(
     Map<LocalDate, List<TripPatternForDate>> tripPatternsRunningOnDate,
     List<List<PathTransfer>> transfersByStopIndex,

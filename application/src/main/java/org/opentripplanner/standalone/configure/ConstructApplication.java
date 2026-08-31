@@ -42,6 +42,7 @@ import org.opentripplanner.street.StreetRepository;
 import org.opentripplanner.street.graph.Graph;
 import org.opentripplanner.street.linking.VertexLinker;
 import org.opentripplanner.transfer.regular.TransferRepository;
+import org.opentripplanner.transfer.regular.TransferRepositorySnapshot;
 import org.opentripplanner.transit.service.TransitRepository;
 import org.opentripplanner.updater.configure.UpdaterConfigurator;
 import org.opentripplanner.utils.logging.ProgressTracker;
@@ -213,6 +214,7 @@ public class ConstructApplication {
       deduplicatorService(),
       vertexLinker(),
       realtimeVehicleRepositoryHandle(),
+      transferRepositoryHandle(),
       vehicleRentalRepository(),
       vehicleParkingRepository(),
       transitRepository(),
@@ -314,6 +316,10 @@ public class ConstructApplication {
     RealtimeVehicleRepository
   > realtimeVehicleRepositoryHandle() {
     return factory.realtimeVehicleRepositoryHandle();
+  }
+
+  public RepositoryHandle<TransferRepositorySnapshot, TransferRepository> transferRepositoryHandle() {
+    return factory.transferRepositoryHandle();
   }
 
   public VehicleRentalRepository vehicleRentalRepository() {

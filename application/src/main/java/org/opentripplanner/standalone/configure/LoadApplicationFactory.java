@@ -32,7 +32,7 @@ import org.opentripplanner.street.StreetRepository;
 import org.opentripplanner.street.configure.StreetRepositoryModule;
 import org.opentripplanner.street.graph.Graph;
 import org.opentripplanner.transfer.regular.TransferRepository;
-import org.opentripplanner.transfer.regular.configure.TransferRepositoryModule;
+import org.opentripplanner.transfer.regular.configure.EmptyTransferRepositoryModule;
 import org.opentripplanner.transit.service.TransitRepository;
 
 /**
@@ -52,7 +52,7 @@ import org.opentripplanner.transit.service.TransitRepository;
     EmpiricalDelayRepositoryModule.class,
     StopConsolidationRepositoryModule.class,
     StreetRepositoryModule.class,
-    TransferRepositoryModule.class,
+    EmptyTransferRepositoryModule.class,
     VehicleParkingRepositoryModule.class,
     FareModule.class,
     DeduplicatorServiceModule.class,

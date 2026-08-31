@@ -1,6 +1,7 @@
 package org.opentripplanner.updater;
 
 import org.opentripplanner.service.realtimevehicles.RealtimeVehicleRepository;
+import org.opentripplanner.transfer.regular.TransferRepository;
 import org.opentripplanner.transit.repository.TimetableRepository;
 import org.opentripplanner.transit.service.TransitService;
 import org.opentripplanner.updater.trip.gtfs.GtfsRealtimeFuzzyTripMatcher;
@@ -24,6 +25,14 @@ public interface TransitRealTimeUpdateContext {
    * vehicle updates to apply.
    */
   RealtimeVehicleRepository realtimeVehicleRepository();
+
+  /**
+   * Return the mutable transfer repository for this update task. Callers must only use this from
+   * the single writer thread. Accessing it causes the current transaction to publish a new transfer
+   * snapshot at commit — even if nothing was written — so only call it when there are transfer
+   * updates to apply.
+   */
+  TransferRepository transferRepository();
 
   /**
    * Return a transit service that can look up both scheduled and real-time data.

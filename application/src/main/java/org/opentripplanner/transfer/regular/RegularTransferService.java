@@ -1,13 +1,19 @@
 package org.opentripplanner.transfer.regular;
 
 import java.util.Collection;
+import java.util.List;
 import org.opentripplanner.transfer.regular.model.PathTransfer;
 import org.opentripplanner.transit.model.site.StopLocation;
 
 /**
- * Access transfers during OTP server runtime. It provides a frozen view of all these elements at a
- * point in time, which is not affected by ongoing transfer updates, allowing results to remain
- * stable over the course of a request.
+ * Access regular (path) transfers during OTP server runtime. It provides a frozen view of all
+ * transfers at a point in time — the {@link TransferRepositorySnapshot} resolved for the current
+ * request — which is not affected by ongoing transfer updates, allowing results to remain stable
+ * over the course of a request.
+ * <p>
+ * This serves both regular-transfer read paths: the multimap queries below (GraphQL transfers
+ * field, debug vector tiles, refetch, Flex access/egress) and the Raptor path via
+ * {@link #transfersByStopIndex()}.
  */
 public interface RegularTransferService {
   /**
@@ -33,4 +39,13 @@ public interface RegularTransferService {
    * @throws IllegalStateException         if the index was not initialized
    */
   Collection<PathTransfer> findWalkTransfersToStop(StopLocation toStop);
+
+  /**
+   * The regular transfers indexed by stop index, for the Raptor router. Each element is the list of
+   * transfers whose from-stop has that index. Derived once (lazily) from the request's transfer
+   * snapshot.
+   *
+   * @return an immutable {@code List<List<PathTransfer>>} indexed by stop index
+   */
+  List<List<PathTransfer>> transfersByStopIndex();
 }

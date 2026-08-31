@@ -42,8 +42,11 @@ class RaptorRequestTransferCacheKey {
 
   @Override
   public int hashCode() {
-    // transfersByStopIndex is ignored on purpose since it should not change (there is only
-    // one instance per graph) and calculating the hashCode() would be expensive
+    // transfersByStopIndex is intentionally excluded from the hash: it is now published per commit
+    // (a fresh list instance each time a transaction touching transfers commits), so two requests
+    // that differ only by their transfer snapshot hash identically. The identity-based check in
+    // equals() still forces a cache miss when the list instance changes (see below). Computing a
+    // deep hash of the list here would be expensive and unnecessary.
     return options.hashCode();
   }
 
@@ -56,8 +59,10 @@ class RaptorRequestTransferCacheKey {
       return false;
     }
     RaptorRequestTransferCacheKey cacheKey = (RaptorRequestTransferCacheKey) o;
-    // transfersByStopIndex is checked using == on purpose since the instance should not change
-    // (there is only one instance per graph)
+    // transfersByStopIndex is compared by reference identity (==) on purpose: the list is published
+    // per commit, so a request that sees a new list instance must MISS the cache and rebuild its
+    // RaptorTransferIndex for the new transfers. This is the cache-busting key for realtime
+    // transfer updates (e.g. a transfer disabled by an elevator outage).
     return (
       transfersByStopIndex == cacheKey.transfersByStopIndex && options.equals(cacheKey.options)
     );

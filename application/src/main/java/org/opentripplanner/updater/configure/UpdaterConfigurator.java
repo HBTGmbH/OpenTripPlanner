@@ -25,6 +25,8 @@ import org.opentripplanner.service.vehiclerental.VehicleRentalRepository;
 import org.opentripplanner.street.graph.Graph;
 import org.opentripplanner.street.linking.VertexLinker;
 import org.opentripplanner.street.model.openinghours.OpeningHoursCalendarService;
+import org.opentripplanner.transfer.regular.TransferRepository;
+import org.opentripplanner.transfer.regular.TransferRepositorySnapshot;
 import org.opentripplanner.transit.repository.TimetableRepository;
 import org.opentripplanner.transit.repository.TimetableRepositorySnapshot;
 import org.opentripplanner.transit.service.TransitRepository;
@@ -68,6 +70,11 @@ public class UpdaterConfigurator {
     RealtimeVehicleRepositorySnapshot,
     RealtimeVehicleRepository
   > realtimeVehicleRepositoryHandle;
+
+  private final RepositoryHandle<
+    TransferRepositorySnapshot,
+    TransferRepository
+  > transferRepositoryHandle;
   private final VehicleRentalRepository vehicleRentalRepository;
   private final GbfsNetworkOverrides gbfsNetworkOverrides;
 
@@ -99,6 +106,7 @@ public class UpdaterConfigurator {
       RealtimeVehicleRepositorySnapshot,
       RealtimeVehicleRepository
     > realtimeVehicleRepositoryHandle,
+    RepositoryHandle<TransferRepositorySnapshot, TransferRepository> transferRepositoryHandle,
     VehicleRentalRepository vehicleRentalRepository,
     VehicleParkingRepository parkingRepository,
     TransitRepository transitRepository,
@@ -115,6 +123,7 @@ public class UpdaterConfigurator {
     this.deduplicator = deduplicator;
     this.linker = linker;
     this.realtimeVehicleRepositoryHandle = realtimeVehicleRepositoryHandle;
+    this.transferRepositoryHandle = transferRepositoryHandle;
     this.vehicleRentalRepository = vehicleRentalRepository;
     this.transitRepository = transitRepository;
     this.updatersParameters = updatersParameters;
@@ -136,6 +145,7 @@ public class UpdaterConfigurator {
       RealtimeVehicleRepositorySnapshot,
       RealtimeVehicleRepository
     > realtimeVehicleRepositoryHandle,
+    RepositoryHandle<TransferRepositorySnapshot, TransferRepository> transferRepositoryHandle,
     VehicleRentalRepository vehicleRentalRepository,
     VehicleParkingRepository parkingRepository,
     TransitRepository transitRepository,
@@ -153,6 +163,7 @@ public class UpdaterConfigurator {
       deduplicator,
       linker,
       realtimeVehicleRepositoryHandle,
+      transferRepositoryHandle,
       vehicleRentalRepository,
       parkingRepository,
       transitRepository,
@@ -191,6 +202,7 @@ public class UpdaterConfigurator {
       transitUpdateManager,
       timetableRepositoryHandle,
       realtimeVehicleRepositoryHandle,
+      transferRepositoryHandle,
       transitRepository
     );
     var streetWriterService = GraphWriterService.forStreetDomain(streetUpdateManager, graph);

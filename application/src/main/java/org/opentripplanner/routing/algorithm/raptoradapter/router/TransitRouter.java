@@ -175,6 +175,18 @@ public class TransitRouter {
     var raptorTransitData = request.preferences().transit().ignoreRealtimeUpdates()
       ? transitService.getRaptorTransitData()
       : transitService.getRealtimeRaptorTransitData();
+
+    // Compose the realtime transfer snapshot's transfers into the realtime RaptorTransitData. The
+    // timetable repository's realtime data carries the scheduled transfersByStopIndex by reference;
+    // substituting the per-request transfer snapshot's list makes a request see realtime transfers
+    // (e.g. transfers disabled by an elevator outage). The ignoreRealtimeUpdates branch keeps the
+    // scheduled list, which is correct: ignoring realtime ignores transfer updates too.
+    if (!request.preferences().transit().ignoreRealtimeUpdates() && raptorTransitData != null) {
+      raptorTransitData = new RaptorTransitData(
+        raptorTransitData,
+        transferService.transfersByStopIndex()
+      );
+    }
     var requestTransitDataProvider = createRequestTransitDataProvider(raptorTransitData);
     var fetchAccessEgress = new AccessEgressFetcher(
       request,
