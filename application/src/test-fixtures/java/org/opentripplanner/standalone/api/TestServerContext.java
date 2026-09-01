@@ -118,6 +118,13 @@ public class TestServerContext {
     var raptorConfig = createRaptorConfig();
     var vertexLinker = createVertexLinker(graph);
 
+    // The transfer snapshot's stop-indexed list must be sized to the stop-index space, exactly as
+    // the initial StopCountChangedEvent seeds it in production. Derive that size from the (already
+    // built) scheduled Raptor data so the request-time transfer swap composes a correctly-sized
+    // index instead of an empty one.
+    var raptorData = transitService.getRaptorTransitData();
+    int stopIndexSize = raptorData != null ? raptorData.getStopCount() : 0;
+
     return new DefaultRoutingService(
       transitService,
       new TransitAlertServiceImpl(),
@@ -127,7 +134,7 @@ public class TestServerContext {
       createStreetLimitationParametersService(),
       createVehicleRentalService(),
       createStreetDetailsService(),
-      TransferServiceTestFactory.transferService(transferRepository),
+      TransferServiceTestFactory.transferService(transferRepository, stopIndexSize),
       routerConfig.flexParameters(),
       List.of(),
       null,

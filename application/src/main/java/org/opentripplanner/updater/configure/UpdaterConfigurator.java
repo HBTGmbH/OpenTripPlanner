@@ -27,6 +27,7 @@ import org.opentripplanner.street.linking.VertexLinker;
 import org.opentripplanner.street.model.openinghours.OpeningHoursCalendarService;
 import org.opentripplanner.transfer.regular.TransferRepository;
 import org.opentripplanner.transfer.regular.TransferRepositorySnapshot;
+import org.opentripplanner.transfer.regular.internal.StopCountChangedEventHandler;
 import org.opentripplanner.transit.repository.TimetableRepository;
 import org.opentripplanner.transit.repository.TimetableRepositorySnapshot;
 import org.opentripplanner.transit.service.TransitRepository;
@@ -179,6 +180,10 @@ public class UpdaterConfigurator {
   }
 
   private void configure() {
+    // Register the transfer repository's reaction to stop-count changes. Living here (outside the
+    // transfer module) keeps that module free of any SiteRepository dependency.
+    transitUpdateManager.register(new StopCountChangedEventHandler(), transferRepositoryHandle);
+
     List<GraphUpdater<?>> updaters = new ArrayList<>();
 
     updaters.addAll(createUpdatersFromConfig());

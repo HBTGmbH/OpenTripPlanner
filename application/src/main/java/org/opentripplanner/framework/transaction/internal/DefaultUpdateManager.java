@@ -73,6 +73,13 @@ class DefaultUpdateManager implements UpdateManager {
   }
 
   @Override
+  public Future<Void> submitAndCommit(Consumer<WriteContext> task) {
+    // Force a commit regardless of periodic-commit mode. Runs on the same single-threaded executor,
+    // so the commit is serialised ahead of any later periodic commit.
+    return submitAndAutoCommit(task);
+  }
+
+  @Override
   public ExecutorService writerThreadExecutor() {
     return executor;
   }

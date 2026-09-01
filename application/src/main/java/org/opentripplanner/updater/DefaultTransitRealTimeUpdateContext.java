@@ -58,15 +58,20 @@ public class DefaultTransitRealTimeUpdateContext implements TransitRealTimeUpdat
    * Constructor for unit tests only.
    */
   public DefaultTransitRealTimeUpdateContext(TransitRepository transitRepository) {
-    this(transitRepository, null, () -> {
-      throw new UnsupportedOperationException(
-        "The realtime-vehicle repository is not available in this test context"
-      );
-    }, () -> {
-      throw new UnsupportedOperationException(
-        "The transfer repository is not available in this test context"
-      );
-    });
+    this(
+      transitRepository,
+      null,
+      () -> {
+        throw new UnsupportedOperationException(
+          "The realtime-vehicle repository is not available in this test context"
+        );
+      },
+      () -> {
+        throw new UnsupportedOperationException(
+          "The transfer repository is not available in this test context"
+        );
+      }
+    );
   }
 
   @Override

@@ -41,6 +41,7 @@ import org.opentripplanner.standalone.config.routerconfig.RaptorEnvironmentFacto
 import org.opentripplanner.street.graph.Graph;
 import org.opentripplanner.transfer.regular.TransferRepository;
 import org.opentripplanner.transfer.regular.TransferServiceTestFactory;
+import org.opentripplanner.transfer.regular.internal.TransferRepositoryLifecycle;
 import org.opentripplanner.transit.repository.DefaultTimetableRepository;
 import org.opentripplanner.transit.repository.TimetableRepository;
 import org.opentripplanner.transit.repository.TimetableRepositoryLifecycle;
@@ -151,11 +152,17 @@ public class SpeedTest {
       threadFactory
     );
 
+    var transferHandle = registry.registerRepository(
+      transferRepository,
+      new TransferRepositoryLifecycle()
+    );
+
     UpdaterConfigurator.configure(
       graph,
       DeduplicatorService.NOOP,
       VertexLinkerTestFactory.of(graph),
       realtimeVehicleHandle,
+      transferHandle,
       new DefaultVehicleRentalRepository(),
       new DefaultVehicleParkingRepository(),
       transitRepository,
@@ -196,7 +203,10 @@ public class SpeedTest {
       TestServerContext.createStreetLimitationParametersService(),
       TestServerContext.createVehicleRentalService(),
       TestServerContext.createStreetDetailsService(),
-      TransferServiceTestFactory.transferService(transferRepository),
+      TransferServiceTestFactory.transferService(
+        transferRepository,
+        transitRepository.getSiteRepository().stopIndexSize()
+      ),
       routerConfig.flexParameters(),
       List.of(),
       null,

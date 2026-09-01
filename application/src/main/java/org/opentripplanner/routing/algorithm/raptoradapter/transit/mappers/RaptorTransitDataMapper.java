@@ -78,7 +78,7 @@ public class RaptorTransitDataMapper {
 
     tripPatternsByStopByDate = mapTripPatterns(allTripPatterns);
 
-    transfersByStopIndex = mapTransfers(siteRepository, transferRepository);
+    transfersByStopIndex = mapTransfers(siteRepository.stopIndexSize(), transferRepository);
 
     TransferIndexGenerator transferIndexGenerator = null;
     if (OTPFeature.TransferConstraints.isOn()) {

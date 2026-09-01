@@ -63,6 +63,20 @@ public interface UpdateManager {
   Future<Void> submit(Consumer<WriteContext> task);
 
   /**
+   * Submit a task and commit synchronously as soon as it completes, regardless of whether this
+   * manager is in periodic-commit mode. The returned {@link Future} resolves after the commit; on
+   * task failure a rollback is performed and the exception is propagated through the Future.
+   * <p>
+   * Intended for one-off startup seeding that must be visible before the server serves requests
+   * (e.g. publishing the initial stop count). In atomic-commit mode this behaves like
+   * {@link #submit(Consumer)}.
+   *
+   * @param task the task to execute
+   * @return a {@link Future} that completes after the task and its commit have run
+   */
+  Future<Void> submitAndCommit(Consumer<WriteContext> task);
+
+  /**
    * The single-threaded executor running all submitted write tasks. Exposed for monitoring
    * purposes only, e.g. to observe the length of the task queue on the writer thread. Never
    * submit tasks directly to the executor — use {@link #submit(Consumer)}.

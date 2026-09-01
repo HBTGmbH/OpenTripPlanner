@@ -241,7 +241,10 @@ class ScheduledDeviatedTripIntegrationTest {
         TestServerContext.createRaptorConfig(),
         Metrics.globalRegistry,
         TestServerContext.createStreetDetailsService(),
-        TransferServiceTestFactory.transferService(transferRepository),
+        TransferServiceTestFactory.transferService(
+          transferRepository,
+          transitService.getRaptorTransitData().getStopCount()
+        ),
         RouterConfig.DEFAULT.flexParameters(),
         List.of(),
         null,

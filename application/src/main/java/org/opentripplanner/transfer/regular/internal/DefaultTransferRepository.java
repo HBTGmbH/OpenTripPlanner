@@ -9,8 +9,8 @@ import org.opentripplanner.street.model.StreetMode;
 import org.opentripplanner.transfer.regular.TransferRepository;
 import org.opentripplanner.transfer.regular.TransferRepositorySnapshot;
 import org.opentripplanner.transfer.regular.model.PathTransfer;
+import org.opentripplanner.transfer.regular.model.TransfersMapper;
 import org.opentripplanner.transit.model.site.StopLocation;
-import org.opentripplanner.transit.service.SiteRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,12 +23,13 @@ public class DefaultTransferRepository implements TransferRepository {
   private final TransferIndex index;
 
   /**
-   * Needed by {@link #freeze()} to derive {@link TransferRepositorySnapshot#transfersByStopIndex()}
-   * for the Raptor path. Captured at registration time via {@link #setSiteRepository(SiteRepository)}
-   * and deliberately not serialized — it is an application-scoped singleton, so storing it in the
-   * serialized graph would duplicate it and risk identity mismatch.
+   * The size of the dense stop-index space, needed by {@link #freeze()} to build
+   * {@link TransferRepositorySnapshot#transfersByStopIndex()} for the Raptor path. Delivered via a
+   * {@code StopCountChangedEvent} (and threaded across copy-on-write), so this repository has no
+   * direct dependency on the {@code SiteRepository}. Deliberately not serialized — it is build-time
+   * state that is always re-seeded by the initial event at startup.
    */
-  private transient SiteRepository siteRepository;
+  private transient int stopCount = 0;
 
   public DefaultTransferRepository(TransferIndex index) {
     this.index = index;
@@ -78,22 +79,28 @@ public class DefaultTransferRepository implements TransferRepository {
   }
 
   /**
-   * Capture the {@link SiteRepository} so that {@link #freeze()} can derive the stop-indexed
-   * transfer list for the Raptor path. Called once, at wiring time, before the initial snapshot is
-   * frozen. Not serialized.
+   * Set the size of the dense stop-index space used by {@link #freeze()} to build the stop-indexed
+   * transfer list. Written by the {@code StopCountChangedEventHandler} inside a write transaction,
+   * and by {@code DefaultTransferRepositorySnapshot#copyOnWrite()} to carry the value forward.
    */
-  public void setSiteRepository(SiteRepository siteRepository) {
-    this.siteRepository = siteRepository;
+  void setStopCount(int stopCount) {
+    this.stopCount = stopCount;
+  }
+
+  int stopCount() {
+    return stopCount;
   }
 
   /**
    * Produce an immutable snapshot of the current state. Used by the repository lifecycle at commit,
-   * and exposed publicly so tests can build a read view from a populated repository.
+   * and exposed publicly so tests can build a read view from a populated repository. The stop-indexed
+   * transfer list for the Raptor path is built eagerly here from the current {@link #stopCount}.
    */
   public TransferRepositorySnapshot freeze() {
     return new DefaultTransferRepositorySnapshot(
       ImmutableListMultimap.copyOf(transfersByStop),
-      siteRepository
+      TransfersMapper.mapTransfers(stopCount, this),
+      stopCount
     );
   }
 }

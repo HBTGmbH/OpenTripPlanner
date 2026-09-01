@@ -86,7 +86,10 @@ public class RaptorTransitData {
    * substituting the list naturally causes a cache miss and a fresh {@code RaptorTransferIndex}
    * build for the new transfers.
    */
-  public RaptorTransitData(RaptorTransitData raptorTransitData, List<List<PathTransfer>> transfersByStopIndex) {
+  public RaptorTransitData(
+    RaptorTransitData raptorTransitData,
+    List<List<PathTransfer>> transfersByStopIndex
+  ) {
     this(
       raptorTransitData.tripPatternsRunningOnDate,
       transfersByStopIndex,

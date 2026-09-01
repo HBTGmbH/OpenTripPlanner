@@ -54,10 +54,11 @@ import org.opentripplanner.standalone.config.routerconfig.RaptorEnvironmentFacto
 import org.opentripplanner.street.graph.Graph;
 import org.opentripplanner.street.linking.VertexLinker;
 import org.opentripplanner.street.service.StreetLimitationParametersService;
-import org.opentripplanner.transfer.regular.RegularTransferService;
-import org.opentripplanner.transfer.regular.TransferServiceTestFactory;
+import org.opentripplanner.transfer.regular.TransferRepository;
+import org.opentripplanner.transfer.regular.TransferRepositorySnapshot;
 import org.opentripplanner.transfer.regular.internal.DefaultTransferRepository;
 import org.opentripplanner.transfer.regular.internal.TransferIndex;
+import org.opentripplanner.transfer.regular.internal.TransferRepositoryLifecycle;
 import org.opentripplanner.transit.model.calendar.DefaultTripCalendars;
 import org.opentripplanner.transit.repository.DefaultTimetableRepository;
 import org.opentripplanner.transit.repository.TimetableRepository;
@@ -97,7 +98,10 @@ class RequestScopedFactoryTest {
     var routerConfig = RouterConfig.DEFAULT;
     var graph = new Graph();
     var vertexLinker = VertexLinkerTestFactory.of(graph);
-    var transferRepository = new DefaultTransferRepository(new TransferIndex());
+    var transferRepositoryHandle = repositoryRegistry.registerRepository(
+      new DefaultTransferRepository(new TransferIndex()),
+      new TransferRepositoryLifecycle()
+    );
     // Only used to wire up the throwaway helper services below; not part of what's under test.
     var placeholderTransitService = new DefaultTransitService(transitRepository);
 
@@ -122,7 +126,7 @@ class RequestScopedFactoryTest {
         )
       )
       .vertexLinker(vertexLinker)
-      .transferService(TransferServiceTestFactory.transferService(transferRepository))
+      .transferRepositoryHandle(transferRepositoryHandle)
       .worldEnvelopeService(TestServerContext.createWorldEnvelopeService())
       .realtimeVehicleRepositoryHandle(realtimeVehicleRepositoryHandle)
       .vehicleRentalService(new DefaultVehicleRentalService(new DefaultVehicleRentalRepository()))
@@ -215,7 +219,9 @@ class RequestScopedFactoryTest {
       Builder vertexLinker(VertexLinker vertexLinker);
 
       @BindsInstance
-      Builder transferService(RegularTransferService transferService);
+      Builder transferRepositoryHandle(
+        RepositoryHandle<TransferRepositorySnapshot, TransferRepository> transferRepositoryHandle
+      );
 
       @BindsInstance
       Builder worldEnvelopeService(WorldEnvelopeService worldEnvelopeService);

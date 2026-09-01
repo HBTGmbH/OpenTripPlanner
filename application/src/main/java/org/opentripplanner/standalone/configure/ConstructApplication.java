@@ -1,6 +1,7 @@
 package org.opentripplanner.standalone.configure;
 
 import jakarta.ws.rs.core.Application;
+import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import org.opentripplanner.core.framework.deduplicator.DeduplicatorService;
 import org.opentripplanner.datastore.api.DataSource;
@@ -43,6 +44,7 @@ import org.opentripplanner.street.graph.Graph;
 import org.opentripplanner.street.linking.VertexLinker;
 import org.opentripplanner.transfer.regular.TransferRepository;
 import org.opentripplanner.transfer.regular.TransferRepositorySnapshot;
+import org.opentripplanner.transit.service.StopCountChangedEvent;
 import org.opentripplanner.transit.service.TransitRepository;
 import org.opentripplanner.updater.configure.UpdaterConfigurator;
 import org.opentripplanner.utils.logging.ProgressTracker;
@@ -228,6 +230,8 @@ public class ConstructApplication {
       otpConfig().gbfsNetworks
     );
 
+    seedTransferStopCount();
+
     // Start application warmup — runs routing queries to warm up the application
     factory.warmupLauncher().start();
 
@@ -239,6 +243,29 @@ public class ConstructApplication {
       LOG.info("Initializing geocoder");
       // eagerly initialize the geocoder
       this.factory.luceneIndex();
+    }
+  }
+
+  /**
+   * Publish the initial {@link StopCountChangedEvent} so the transfer repository can build its
+   * stop-indexed transfer list for the Raptor path. This runs after updater configuration (so the
+   * handler is registered) and before warmup (which issues routing queries that read the index). The
+   * forced commit is required because the transit update manager runs in periodic-commit mode; the
+   * blocking {@code get()} guarantees the seeded snapshot is committed before the server serves
+   * requests.
+   */
+  private void seedTransferStopCount() {
+    int stopCount = transitRepository().getSiteRepository().stopIndexSize();
+    try {
+      factory
+        .transitUpdateManager()
+        .submitAndCommit(ctx -> ctx.publish(new StopCountChangedEvent(stopCount)))
+        .get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException("Interrupted while seeding transfer stop count", e);
+    } catch (ExecutionException e) {
+      throw new RuntimeException("Failed to seed transfer stop count", e);
     }
   }
 
@@ -318,7 +345,10 @@ public class ConstructApplication {
     return factory.realtimeVehicleRepositoryHandle();
   }
 
-  public RepositoryHandle<TransferRepositorySnapshot, TransferRepository> transferRepositoryHandle() {
+  public RepositoryHandle<
+    TransferRepositorySnapshot,
+    TransferRepository
+  > transferRepositoryHandle() {
     return factory.transferRepositoryHandle();
   }
 
