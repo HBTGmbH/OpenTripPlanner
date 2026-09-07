@@ -35,11 +35,6 @@ public class DefaultTransferRepository implements TransferRepository {
     this.index = index;
   }
 
-  @Override
-  public Collection<PathTransfer> findTransfersByStop(StopLocation stop) {
-    return transfersByStop.get(stop);
-  }
-
   /** Pre-generated transfers between all stops filtered based on the modes in the PathTransfer. */
   @Override
   public List<PathTransfer> findTransfersByMode(StreetMode mode) {
@@ -68,22 +63,13 @@ public class DefaultTransferRepository implements TransferRepository {
     LOG.info("Transfer repository indexing complete.");
   }
 
-  @Override
-  public Collection<PathTransfer> findWalkTransfersToStop(StopLocation toStop) {
-    return index.findWalkTransfersToStop(toStop);
-  }
-
-  @Override
-  public Collection<PathTransfer> findWalkTransfersFromStop(StopLocation fromStop) {
-    return index.findWalkTransfersFromStop(fromStop);
-  }
-
   /**
    * Set the size of the dense stop-index space used by {@link #freeze()} to build the stop-indexed
    * transfer list. Written by the {@code StopCountChangedEventHandler} inside a write transaction,
    * and by {@code DefaultTransferRepositorySnapshot#copyOnWrite()} to carry the value forward.
    */
-  void setStopCount(int stopCount) {
+  @Override
+  public void setStopCount(int stopCount) {
     this.stopCount = stopCount;
   }
 

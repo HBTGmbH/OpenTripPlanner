@@ -23,8 +23,6 @@ public class StopCountChangedEventHandler
 
   @Override
   public void handle(StopCountChangedEvent event, TransferRepository repository) {
-    // The cast is safe: all transfer repositories are DefaultTransferRepository instances.
-    // TODO Max: dont do the cast
-    ((DefaultTransferRepository) repository).setStopCount(event.stopCount());
+    repository.setStopCount(event.stopCount());
   }
 }

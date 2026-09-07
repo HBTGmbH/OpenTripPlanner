@@ -29,7 +29,7 @@ class FlexTransferIndexTest {
     var repo = new DefaultTransferRepository(index);
     repo.addAllTransfersByStops(TRANSFERS);
     repo.index();
-    assertThat(repo.findWalkTransfersToStop(S1)).isNotEmpty();
+    assertThat(index.findWalkTransfersToStop(S1)).isNotEmpty();
   }
 
   @Test
