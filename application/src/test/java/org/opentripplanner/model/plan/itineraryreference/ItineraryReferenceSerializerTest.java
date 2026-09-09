@@ -144,9 +144,7 @@ class ItineraryReferenceSerializerTest {
   void roundTripWithoutFromOrTo() {
     var ref = defaultReference(List.of(LEG_A_TO_B));
 
-    var decoded = ItineraryReferenceSerializer.decode(
-      ItineraryReferenceSerializer.encode(ref)
-    );
+    var decoded = ItineraryReferenceSerializer.decode(ItineraryReferenceSerializer.encode(ref));
 
     assertNotNull(decoded);
     assertEquals(ref, decoded);
@@ -232,9 +230,7 @@ class ItineraryReferenceSerializerTest {
   void latitudeWithoutLongitudeDecodesToNull() {
     String validLegToken = LegReferenceSerializer.encode(LEG_A_TO_B);
 
-    String craftedToken = craftedTokenBuilder(validLegToken)
-      .withString("fromLat", "1.0")
-      .build();
+    String craftedToken = craftedTokenBuilder(validLegToken).withString("fromLat", "1.0").build();
 
     assertNull(ItineraryReferenceSerializer.decode(craftedToken));
   }
@@ -243,9 +239,7 @@ class ItineraryReferenceSerializerTest {
   void longitudeWithoutLatitudeDecodesToNull() {
     String validLegToken = LegReferenceSerializer.encode(LEG_A_TO_B);
 
-    String craftedToken = craftedTokenBuilder(validLegToken)
-      .withString("fromLng", "2.0")
-      .build();
+    String craftedToken = craftedTokenBuilder(validLegToken).withString("fromLng", "2.0").build();
 
     assertNull(ItineraryReferenceSerializer.decode(craftedToken));
   }

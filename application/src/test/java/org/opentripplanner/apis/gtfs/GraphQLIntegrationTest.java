@@ -571,7 +571,8 @@ class GraphQLIntegrationTest {
       SchemaFactory.createSchemaWithDefaultInjection(routeRequest),
       PLACE_FINDER,
       null,
-      routeRequest
+      routeRequest,
+      null
     );
   }
 

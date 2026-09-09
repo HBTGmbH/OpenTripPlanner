@@ -108,10 +108,7 @@ public class ItineraryReferenceSerializer {
       .withString(EGRESS_MODE_FIELD, ref.egressMode().name())
       .withString(TRANSFER_MODE_FIELD, ref.transferMode().name())
       .withDuration(BOARD_SLACK_DEFAULT_FIELD, ref.boardSlack().defaultValue())
-      .withString(
-        BOARD_SLACK_OVERRIDES_FIELD,
-        encodeOverrides(ref.boardSlack(), TransitMode.class)
-      )
+      .withString(BOARD_SLACK_OVERRIDES_FIELD, encodeOverrides(ref.boardSlack(), TransitMode.class))
       .withDuration(ALIGHT_SLACK_DEFAULT_FIELD, ref.alightSlack().defaultValue())
       .withString(
         ALIGHT_SLACK_OVERRIDES_FIELD,
@@ -147,8 +144,8 @@ public class ItineraryReferenceSerializer {
       String joinedLegReferences = token.getString(LEG_REFERENCES_FIELD).orElseThrow();
 
       List<LegReference> legReferences = Arrays.stream(
-          joinedLegReferences.split(LEG_REFERENCE_DELIMITER, -1)
-        )
+        joinedLegReferences.split(LEG_REFERENCE_DELIMITER, -1)
+      )
         .map(LegReferenceSerializer::decode)
         .map(Objects::requireNonNull)
         .toList();
@@ -173,9 +170,7 @@ public class ItineraryReferenceSerializer {
       );
 
       var walkSpeed = Double.parseDouble(token.getString(WALK_SPEED_FIELD).orElseThrow());
-      var walkReluctance = Double.parseDouble(
-        token.getString(WALK_RELUCTANCE_FIELD).orElseThrow()
-      );
+      var walkReluctance = Double.parseDouble(token.getString(WALK_RELUCTANCE_FIELD).orElseThrow());
 
       var maxAccessEgressDuration = decodeDurationForEnum(
         StreetMode.class,
@@ -236,10 +231,7 @@ public class ItineraryReferenceSerializer {
       }
     }
 
-    builder
-      .withString(stopIdField, stopId)
-      .withString(latField, lat)
-      .withString(lngField, lng);
+    builder.withString(stopIdField, stopId).withString(latField, lat).withString(lngField, lng);
   }
 
   /**
@@ -260,9 +252,7 @@ public class ItineraryReferenceSerializer {
     var lng = token.getString(lngField).map(Double::parseDouble);
 
     if (lat.isPresent() != lng.isPresent()) {
-      throw new IllegalArgumentException(
-        "Location must contain both latitude and longitude"
-      );
+      throw new IllegalArgumentException("Location must contain both latitude and longitude");
     }
 
     if (lat.isPresent()) {
@@ -270,12 +260,7 @@ public class ItineraryReferenceSerializer {
       double longitude = lng.orElseThrow();
 
       if (stopId != null) {
-        return GenericLocation.fromStopIdWithFallback(
-          stopId,
-          latitude,
-          longitude,
-          null
-        );
+        return GenericLocation.fromStopIdWithFallback(stopId, latitude, longitude, null);
       }
 
       return GenericLocation.fromCoordinate(latitude, longitude);
@@ -296,10 +281,7 @@ public class ItineraryReferenceSerializer {
       .filter(value::isSet)
       .sorted(Comparator.comparing(Enum::name))
       .map(
-        e ->
-          e.name() +
-            OVERRIDE_KEY_VALUE_DELIMITER +
-            DurationUtils.durationToStr(value.valueOf(e))
+        e -> e.name() + OVERRIDE_KEY_VALUE_DELIMITER + DurationUtils.durationToStr(value.valueOf(e))
       )
       .collect(Collectors.joining(OVERRIDE_ENTRY_DELIMITER));
   }

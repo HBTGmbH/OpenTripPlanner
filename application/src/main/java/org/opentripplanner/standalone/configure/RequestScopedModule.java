@@ -40,6 +40,7 @@ import org.opentripplanner.routing.api.RoutingService;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.fares.FareService;
 import org.opentripplanner.routing.linking.LinkingContextFactory;
+import org.opentripplanner.routing.refetch.RefetchItineraryService;
 import org.opentripplanner.routing.service.DefaultRoutingService;
 import org.opentripplanner.routing.services.TransitAlertService;
 import org.opentripplanner.routing.via.ViaCoordinateTransferFactory;
@@ -268,7 +269,9 @@ public class RequestScopedModule {
     @Nullable @GtfsSchema GraphQLSchema gtfsSchema,
     Graph graph,
     LinkingContextFactory linkingContextFactory,
-    RouteRequest defaultRouteRequest
+    RouteRequest defaultRouteRequest,
+    StreetDetailsService streetDetailsService,
+    StreetLimitationParametersService streetLimitationParametersService
   ) {
     var realtimeVehicleSnapshot = realtimeVehicleRepositoryHandle.repositorySnapshot(
       transactionScope
@@ -281,6 +284,15 @@ public class RequestScopedModule {
     NearbyStopFinder nearbyStopFinder = graph.hasStreets
       ? StreetNearbyStopFinder.of(linkingContextFactory).build()
       : new StraightLineNearbyStopFinder(transitService::findRegularStopsByBoundingBox);
+    RefetchItineraryService refetchItineraryService = new RefetchItineraryService(
+      graph,
+      transitService,
+      transitAlertService,
+      transferService,
+      streetDetailsService,
+      linkingContextFactory,
+      streetLimitationParametersService
+    );
 
     return new GtfsGraphQLRequestContext(
       routingService,
@@ -294,7 +306,8 @@ public class RequestScopedModule {
       gtfsSchema,
       nearbyPlaceFinder,
       nearbyStopFinder,
-      defaultRouteRequest
+      defaultRouteRequest,
+      refetchItineraryService
     );
   }
 }

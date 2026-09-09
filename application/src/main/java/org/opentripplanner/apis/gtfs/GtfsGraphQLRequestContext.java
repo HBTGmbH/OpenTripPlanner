@@ -6,6 +6,7 @@ import org.opentripplanner.place.NearbyStopFinder;
 import org.opentripplanner.routing.api.RoutingService;
 import org.opentripplanner.routing.api.request.RouteRequest;
 import org.opentripplanner.routing.fares.FareService;
+import org.opentripplanner.routing.refetch.RefetchItineraryService;
 import org.opentripplanner.routing.services.TransitAlertService;
 import org.opentripplanner.service.realtimevehicles.RealtimeVehicleService;
 import org.opentripplanner.service.vehicleparking.VehicleParkingService;
@@ -25,7 +26,8 @@ public record GtfsGraphQLRequestContext(
   GraphQLSchema schema,
   NearbyPlaceFinder nearbyPlaceFinder,
   NearbyStopFinder nearbyStopFinder,
-  RouteRequest defaultRouteRequest
+  RouteRequest defaultRouteRequest,
+  RefetchItineraryService refetchItineraryService
 ) {
   /**
    * Returns a clone of the default route request. The clone is necessary because one HTTP
