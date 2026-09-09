@@ -1,18 +1,25 @@
 package org.opentripplanner.model.plan.itineraryreference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.core.model.id.FeedScopedIdForTestFactory;
+import org.opentripplanner.framework.token.TokenBuilder;
 import org.opentripplanner.framework.token.TokenSchema;
+import org.opentripplanner.model.GenericLocation;
+import org.opentripplanner.model.plan.legreference.LegReference;
 import org.opentripplanner.model.plan.legreference.LegReferenceSerializer;
 import org.opentripplanner.model.plan.legreference.ScheduledTransitLegReference;
+import org.opentripplanner.routing.api.request.framework.DurationForEnum;
 import org.opentripplanner.street.model.StreetMode;
+import org.opentripplanner.transit.model.basic.TransitMode;
 
 class ItineraryReferenceSerializerTest {
 
@@ -43,9 +50,27 @@ class ItineraryReferenceSerializerTest {
     null
   );
 
+  /** A reference with plain, no-override defaults - used where the other fields don't matter. */
+  private static ItineraryReference defaultReference(List<LegReference> legReferences) {
+    return new ItineraryReference(
+      legReferences,
+      null,
+      null,
+      StreetMode.WALK,
+      StreetMode.WALK,
+      StreetMode.WALK,
+      DurationForEnum.of(TransitMode.class).build(),
+      DurationForEnum.of(TransitMode.class).build(),
+      1.3,
+      2.0,
+      DurationForEnum.of(StreetMode.class).build(),
+      false
+    );
+  }
+
   @Test
   void roundTripSingleLeg() {
-    var ref = new ItineraryReference(List.of(LEG_A_TO_B), StreetMode.WALK, false);
+    var ref = defaultReference(List.of(LEG_A_TO_B));
 
     var decoded = ItineraryReferenceSerializer.decode(ItineraryReferenceSerializer.encode(ref));
 
@@ -54,7 +79,7 @@ class ItineraryReferenceSerializerTest {
 
   @Test
   void roundTripMultipleLegs() {
-    var ref = new ItineraryReference(List.of(LEG_A_TO_B, LEG_B_TO_C), StreetMode.WALK, false);
+    var ref = defaultReference(List.of(LEG_A_TO_B, LEG_B_TO_C));
 
     var decoded = ItineraryReferenceSerializer.decode(ItineraryReferenceSerializer.encode(ref));
 
@@ -63,7 +88,88 @@ class ItineraryReferenceSerializerTest {
 
   @Test
   void roundTripNonWalkTransferModeAndWheelchair() {
-    var ref = new ItineraryReference(List.of(LEG_A_TO_B), StreetMode.BIKE, true);
+    var ref = new ItineraryReference(
+      List.of(LEG_A_TO_B),
+      null,
+      null,
+      StreetMode.WALK,
+      StreetMode.WALK,
+      StreetMode.BIKE,
+      DurationForEnum.of(TransitMode.class).build(),
+      DurationForEnum.of(TransitMode.class).build(),
+      1.3,
+      2.0,
+      DurationForEnum.of(StreetMode.class).build(),
+      true
+    );
+
+    var decoded = ItineraryReferenceSerializer.decode(ItineraryReferenceSerializer.encode(ref));
+
+    assertEquals(ref, decoded);
+  }
+
+  @Test
+  void roundTripFullFieldSet() {
+    var ref = new ItineraryReference(
+      List.of(LEG_A_TO_B, LEG_B_TO_C),
+      GenericLocation.fromStopIdWithFallback(STOP_A_ID, 1.0, 2.0, null),
+      GenericLocation.fromCoordinate(3.0, 4.0),
+      StreetMode.BIKE,
+      StreetMode.CAR,
+      StreetMode.WALK,
+      DurationForEnum.of(TransitMode.class)
+        .withDefaultSec(60)
+        .with(TransitMode.BUS, Duration.ofSeconds(90))
+        .with(TransitMode.RAIL, Duration.ofSeconds(120))
+        .build(),
+      DurationForEnum.of(TransitMode.class)
+        .withDefaultSec(30)
+        .with(TransitMode.FERRY, Duration.ofSeconds(180))
+        .build(),
+      2.5,
+      3.25,
+      DurationForEnum.of(StreetMode.class)
+        .withDefault(Duration.ofMinutes(20))
+        .with(StreetMode.BIKE, Duration.ofMinutes(15))
+        .build(),
+      true
+    );
+
+    var decoded = ItineraryReferenceSerializer.decode(ItineraryReferenceSerializer.encode(ref));
+
+    assertEquals(ref, decoded);
+  }
+
+  @Test
+  void roundTripWithoutFromOrTo() {
+    var ref = defaultReference(List.of(LEG_A_TO_B));
+
+    var decoded = ItineraryReferenceSerializer.decode(
+      ItineraryReferenceSerializer.encode(ref)
+    );
+
+    assertNotNull(decoded);
+    assertEquals(ref, decoded);
+    assertNull(decoded.from());
+    assertNull(decoded.to());
+  }
+
+  @Test
+  void roundTripStopOnlyLocation() {
+    var ref = new ItineraryReference(
+      List.of(LEG_A_TO_B),
+      GenericLocation.fromStopId(STOP_A_ID),
+      GenericLocation.fromStopId(STOP_B_ID),
+      StreetMode.WALK,
+      StreetMode.WALK,
+      StreetMode.WALK,
+      DurationForEnum.of(TransitMode.class).build(),
+      DurationForEnum.of(TransitMode.class).build(),
+      1.3,
+      2.0,
+      DurationForEnum.of(StreetMode.class).build(),
+      false
+    );
 
     var decoded = ItineraryReferenceSerializer.decode(ItineraryReferenceSerializer.encode(ref));
 
@@ -93,20 +199,19 @@ class ItineraryReferenceSerializerTest {
   @Test
   void truncatedTokenDecodesToNull() {
     var encoded = Objects.requireNonNull(
-      ItineraryReferenceSerializer.encode(
-        new ItineraryReference(List.of(LEG_A_TO_B), StreetMode.WALK, false)
-      )
+      ItineraryReferenceSerializer.encode(defaultReference(List.of(LEG_A_TO_B)))
     );
 
     var truncated = encoded.substring(0, encoded.length() / 2);
+
     assertNull(ItineraryReferenceSerializer.decode(truncated));
   }
 
   /**
    * A trailing delimiter in the joined leg-references field must not be silently dropped by
    * {@code split}, which would otherwise let a corrupted value decode as if the trailing empty
-   * segment didn't exist. Crafts a token with the exact same field shape production uses
-   * (legReferences, transferMode, wheelchair) so this isolates the delimiter defense rather than
+   * segment didn't exist. Crafts a token with the exact same field shape production uses, with
+   * valid values for every other field, so this isolates the delimiter defense rather than
    * failing for an unrelated "missing field" reason.
    */
   @Test
@@ -114,18 +219,86 @@ class ItineraryReferenceSerializerTest {
     String validLegToken = LegReferenceSerializer.encode(LEG_A_TO_B);
     String joinedWithTrailingDelimiter = validLegToken + "~";
 
-    var schema = TokenSchema.ofVersion(1)
-      .addString("legReferences")
-      .addString("transferMode")
-      .addBoolean("wheelchair")
-      .build();
-    String craftedToken = schema
-      .encode()
-      .withString("legReferences", joinedWithTrailingDelimiter)
-      .withString("transferMode", StreetMode.WALK.name())
-      .withBoolean("wheelchair", false)
+    String craftedToken = craftedTokenBuilder(joinedWithTrailingDelimiter).build();
+
+    assertNull(ItineraryReferenceSerializer.decode(craftedToken));
+  }
+
+  /**
+   * A location with only one of latitude/longitude present must be rejected as malformed, not
+   * silently treated as "no coordinate" or "stop only".
+   */
+  @Test
+  void latitudeWithoutLongitudeDecodesToNull() {
+    String validLegToken = LegReferenceSerializer.encode(LEG_A_TO_B);
+
+    String craftedToken = craftedTokenBuilder(validLegToken)
+      .withString("fromLat", "1.0")
       .build();
 
     assertNull(ItineraryReferenceSerializer.decode(craftedToken));
+  }
+
+  @Test
+  void longitudeWithoutLatitudeDecodesToNull() {
+    String validLegToken = LegReferenceSerializer.encode(LEG_A_TO_B);
+
+    String craftedToken = craftedTokenBuilder(validLegToken)
+      .withString("fromLng", "2.0")
+      .build();
+
+    assertNull(ItineraryReferenceSerializer.decode(craftedToken));
+  }
+
+  /**
+   * A {@link TokenBuilder} pre-filled with otherwise-valid values for every field production
+   * uses, and no {@code from}/{@code to} location - so a test only needs to override the one
+   * field it wants to make malformed. Field names/order must match
+   * {@code ItineraryReferenceSerializer}'s schema exactly.
+   */
+  private static TokenBuilder craftedTokenBuilder(String legReferencesValue) {
+    var schema = TokenSchema.ofVersion(1)
+      .addString("legReferences")
+      .addString("fromStopId")
+      .addString("fromLat")
+      .addString("fromLng")
+      .addString("toStopId")
+      .addString("toLat")
+      .addString("toLng")
+      .addString("accessMode")
+      .addString("egressMode")
+      .addString("transferMode")
+      .addDuration("boardSlackDefault")
+      .addString("boardSlackOverrides")
+      .addDuration("alightSlackDefault")
+      .addString("alightSlackOverrides")
+      .addString("walkSpeed")
+      .addString("walkReluctance")
+      .addDuration("maxAccessEgressDurationDefault")
+      .addString("maxAccessEgressDurationOverrides")
+      .addBoolean("wheelchair")
+      .build();
+
+    return schema
+      .encode()
+      .withString("legReferences", legReferencesValue)
+      .withString("fromStopId", null)
+      .withString("fromLat", null)
+      .withString("fromLng", null)
+      .withString("toStopId", null)
+      .withString("toLat", null)
+      .withString("toLng", null)
+      .withString("accessMode", StreetMode.WALK.name())
+      .withString("egressMode", StreetMode.WALK.name())
+      .withString("transferMode", StreetMode.WALK.name())
+      .withDuration("boardSlackDefault", Duration.ZERO)
+      .withString("boardSlackOverrides", "")
+      .withDuration("alightSlackDefault", Duration.ZERO)
+      .withString("alightSlackOverrides", "")
+      .withString("walkSpeed", "1.3")
+      .withString("walkReluctance", "2.0")
+      .withDuration("maxAccessEgressDurationDefault", Duration.ZERO)
+      .withString("maxAccessEgressDurationOverrides", "")
+      .withBoolean("wheelchair", false);
   }
 }
