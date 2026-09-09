@@ -62,7 +62,7 @@ class ItineraryReferenceMapperTest {
       routeRequest
     );
 
-    var reference = ItineraryReferenceMapper.toItineraryReference(originalItinerary);
+    var reference = ItineraryReferenceMapper.toItineraryReference(originalItinerary, routeRequest);
 
     var encoded = ItineraryReferenceSerializer.encode(reference);
     assertNotNull(encoded);
@@ -87,8 +87,29 @@ class ItineraryReferenceMapperTest {
     var streetOnlyItinerary = newItinerary(from, 0).walk(200, to).build();
 
     assertThrows(UnsupportedItineraryReferenceException.class, () ->
-      ItineraryReferenceMapper.toItineraryReference(streetOnlyItinerary)
+      ItineraryReferenceMapper.toItineraryReference(streetOnlyItinerary, routeRequest())
     );
+  }
+
+  @Test
+  void ignoresStreetLegsWhenExtractingTransitSpine() {
+    var boardPlace = Place.forStop(STOP_A);
+    var alightPlace = Place.forStop(STOP_B);
+
+    // WALK -> BUS -> WALK: the walk (access/egress) legs have no LegReference and must be
+    // ignored rather than making the whole itinerary unsupported.
+    var itinerary = newItinerary(boardPlace, 0)
+      .walk(200, boardPlace)
+      .bus(1, 200, 300, alightPlace)
+      .walk(200, alightPlace)
+      .build();
+
+    var expectedLegReference = itinerary.legs().get(1).legReference();
+    assertNotNull(expectedLegReference);
+
+    var reference = ItineraryReferenceMapper.toItineraryReference(itinerary, routeRequest());
+
+    assertEquals(List.of(expectedLegReference), reference.legReferences());
   }
 
   private ScheduledTransitLegReference legRef() {

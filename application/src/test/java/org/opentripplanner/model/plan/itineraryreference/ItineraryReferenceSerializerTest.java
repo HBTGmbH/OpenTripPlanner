@@ -12,6 +12,7 @@ import org.opentripplanner.core.model.id.FeedScopedIdForTestFactory;
 import org.opentripplanner.framework.token.TokenSchema;
 import org.opentripplanner.model.plan.legreference.LegReferenceSerializer;
 import org.opentripplanner.model.plan.legreference.ScheduledTransitLegReference;
+import org.opentripplanner.street.model.StreetMode;
 
 class ItineraryReferenceSerializerTest {
 
@@ -44,7 +45,7 @@ class ItineraryReferenceSerializerTest {
 
   @Test
   void roundTripSingleLeg() {
-    var ref = new ItineraryReference(List.of(LEG_A_TO_B));
+    var ref = new ItineraryReference(List.of(LEG_A_TO_B), StreetMode.WALK, false);
 
     var decoded = ItineraryReferenceSerializer.decode(ItineraryReferenceSerializer.encode(ref));
 
@@ -53,7 +54,16 @@ class ItineraryReferenceSerializerTest {
 
   @Test
   void roundTripMultipleLegs() {
-    var ref = new ItineraryReference(List.of(LEG_A_TO_B, LEG_B_TO_C));
+    var ref = new ItineraryReference(List.of(LEG_A_TO_B, LEG_B_TO_C), StreetMode.WALK, false);
+
+    var decoded = ItineraryReferenceSerializer.decode(ItineraryReferenceSerializer.encode(ref));
+
+    assertEquals(ref, decoded);
+  }
+
+  @Test
+  void roundTripNonWalkTransferModeAndWheelchair() {
+    var ref = new ItineraryReference(List.of(LEG_A_TO_B), StreetMode.BIKE, true);
 
     var decoded = ItineraryReferenceSerializer.decode(ItineraryReferenceSerializer.encode(ref));
 
@@ -83,7 +93,9 @@ class ItineraryReferenceSerializerTest {
   @Test
   void truncatedTokenDecodesToNull() {
     var encoded = Objects.requireNonNull(
-      ItineraryReferenceSerializer.encode(new ItineraryReference(List.of(LEG_A_TO_B)))
+      ItineraryReferenceSerializer.encode(
+        new ItineraryReference(List.of(LEG_A_TO_B), StreetMode.WALK, false)
+      )
     );
 
     var truncated = encoded.substring(0, encoded.length() / 2);
@@ -91,19 +103,27 @@ class ItineraryReferenceSerializerTest {
   }
 
   /**
-   * A trailing delimiter must not be silently dropped by {@code split}, which would otherwise
-   * let a corrupted "joined leg references" value decode as if the trailing empty segment
-   * didn't exist.
+   * A trailing delimiter in the joined leg-references field must not be silently dropped by
+   * {@code split}, which would otherwise let a corrupted value decode as if the trailing empty
+   * segment didn't exist. Crafts a token with the exact same field shape production uses
+   * (legReferences, transferMode, wheelchair) so this isolates the delimiter defense rather than
+   * failing for an unrelated "missing field" reason.
    */
   @Test
   void malformedNestedLegReferenceDecodesToNull() {
     String validLegToken = LegReferenceSerializer.encode(LEG_A_TO_B);
     String joinedWithTrailingDelimiter = validLegToken + "~";
 
-    var schema = TokenSchema.ofVersion(1).addString("legReferences").build();
+    var schema = TokenSchema.ofVersion(1)
+      .addString("legReferences")
+      .addString("transferMode")
+      .addBoolean("wheelchair")
+      .build();
     String craftedToken = schema
       .encode()
       .withString("legReferences", joinedWithTrailingDelimiter)
+      .withString("transferMode", StreetMode.WALK.name())
+      .withBoolean("wheelchair", false)
       .build();
 
     assertNull(ItineraryReferenceSerializer.decode(craftedToken));
