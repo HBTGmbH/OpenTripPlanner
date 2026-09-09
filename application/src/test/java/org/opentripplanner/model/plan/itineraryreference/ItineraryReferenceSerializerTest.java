@@ -82,9 +82,9 @@ class ItineraryReferenceSerializerTest {
 
   @Test
   void truncatedTokenDecodesToNull() {
-
     var encoded = Objects.requireNonNull(
-      ItineraryReferenceSerializer.encode(new ItineraryReference(List.of(LEG_A_TO_B))));
+      ItineraryReferenceSerializer.encode(new ItineraryReference(List.of(LEG_A_TO_B)))
+    );
 
     var truncated = encoded.substring(0, encoded.length() / 2);
     assertNull(ItineraryReferenceSerializer.decode(truncated));
