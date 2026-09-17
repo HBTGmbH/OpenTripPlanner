@@ -306,9 +306,7 @@ class GraphQLIntegrationTest {
     DefaultTimetableRepository timetableSnapshot = new DefaultTimetableRepository(
       RaptorTransitDataTestFactory.empty(),
       transitRepository.getTripCalendar(),
-      transitRepository.getAllTripPatterns(),
-      transitRepository.getAllTripsOnServiceDates(),
-      transitRepository.getAllFlexTrips()
+      transitRepository.getScheduledTransitEntities()
     );
     timetableSnapshot.update(
       RealTimeTripUpdate.of(

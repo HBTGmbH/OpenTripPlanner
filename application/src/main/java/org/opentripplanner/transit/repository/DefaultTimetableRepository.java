@@ -28,7 +28,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.opentripplanner.core.model.id.FeedScopedId;
-import org.opentripplanner.ext.flex.trip.FlexTrip;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.RaptorTransitData;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.mappers.TimetableUpdateMapper;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.mappers.TripPatternForDateMapper;
@@ -174,16 +173,15 @@ public class DefaultTimetableRepository implements TimetableRepository {
   private TripCalendars tripCalendars;
 
   /**
-   * Index of the scheduled (non-realtime) routes, trips and trip patterns, built once from the
-   * collections handed to the constructor and shared, unchanged, by every snapshot produced by
-   * {@link #createSnapshot()} — the scheduled data itself never changes at runtime. This is what
-   * lets {@link #getRoute}, {@link #getTrip}, {@link #findPattern}, and friends answer
-   * "realtime-first, scheduled-fallback" without any help from the rest of the codebase.
+   * The scheduled (non-realtime) routes, trips and trip patterns, shared, unchanged, by every
+   * snapshot produced by {@link #createSnapshot()} — the scheduled data itself never changes at
+   * runtime. This is what lets {@link #getRoute}, {@link #getTrip}, {@link #findPattern}, and
+   * friends answer "realtime-first, scheduled-fallback" without any help from the rest of the
+   * codebase.
    * <p>
-   * Built from a subset of {@code TransitRepository}'s public accessors
-   * ({@code getAllTripPatterns()}, {@code getAllTripsOnServiceDates()}, {@code getAllFlexTrips()})
-   * rather than holding a reference to the whole {@code TransitRepository} — this repository only
-   * ever needs timetable-shaped scheduled data, not agencies, stops, or notices.
+   * This is the same instance held by {@code TransitRepository} (see {@code
+   * TransitRepository.getScheduledTransitEntities()}), which is where it's populated during graph
+   * build.
    */
   private final ScheduledTransitEntities scheduledIndex;
 
@@ -211,24 +209,19 @@ public class DefaultTimetableRepository implements TimetableRepository {
     RaptorTransitData raptorTransitData,
     TripCalendars tripCalendars
   ) {
-    this(raptorTransitData, tripCalendars, List.of(), List.of(), List.of());
+    this(raptorTransitData, tripCalendars, new ScheduledTransitEntities());
   }
 
   /**
-   * @param scheduledTripPatterns all scheduled (non-realtime) trip patterns, e.g.
-   *                              {@code TransitRepository.getAllTripPatterns()}
-   * @param scheduledTripsOnServiceDate all scheduled trips-on-service-date, e.g.
-   *                              {@code TransitRepository.getAllTripsOnServiceDates()}
-   * @param scheduledFlexTrips all scheduled flex trips, e.g.
-   *                              {@code TransitRepository.getAllFlexTrips()}; may be empty when
-   *                              flex routing is disabled
+   * @param scheduledTransitEntities the scheduled (non-realtime) routes, trips, trip patterns and
+   *                                 flex trips, e.g. {@code
+   *                                 TransitRepository.getScheduledTransitEntities()}. Indexed here
+   *                                 if it has not been already.
    */
   public DefaultTimetableRepository(
     RaptorTransitData raptorTransitData,
     TripCalendars tripCalendars,
-    Collection<TripPattern> scheduledTripPatterns,
-    Collection<TripOnServiceDate> scheduledTripsOnServiceDate,
-    Collection<FlexTrip<?, ?>> scheduledFlexTrips
+    ScheduledTransitEntities scheduledTransitEntities
   ) {
     this(
       new HashMap<>(),
@@ -245,12 +238,9 @@ public class DefaultTimetableRepository implements TimetableRepository {
       raptorTransitData,
       false,
       new TimetableUpdateMapper(),
-      new ScheduledTransitEntities(
-        scheduledTripPatterns,
-        scheduledTripsOnServiceDate,
-        scheduledFlexTrips
-      )
+      scheduledTransitEntities
     );
+    scheduledTransitEntities.index();
   }
 
   DefaultTimetableRepository(

@@ -109,9 +109,7 @@ class EntityResolverTest {
     var timetableSnapshot = new DefaultTimetableRepository(
       RaptorTransitDataTestFactory.empty(),
       transitRepository.getTripCalendar(),
-      transitRepository.getAllTripPatterns(),
-      transitRepository.getAllTripsOnServiceDates(),
-      transitRepository.getAllFlexTrips()
+      transitRepository.getScheduledTransitEntities()
     );
     return new EntityResolver(timetableSnapshot, transitRepository, FEED_ID);
   }

@@ -124,9 +124,7 @@ public class SpeedTest {
     var timetableSnapshot = new DefaultTimetableRepository(
       new RaptorTransitData(transitRepository.getRaptorTransitData()),
       transitRepository.getTripCalendar(),
-      transitRepository.getAllTripPatterns(),
-      transitRepository.getAllTripsOnServiceDates(),
-      transitRepository.getAllFlexTrips()
+      transitRepository.getScheduledTransitEntities()
     );
     RepositoryHandle<TimetableRepositorySnapshot, TimetableRepository> timetableHandle =
       registry.registerRepositorySnapshot(

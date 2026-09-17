@@ -112,9 +112,7 @@ class AddedTripBuilderTest {
     timetableRepository = new DefaultTimetableRepository(
       RaptorTransitDataTestFactory.empty(),
       TRANSIT_MODEL.getTripCalendar(),
-      TRANSIT_MODEL.getAllTripPatterns(),
-      TRANSIT_MODEL.getAllTripsOnServiceDates(),
-      TRANSIT_MODEL.getAllFlexTrips()
+      TRANSIT_MODEL.getScheduledTransitEntities()
     );
     transitService = new DefaultTransitService(TRANSIT_MODEL, timetableRepository);
 

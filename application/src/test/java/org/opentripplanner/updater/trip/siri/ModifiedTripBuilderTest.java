@@ -147,9 +147,7 @@ class ModifiedTripBuilderTest {
     var timetableSnapshot = new DefaultTimetableRepository(
       null,
       transitRepository.getTripCalendar(),
-      transitRepository.getAllTripPatterns(),
-      transitRepository.getAllTripsOnServiceDates(),
-      transitRepository.getAllFlexTrips()
+      transitRepository.getScheduledTransitEntities()
     );
     entityResolver = new EntityResolver(
       timetableSnapshot,

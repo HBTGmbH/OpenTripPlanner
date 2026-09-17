@@ -49,28 +49,6 @@ public class ScheduledTransitEntities {
   /** Creates an empty, mutable instance to be populated during graph build. */
   public ScheduledTransitEntities() {}
 
-  /**
-   * Creates an instance already populated (and indexed) from complete collections, e.g. {@code
-   * TransitRepository.getAllTripPatterns()}/{@code getAllTripsOnServiceDates()}/{@code
-   * getAllFlexTrips()}.
-   */
-  ScheduledTransitEntities(
-    Collection<TripPattern> scheduledTripPatterns,
-    Collection<TripOnServiceDate> scheduledTripsOnServiceDate,
-    Collection<FlexTrip<?, ?>> scheduledFlexTrips
-  ) {
-    for (TripPattern pattern : scheduledTripPatterns) {
-      addTripPattern(pattern.getId(), pattern);
-    }
-    for (TripOnServiceDate tripOnServiceDate : scheduledTripsOnServiceDate) {
-      addTripOnServiceDate(tripOnServiceDate);
-    }
-    for (FlexTrip<?, ?> flexTrip : scheduledFlexTrips) {
-      addFlexTrip(flexTrip.getId(), flexTrip);
-    }
-    index();
-  }
-
   public void addTripPattern(FeedScopedId id, TripPattern tripPattern) {
     tripPatternForId.put(id, tripPattern);
   }

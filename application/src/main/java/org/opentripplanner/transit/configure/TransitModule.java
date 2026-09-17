@@ -55,9 +55,7 @@ public abstract class TransitModule {
     var buffer = new DefaultTimetableRepository(
       scheduledRaptorTransitData,
       tripCalendars,
-      transitRepository.getAllTripPatterns(),
-      transitRepository.getAllTripsOnServiceDates(),
-      transitRepository.getAllFlexTrips()
+      transitRepository.getScheduledTransitEntities()
     );
     var lifecycle = new TimetableRepositoryLifecycle(buffer, parameters.purgeExpiredData(), () ->
       LocalDate.now(transitRepository.getTimeZone())

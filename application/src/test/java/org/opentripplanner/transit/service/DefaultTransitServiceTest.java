@@ -202,9 +202,7 @@ class DefaultTransitServiceTest {
     DefaultTimetableRepository timetableSnapshot = new DefaultTimetableRepository(
       RaptorTransitDataTestFactory.empty(),
       transitRepository.getTripCalendar(),
-      transitRepository.getAllTripPatterns(),
-      transitRepository.getAllTripsOnServiceDates(),
-      transitRepository.getAllFlexTrips()
+      transitRepository.getScheduledTransitEntities()
     );
     TripTimes tripTimes = ScheduledTripTimes.of()
       .withTrip(TransitRepositoryForTest.trip("123").build())

@@ -376,6 +376,16 @@ public class TransitRepository implements Serializable {
     scheduledTransitEntities.addTripPattern(id, tripPattern);
   }
 
+  /**
+   * The scheduled (non-realtime) routes, trips, trip patterns and flex trips, e.g. to hand off to
+   * {@link org.opentripplanner.transit.repository.DefaultTimetableRepository} without rebuilding
+   * a copy from {@link #getAllTripPatterns()}/{@link #getAllTripsOnServiceDates()}/{@link
+   * #getAllFlexTrips()}.
+   */
+  public ScheduledTransitEntities getScheduledTransitEntities() {
+    return scheduledTransitEntities;
+  }
+
   public void addScheduledStopPointMapping(Map<FeedScopedId, RegularStop> mapping) {
     assertModificationsAllowed();
     stopsByScheduledStopPointRefs.putAll(mapping);
