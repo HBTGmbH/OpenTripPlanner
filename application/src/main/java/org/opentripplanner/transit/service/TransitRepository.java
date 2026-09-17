@@ -2,9 +2,7 @@ package org.opentripplanner.transit.service;
 
 import static org.opentripplanner.framework.application.OtpFileNames.BUILD_CONFIG_FILENAME;
 
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import gnu.trove.set.TIntSet;
 import jakarta.inject.Inject;
@@ -45,6 +43,7 @@ import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.StopLocation;
 import org.opentripplanner.transit.model.timetable.TripOnServiceDate;
 import org.opentripplanner.transit.model.timetable.TripTimes;
+import org.opentripplanner.transit.repository.ScheduledTransitEntities;
 import org.opentripplanner.updater.GraphUpdaterManager;
 import org.opentripplanner.updater.configure.UpdaterConfigurator;
 import org.opentripplanner.utils.lang.ObjectUtils;
@@ -106,12 +105,7 @@ public class TransitRepository implements Serializable {
   private boolean hasFrequencyService = false;
   private boolean hasScheduledService = false;
 
-  private final Map<FeedScopedId, TripPattern> tripPatternForId = new HashMap<>();
-  private final Map<FeedScopedId, TripOnServiceDate> tripOnServiceDates = new HashMap<>();
-  private final ListMultimap<FeedScopedId, TripOnServiceDate> replacedByTripOnServiceDates =
-    ArrayListMultimap.create();
-
-  private final Map<FeedScopedId, FlexTrip<?, ?>> flexTripsById = new HashMap<>();
+  private final ScheduledTransitEntities scheduledTransitEntities = new ScheduledTransitEntities();
 
   private final Map<FeedScopedId, RegularStop> stopsByScheduledStopPointRefs = new HashMap<>();
 
@@ -350,20 +344,17 @@ public class TransitRepository implements Serializable {
   }
 
   public TripPattern getTripPatternForId(FeedScopedId id) {
-    return tripPatternForId.get(id);
+    return scheduledTransitEntities.getTripPatternForId(id);
   }
 
   public void addTripOnServiceDate(TripOnServiceDate tripOnServiceDate) {
     assertModificationsAllowed();
     invalidateIndex();
-    tripOnServiceDates.put(tripOnServiceDate.getId(), tripOnServiceDate);
-    for (var replacementFor : tripOnServiceDate.getReplacementFor()) {
-      replacedByTripOnServiceDates.put(replacementFor.getId(), tripOnServiceDate);
-    }
+    scheduledTransitEntities.addTripOnServiceDate(tripOnServiceDate);
   }
 
   public List<TripOnServiceDate> getReplacedByTripOnServiceDate(FeedScopedId id) {
-    return replacedByTripOnServiceDates.get(id);
+    return scheduledTransitEntities.getReplacedByTripOnServiceDate(id);
   }
 
   /**
@@ -382,7 +373,7 @@ public class TransitRepository implements Serializable {
   public void addTripPattern(FeedScopedId id, TripPattern tripPattern) {
     assertModificationsAllowed();
     invalidateIndex();
-    tripPatternForId.put(id, tripPattern);
+    scheduledTransitEntities.addTripPattern(id, tripPattern);
   }
 
   public void addScheduledStopPointMapping(Map<FeedScopedId, RegularStop> mapping) {
@@ -413,15 +404,15 @@ public class TransitRepository implements Serializable {
    * vertices/edges anymore.
    */
   public Collection<TripPattern> getAllTripPatterns() {
-    return tripPatternForId.values();
+    return scheduledTransitEntities.getAllTripPatterns();
   }
 
   public TripOnServiceDate getTripOnServiceDateById(FeedScopedId tripOnServiceDateId) {
-    return tripOnServiceDates.get(tripOnServiceDateId);
+    return scheduledTransitEntities.getTripOnServiceDateById(tripOnServiceDateId);
   }
 
   public Collection<TripOnServiceDate> getAllTripsOnServiceDates() {
-    return Collections.unmodifiableCollection(tripOnServiceDates.values());
+    return scheduledTransitEntities.getAllTripsOnServiceDate();
   }
 
   /**
@@ -454,7 +445,7 @@ public class TransitRepository implements Serializable {
   }
 
   public Collection<FlexTrip<?, ?>> getAllFlexTrips() {
-    return flexTripsById.values();
+    return scheduledTransitEntities.getAllFlexTrips();
   }
 
   /** True if there are active transit services loaded into this Graph. */
@@ -481,7 +472,7 @@ public class TransitRepository implements Serializable {
   public void addFlexTrip(FeedScopedId id, FlexTrip<?, ?> flexTrip) {
     assertModificationsAllowed();
     invalidateIndex();
-    flexTripsById.put(id, flexTrip);
+    scheduledTransitEntities.addFlexTrip(id, flexTrip);
   }
 
   /**
@@ -530,11 +521,11 @@ public class TransitRepository implements Serializable {
   }
 
   public boolean hasFlexTrips() {
-    return !flexTripsById.isEmpty();
+    return scheduledTransitEntities.hasFlexTrips();
   }
 
   public FlexTrip getFlexTrip(FeedScopedId tripId) {
-    return flexTripsById.get(tripId);
+    return scheduledTransitEntities.getFlexTrip(tripId);
   }
 
   /**
