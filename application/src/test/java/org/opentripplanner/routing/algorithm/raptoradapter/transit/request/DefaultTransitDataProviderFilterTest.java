@@ -903,7 +903,7 @@ class DefaultTransitDataProviderFilterTest {
       .build()
       .getRoutingTripPattern();
 
-    TripTimes tripTimes = TripTimesFactory.tripTimes(
+    var tripTimes = TripTimesFactory.tripTimes(
       TransitRepositoryForTest.trip("1").withRoute(route).build(),
       List.of(new StopTime()),
       new Deduplicator()
@@ -948,8 +948,8 @@ class DefaultTransitDataProviderFilterTest {
     );
   }
 
-  private record PatternAndTimes(TripPattern pattern, TripTimes tripTimes) {
-    public PatternAndTimes withTimes(TripTimes tripTimes) {
+  private record PatternAndTimes(TripPattern pattern, TripTimes<?> tripTimes) {
+    public PatternAndTimes withTimes(TripTimes<?> tripTimes) {
       return new PatternAndTimes(pattern, tripTimes);
     }
   }
@@ -1014,7 +1014,7 @@ class DefaultTransitDataProviderFilterTest {
       .withContainsMultipleModes(multipleSubmodes)
       .build();
 
-    TripTimes tripTimes = TripTimesFactory.tripTimes(
+    var tripTimes = TripTimesFactory.tripTimes(
       trip,
       List.of(new StopTime()),
       new Deduplicator()
@@ -1066,7 +1066,7 @@ class DefaultTransitDataProviderFilterTest {
       .withContainsMultipleModes(containsMultipleModes)
       .build();
 
-    TripTimes tripTimes = TripTimesFactory.tripTimes(
+    var tripTimes = TripTimesFactory.tripTimes(
       trip,
       List.of(new StopTime()),
       new Deduplicator()

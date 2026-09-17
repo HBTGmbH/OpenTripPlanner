@@ -40,7 +40,7 @@ public final class TripFrequencyBoardSearch<T extends DefaultTripSchedule> imple
         );
         if (departureTime != -1) {
           int headway = frequency.routingSlack();
-          TripTimes tripTimes = frequency.materialize(
+          var tripTimes = frequency.materialize(
             stopPositionInPattern,
             departureTime - headway,
             true

@@ -179,7 +179,7 @@ public record ScheduledTransitLegReference(
     }
 
     Timetable timetable = transitService.findTimetable(tripPattern, serviceDate);
-    TripTimes tripTimes = timetable.getTripTimes(trip);
+    var tripTimes = timetable.getTripTimes(trip);
 
     if (tripTimes == null) {
       logInvalidLegRef(

@@ -51,7 +51,7 @@ public class SiriFuzzyTripMatcherCache {
       }
       String lastStopId = tripPattern.lastStop().getId().getId();
 
-      TripTimes tripTimes = tripPattern.getScheduledTimetable().getTripTimes(trip);
+      var tripTimes = tripPattern.getScheduledTimetable().getTripTimes(trip);
       if (tripTimes != null) {
         int arrivalTime = tripTimes.getArrivalTime(tripTimes.getNumStops() - 1);
         startStopTrips.put(startStopKey(lastStopId, arrivalTime), trip);

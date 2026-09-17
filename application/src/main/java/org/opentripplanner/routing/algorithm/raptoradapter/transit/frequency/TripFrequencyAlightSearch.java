@@ -41,7 +41,7 @@ public final class TripFrequencyAlightSearch<T extends DefaultTripSchedule> impl
         );
         if (arrivalTime != -1) {
           int headway = frequency.routingSlack();
-          TripTimes tripTimes = frequency.materialize(
+          var tripTimes = frequency.materialize(
             stopPositionInPattern,
             arrivalTime + headway,
             false

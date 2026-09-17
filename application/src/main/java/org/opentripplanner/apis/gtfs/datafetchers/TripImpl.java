@@ -155,7 +155,7 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
         Instant midnight = ServiceDateUtils.asStartOfService(serviceDate, timeZone).toInstant();
         Timetable timetable = transitService.findTimetable(tripPattern, serviceDate);
 
-        TripTimes tripTimes = timetable.getTripTimes(trip);
+        var tripTimes = timetable.getTripTimes(trip);
         if (tripTimes == null) {
           return null;
         }
@@ -211,7 +211,7 @@ public class TripImpl implements GraphQLDataFetchers.GraphQLTrip {
         Instant midnight = ServiceDateUtils.asStartOfService(serviceDate, timeZone).toInstant();
         Timetable timetable = transitService.findTimetable(tripPattern, serviceDate);
 
-        TripTimes tripTimes = timetable.getTripTimes(trip);
+        var tripTimes = timetable.getTripTimes(trip);
         if (tripTimes == null) {
           return null;
         }

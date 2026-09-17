@@ -227,7 +227,7 @@ public class SiriFuzzyTripMatcher {
         continue;
       }
 
-      TripTimes times = getCurrentTimetable.apply(tripPattern, serviceDate).getTripTimes(trip);
+      var times = getCurrentTimetable.apply(tripPattern, serviceDate).getTripTimes(trip);
       if (times != null && times.getScheduledDepartureTime(0) == departureInSecondsSinceMidnight) {
         // Found matches
         possibleTrips.add(new TripAndPattern(times.getTrip(), tripPattern));

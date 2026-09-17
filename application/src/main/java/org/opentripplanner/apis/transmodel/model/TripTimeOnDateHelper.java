@@ -81,7 +81,7 @@ public class TripTimeOnDateHelper {
       return List.of();
     }
     ScheduledTransitLeg transitLeg = leg.asScheduledTransitLeg();
-    TripTimes tripTimes = transitLeg.tripTimes();
+    var tripTimes = transitLeg.tripTimes();
     TripPattern tripPattern = transitLeg.tripPattern();
     Instant serviceDateMidnight = transitLeg.serviceDateMidnight();
     LocalDate serviceDate = transitLeg.serviceDate();
@@ -106,7 +106,7 @@ public class TripTimeOnDateHelper {
       return List.of();
     }
     ScheduledTransitLeg transitLeg = leg.asScheduledTransitLeg();
-    TripTimes tripTimes = transitLeg.tripTimes();
+    var tripTimes = transitLeg.tripTimes();
     TripPattern tripPattern = transitLeg.tripPattern();
     Instant serviceDateMidnight = transitLeg.serviceDateMidnight();
     LocalDate serviceDate = transitLeg.serviceDate();

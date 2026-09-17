@@ -237,7 +237,7 @@ public class SiriRealTimeUpdateHandler {
     }
 
     Timetable currentTimetable = getCurrentTimetable(pattern, serviceDate);
-    TripTimes existingTripTimes = currentTimetable.getTripTimes(trip);
+    var existingTripTimes = currentTimetable.getTripTimes(trip);
     if (existingTripTimes == null) {
       LOG.debug("tripId {} not found in pattern.", trip.getId());
       throw UpdateException.of(trip.getId(), TRIP_NOT_FOUND_IN_PATTERN);
@@ -292,7 +292,7 @@ public class SiriRealTimeUpdateHandler {
     }
 
     Timetable currentTimetable = getCurrentTimetable(pattern, serviceDate);
-    TripTimes existingTripTimes = currentTimetable.getTripTimes(trip);
+    var existingTripTimes = currentTimetable.getTripTimes(trip);
     if (existingTripTimes == null) {
       LOG.debug("tripId {} not found in pattern.", trip.getId());
       throw UpdateException.of(trip.getId(), TRIP_NOT_FOUND_IN_PATTERN);
