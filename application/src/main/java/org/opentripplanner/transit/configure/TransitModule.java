@@ -52,7 +52,13 @@ public abstract class TransitModule {
     RaptorTransitData scheduledRaptorTransitData,
     TripCalendars tripCalendars
   ) {
-    var buffer = new DefaultTimetableRepository(scheduledRaptorTransitData, tripCalendars);
+    var buffer = new DefaultTimetableRepository(
+      scheduledRaptorTransitData,
+      tripCalendars,
+      transitRepository.getAllTripPatterns(),
+      transitRepository.getAllTripsOnServiceDates(),
+      transitRepository.getAllFlexTrips()
+    );
     var lifecycle = new TimetableRepositoryLifecycle(buffer, parameters.purgeExpiredData(), () ->
       LocalDate.now(transitRepository.getTimeZone())
     );

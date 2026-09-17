@@ -10,9 +10,10 @@ import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.LocalTimeParser;
 import org.opentripplanner.core.model.id.FeedScopedId;
+import org.opentripplanner.routing.algorithm.raptoradapter.transit.RaptorTransitDataTestFactory;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.site.RegularStop;
-import org.opentripplanner.transit.service.DefaultTransitService;
+import org.opentripplanner.transit.repository.DefaultTimetableRepository;
 import org.opentripplanner.transit.service.SiteRepository;
 import org.opentripplanner.transit.service.TransitRepository;
 
@@ -31,8 +32,7 @@ class EntityResolverTest {
   void resolveScheduledStopPointId() {
     var transitRepository = new TransitRepository();
     transitRepository.addScheduledStopPointMapping(Map.of(SSP_ID, STOP_1));
-    var transitService = new DefaultTransitService(transitRepository);
-    var resolver = new EntityResolver(transitService, FEED_ID);
+    var resolver = newResolver(transitRepository);
     var stop = resolver.resolveQuay(SSP_ID.getId());
     assertEquals(STOP_1, stop);
   }
@@ -40,8 +40,7 @@ class EntityResolverTest {
   @Test
   void resolveQuayId() {
     var transitRepository = new TransitRepository(SITE_REPOSITORY);
-    var transitService = new DefaultTransitService(transitRepository);
-    var resolver = new EntityResolver(transitService, FEED_ID);
+    var resolver = newResolver(transitRepository);
     var stop = resolver.resolveQuay(STOP_1.getId().getId());
     assertEquals(STOP_1, stop);
   }
@@ -49,9 +48,8 @@ class EntityResolverTest {
   @Test
   void scheduledStopPointTakesPrecedence() {
     var transitRepository = new TransitRepository(SITE_REPOSITORY);
-    var transitService = new DefaultTransitService(transitRepository);
     transitRepository.addScheduledStopPointMapping(Map.of(SSP_ID, STOP_2));
-    var resolver = new EntityResolver(transitService, FEED_ID);
+    var resolver = newResolver(transitRepository);
     assertEquals(STOP_2, resolver.resolveQuay(SSP_ID.getId()));
     assertEquals(STOP_1, resolver.resolveQuay(STOP_1.getId().getId()));
   }
@@ -104,8 +102,18 @@ class EntityResolverTest {
   }
 
   private static EntityResolver newResolver() {
-    var transitService = new DefaultTransitService(new TransitRepository());
-    return new EntityResolver(transitService, FEED_ID);
+    return newResolver(new TransitRepository());
+  }
+
+  private static EntityResolver newResolver(TransitRepository transitRepository) {
+    var timetableSnapshot = new DefaultTimetableRepository(
+      RaptorTransitDataTestFactory.empty(),
+      transitRepository.getTripCalendar(),
+      transitRepository.getAllTripPatterns(),
+      transitRepository.getAllTripsOnServiceDates(),
+      transitRepository.getAllFlexTrips()
+    );
+    return new EntityResolver(timetableSnapshot, transitRepository, FEED_ID);
   }
 
   private static EstimatedVehicleJourneyWrapper journey(UnaryOperator<SiriEtBuilder> configure) {

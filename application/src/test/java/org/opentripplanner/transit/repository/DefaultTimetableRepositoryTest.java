@@ -231,7 +231,8 @@ public class DefaultTimetableRepositoryTest {
       TripCalendars.empty(),
       RaptorTransitDataTestFactory.empty(),
       false,
-      new TimetableUpdateMapper()
+      new TimetableUpdateMapper(),
+      null
     );
     assertFalse(snapshot.isEmpty());
     snapshot.clear(id.getFeedId());

@@ -99,7 +99,10 @@ public class TestServerContext {
 
     var timetableSnapshot = new DefaultTimetableRepository(
       new RaptorTransitData(transitRepository.getRaptorTransitData()),
-      transitRepository.getTripCalendar()
+      transitRepository.getTripCalendar(),
+      transitRepository.getAllTripPatterns(),
+      transitRepository.getAllTripsOnServiceDates(),
+      transitRepository.getAllFlexTrips()
     );
     return registry.registerRepositorySnapshot(
       timetableSnapshot,

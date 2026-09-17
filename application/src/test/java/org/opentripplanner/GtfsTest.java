@@ -215,7 +215,10 @@ public abstract class GtfsTest {
       org.opentripplanner.framework.transaction.internal.TransactionFactory.createRepositoryRegistry();
     var timetableSnapshot = new org.opentripplanner.transit.repository.DefaultTimetableRepository(
       new RaptorTransitData(scheduledRaptorData),
-      transitRepository.getTripCalendar()
+      transitRepository.getTripCalendar(),
+      transitRepository.getAllTripPatterns(),
+      transitRepository.getAllTripsOnServiceDates(),
+      transitRepository.getAllFlexTrips()
     );
     var timetableHandle = registry.registerRepositorySnapshot(
       timetableSnapshot,

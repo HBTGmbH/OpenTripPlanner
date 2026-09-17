@@ -32,7 +32,7 @@ public class SiriFuzzyTripMatcherCache {
   }
 
   public static SiriFuzzyTripMatcherCache create(TransitRepository transitRepository) {
-    TransitService index = new DefaultTransitService(transitRepository, null);
+    TransitService index = new DefaultTransitService(transitRepository);
     var internalPlanningCodes = ImmutableSetMultimap.<String, Trip>builder();
     var startStopTrips = ImmutableSetMultimap.<String, Trip>builder();
 
