@@ -42,22 +42,18 @@ class GroupOfStationsMapper {
   }
 
   GroupOfStations map(GroupOfStopPlaces groupOfStopPlaces) {
-    I18NString name;
+    I18NString name =
+      groupOfStopPlaces.getName() == null
+        ? null
+        : NonLocalizedString.ofNullable(groupOfStopPlaces.getName().getValue());
 
-    if (groupOfStopPlaces.getName() != null) {
-      name = NonLocalizedString.ofNullable(groupOfStopPlaces.getName().getValue());
-    } else {
+    if (name == null) {
       issueStore.add(
         "GroupOfStopPlacesWithoutName",
-        "GroupOfStopPlaces {} does not contain a name.",
+        "GroupOfStopPlaces %s does not contain a name.",
         groupOfStopPlaces.getId()
       );
-      StopPlaceRefStructure ref = groupOfStopPlaces
-        .getMembers()
-        .getStopPlaceRef()
-        .get(0)
-        .getValue();
-      name = stations.get(idFactory.createId(ref.getRef())).getName();
+      name = findNameOfFirstMember(groupOfStopPlaces);
     }
     GroupOfStationsBuilder groupOfStations = GroupOfStations.of(
       idFactory.createId(groupOfStopPlaces.getId())
@@ -70,7 +66,7 @@ class GroupOfStationsMapper {
     if (coordinate == null) {
       issueStore.add(
         "GroupOfStationWithoutCoordinates",
-        "MultiModal station {} does not contain any coordinates.",
+        "MultiModal station %s does not contain any coordinates.",
         groupOfStations.getId()
       );
     } else {
@@ -104,6 +100,22 @@ class GroupOfStationsMapper {
         }
       }
     }
+  }
+
+  /**
+   * Use the name of the first member which can be resolved, or "N/A" if there is none.
+   */
+  private I18NString findNameOfFirstMember(GroupOfStopPlaces groupOfStopPlaces) {
+    StopPlaceRefs_RelStructure members = groupOfStopPlaces.getMembers();
+    if (members != null) {
+      for (var ref : members.getStopPlaceRef()) {
+        StopLocationsGroup station = lookupStation(idFactory.createId(ref.getValue().getRef()));
+        if (station != null) {
+          return station.getName();
+        }
+      }
+    }
+    return new NonLocalizedString("N/A");
   }
 
   @Nullable
