@@ -31,7 +31,9 @@ import org.rutebanken.netex.model.ScheduledStopPointsInFrame_RelStructure;
 import org.rutebanken.netex.model.ServiceLink;
 import org.rutebanken.netex.model.ServiceLinksInFrame_RelStructure;
 import org.rutebanken.netex.model.Service_VersionFrameStructure;
+import org.rutebanken.netex.model.SiteConnection;
 import org.rutebanken.netex.model.StopAssignmentsInFrame_RelStructure;
+import org.rutebanken.netex.model.TransfersInFrame_RelStructure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,6 +70,8 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
   private final NoticeParser noticeParser = new NoticeParser();
   private final Collection<ScheduledStopPoint> scheduledStopPoints = new ArrayList<>();
 
+  private final Collection<SiteConnection> siteConnections = new ArrayList<>();
+
   private final boolean allowStopPlaceAsPassengerStopAssignment;
 
   private final NetexProfileSupport profileSupport;
@@ -98,7 +102,11 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
 
     // Keep list sorted alphabetically
     warnOnMissingMapping(LOG, frame.getCommonSections());
-    warnOnMissingMapping(LOG, frame.getConnections());
+    if (profileSupport.extendedNetex()) {
+      parseConnections(frame.getConnections());
+    } else {
+      warnOnMissingMapping(LOG, frame.getConnections());
+    }
     warnOnMissingMapping(LOG, frame.getDirections());
     warnOnMissingMapping(LOG, frame.getDisplayAssignments());
     warnOnMissingMapping(LOG, frame.getFlexibleLinkProperties());
@@ -145,6 +153,7 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
     index.quayIdByStopPointRef.addAll(quayIdByStopPointRef);
     index.stopPlaceIdByStopPointRef.addAll(stopPlaceByStopPointRef);
     index.scheduledStopPointById.addAll(scheduledStopPoints);
+    index.siteConnectionById.addAll(siteConnections);
     index.flexibleStopPlaceByStopPointRef.addAll(flexibleStopPlaceByStopPointRef);
     index.routeById.addAll(routes);
     index.serviceLinkById.addAll(serviceLinks);
@@ -199,6 +208,23 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
   private void parseScheduledStopPoints(@Nullable ScheduledStopPointsInFrame_RelStructure points) {
     if (points != null) {
       scheduledStopPoints.addAll(points.getScheduledStopPoint());
+    }
+  }
+
+  /**
+   * Site connections state the time needed to transfer between or within stop places (EPIP).
+   * Other kinds of connections are not supported.
+   */
+  private void parseConnections(@Nullable TransfersInFrame_RelStructure connections) {
+    if (connections == null) {
+      return;
+    }
+    for (var element : connections.getTransfer()) {
+      if (element.getValue() instanceof SiteConnection siteConnection) {
+        siteConnections.add(siteConnection);
+      } else {
+        warnOnMissingMapping(LOG, element.getValue());
+      }
     }
   }
 

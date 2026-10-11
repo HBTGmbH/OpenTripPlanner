@@ -78,7 +78,7 @@ class NetexImportRegressionTest {
   routesWithOperator=2
   serviceIds=2
   stations=20
-  transfers=0
+  transfers=4
   tripOnServiceDates=0
   tripPatterns=4
   trips=110

@@ -218,6 +218,7 @@ public class NetexMapper {
     mapNoticeAssignments();
 
     mapScheduledStopPointsToQuays();
+    mapSiteConnections();
     mapVehicleParkings();
 
     addEntriesToGroupMapperForPostProcessingLater();
@@ -619,6 +620,22 @@ public class NetexMapper {
           );
         }
       });
+  }
+
+  /** Only done with extended NeTEx support, see {@link SiteConnectionMapper}. */
+  private void mapSiteConnections() {
+    if (!profileSupport.extendedNetex()) {
+      return;
+    }
+    var mapper = new SiteConnectionMapper(
+      idFactory,
+      issueStore,
+      transitBuilder.siteRepository().stationById(),
+      transitBuilder.siteRepository().regularStopsById()
+    );
+    for (var connection : currentNetexIndex.getSiteConnectionById().localValues()) {
+      transitBuilder.getTransfers().addAll(mapper.map(connection));
+    }
   }
 
   private void mapVehicleParkings() {

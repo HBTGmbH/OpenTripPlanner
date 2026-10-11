@@ -26,6 +26,7 @@ import org.rutebanken.netex.model.ScheduledStopPoint;
 import org.rutebanken.netex.model.ServiceJourney;
 import org.rutebanken.netex.model.ServiceJourneyInterchange;
 import org.rutebanken.netex.model.ServiceLink;
+import org.rutebanken.netex.model.SiteConnection;
 import org.rutebanken.netex.model.StopPlace;
 import org.rutebanken.netex.model.TariffZone_VersionStructure;
 
@@ -73,6 +74,12 @@ public interface NetexEntityIndexReadOnlyView {
    * {@link org.opentripplanner.netex.config.NetexProfileSupport#extendedNetex()}.
    */
   ReadOnlyHierarchicalMapById<ScheduledStopPoint> getScheduledStopPointById();
+
+  /**
+   * Site connections are only indexed if extended NeTEx support is enabled, see
+   * {@link org.opentripplanner.netex.config.NetexProfileSupport#extendedNetex()}.
+   */
+  ReadOnlyHierarchicalMapById<SiteConnection> getSiteConnectionById();
 
   ReadOnlyHierarchicalMap<String, String> getStopPlaceIdByStopPointRef();
 

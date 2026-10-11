@@ -35,6 +35,7 @@ import org.rutebanken.netex.model.ScheduledStopPoint;
 import org.rutebanken.netex.model.ServiceJourney;
 import org.rutebanken.netex.model.ServiceJourneyInterchange;
 import org.rutebanken.netex.model.ServiceLink;
+import org.rutebanken.netex.model.SiteConnection;
 import org.rutebanken.netex.model.StopPlace;
 import org.rutebanken.netex.model.TariffZone_VersionStructure;
 
@@ -98,6 +99,7 @@ public class NetexEntityIndex {
   public final HierarchicalMapById<ServiceJourneyInterchange> serviceJourneyInterchangeById;
   public final HierarchicalMapById<ScheduledStopPoint> scheduledStopPointById;
   public final HierarchicalMapById<ServiceLink> serviceLinkById;
+  public final HierarchicalMapById<SiteConnection> siteConnectionById;
   public final HierarchicalVersionMapById<StopPlace> stopPlaceById;
   public final HierarchicalVersionMapById<TariffZone_VersionStructure> tariffZonesById;
   public final HierarchicalMapById<Branding> brandingById;
@@ -144,6 +146,7 @@ public class NetexEntityIndex {
     this.serviceJourneyById = new HierarchicalMapById<>();
     this.scheduledStopPointById = new HierarchicalMapById<>();
     this.serviceLinkById = new HierarchicalMapById<>();
+    this.siteConnectionById = new HierarchicalMapById<>();
     this.serviceJourneyInterchangeById = new HierarchicalMapById<>();
     this.stopPlaceById = new HierarchicalVersionMapById<>();
     this.tariffZonesById = new HierarchicalVersionMapById<>();
@@ -190,6 +193,7 @@ public class NetexEntityIndex {
     this.serviceJourneyById = new HierarchicalMapById<>(parent.serviceJourneyById);
     this.scheduledStopPointById = new HierarchicalMapById<>(parent.scheduledStopPointById);
     this.serviceLinkById = new HierarchicalMapById<>(parent.serviceLinkById);
+    this.siteConnectionById = new HierarchicalMapById<>(parent.siteConnectionById);
     this.serviceJourneyInterchangeById = new HierarchicalMapById<>(
       parent.serviceJourneyInterchangeById
     );
@@ -334,6 +338,11 @@ public class NetexEntityIndex {
       @Override
       public ReadOnlyHierarchicalVersionMapById<Quay> getQuayById() {
         return quayById;
+      }
+
+      @Override
+      public ReadOnlyHierarchicalMapById<SiteConnection> getSiteConnectionById() {
+        return siteConnectionById;
       }
 
       @Override
