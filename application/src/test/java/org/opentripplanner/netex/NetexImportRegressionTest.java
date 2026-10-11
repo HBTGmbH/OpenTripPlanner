@@ -13,6 +13,7 @@ import org.opentripplanner.graph_builder.issue.api.DataImportIssueSummary;
 import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.model.TransitDataImport;
 import org.opentripplanner.transit.model.framework.Deduplicator;
+import org.opentripplanner.transit.model.timetable.Direction;
 import org.opentripplanner.transit.model.timetable.Trip;
 
 /**
@@ -34,12 +35,15 @@ class NetexImportRegressionTest {
   operators=1
   regularStops=16
   routes=2
+  routesWithOperator=2
   serviceIds=3
   stations=5
   transfers=0
   tripOnServiceDates=1
   tripPatterns=4
   trips=5
+  tripsWithDirection=0
+  tripsWithHeadsign=5
   """;
 
   private static final String EPIP_BASELINE = """
@@ -51,12 +55,15 @@ class NetexImportRegressionTest {
   operators=2
   regularStops=31
   routes=2
+  routesWithOperator=0
   serviceIds=2
   stations=20
   transfers=0
   tripOnServiceDates=0
   tripPatterns=4
   trips=110
+  tripsWithDirection=0
+  tripsWithHeadsign=0
   """;
 
   private static final String EPIP_WITH_FEATURE_BASELINE = """
@@ -68,12 +75,15 @@ class NetexImportRegressionTest {
   operators=2
   regularStops=31
   routes=2
+  routesWithOperator=2
   serviceIds=2
   stations=20
   transfers=0
   tripOnServiceDates=0
   tripPatterns=4
   trips=110
+  tripsWithDirection=0
+  tripsWithHeadsign=0
   """;
 
   /** The profile features only extend the import for constructs the Nordic data does not use. */
@@ -127,7 +137,31 @@ class NetexImportRegressionTest {
     summary.put("stations", result.siteRepository().listStations().size());
     summary.put("multiModalStations", result.siteRepository().listMultiModalStations().size());
     summary.put("groupsOfStations", result.siteRepository().listGroupOfStations().size());
-    summary.put("routes", result.getAllTrips().stream().map(Trip::getRoute).distinct().count());
+    var routes = result.getAllTrips().stream().map(Trip::getRoute).distinct().toList();
+    summary.put("routes", routes.size());
+    summary.put(
+      "routesWithOperator",
+      routes
+        .stream()
+        .filter(r -> r.getOperator() != null)
+        .count()
+    );
+    summary.put(
+      "tripsWithDirection",
+      result
+        .getAllTrips()
+        .stream()
+        .filter(t -> t.getDirection() != Direction.UNKNOWN)
+        .count()
+    );
+    summary.put(
+      "tripsWithHeadsign",
+      result
+        .getAllTrips()
+        .stream()
+        .filter(t -> t.getHeadsign() != null && !t.getHeadsign().toString().isEmpty())
+        .count()
+    );
     summary.put("tripPatterns", result.getTripPatterns().size());
     summary.put("trips", result.getAllTrips().size());
     summary.put("tripOnServiceDates", result.getTripOnServiceDates().size());
