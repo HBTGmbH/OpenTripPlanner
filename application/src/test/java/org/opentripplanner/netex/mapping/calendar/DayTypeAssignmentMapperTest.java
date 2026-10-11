@@ -1,5 +1,6 @@
 package org.opentripplanner.netex.mapping.calendar;
 
+import static com.google.common.truth.Truth.assertThat;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,12 +24,14 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
+import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMapById;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMultimap;
 import org.rutebanken.netex.model.DayType;
 import org.rutebanken.netex.model.DayTypeAssignment;
 import org.rutebanken.netex.model.OperatingDay;
+import org.rutebanken.netex.model.OperatingPeriod;
 import org.rutebanken.netex.model.OperatingPeriod_VersionStructure;
 import org.rutebanken.netex.model.PropertyOfDay;
 
@@ -86,7 +89,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       EMPTY_OPERATING_DAYS,
       EMPTY_PERIODS,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - verify
@@ -118,7 +121,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       EMPTY_OPERATING_DAYS,
       EMPTY_PERIODS,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - verify
@@ -143,7 +146,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       operatingDays,
       EMPTY_PERIODS,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - verify
@@ -178,7 +181,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       EMPTY_OPERATING_DAYS,
       periods,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - verify
@@ -208,7 +211,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       EMPTY_OPERATING_DAYS,
       periods,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - verify
@@ -236,7 +239,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       operatingDays,
       periods,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - verify
@@ -265,7 +268,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       operatingDays,
       periods,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - verify
@@ -299,7 +302,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       operatingDays,
       periods,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - verify
@@ -332,7 +335,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       EMPTY_OPERATING_DAYS,
       periods,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - verify
@@ -367,7 +370,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       EMPTY_OPERATING_DAYS,
       periods,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - all days in the period, Sunday to Tuesday
@@ -392,7 +395,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       EMPTY_OPERATING_DAYS,
       periods,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - all days in the period, Sunday to Tuesday
@@ -457,7 +460,7 @@ class DayTypeAssignmentMapperTest {
       assignments,
       EMPTY_OPERATING_DAYS,
       periods,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - only the stated Sunday
@@ -485,16 +488,87 @@ class DayTypeAssignmentMapperTest {
       assignments,
       EMPTY_OPERATING_DAYS,
       periods,
-      null
+      DataImportIssueStore.NOOP
     );
 
     // THEN - the valid-day-bits decide, the second day is skipped
     assertEquals("[2020-11-01, 2020-11-03]", toStr(result, DAY_TYPE_1));
   }
 
+  @Test
+  void ignoreAssignmentWithUnknownOperatingDay() {
+    var dayTypes = new HierarchicalMapById<DayType>();
+    var assignments = new HierarchicalMultimap<String, DayTypeAssignment>();
+    var issueStore = new DefaultDataImportIssueStore();
+
+    dayTypes.add(createDayType(DAY_TYPE_1));
+    assignments.add(DAY_TYPE_1, createDayTypeAssignmentWithOpDay(DAY_TYPE_1, OP_DAY_1, AVAILABLE));
+
+    Map<String, Set<LocalDate>> result = DayTypeAssignmentMapper.mapDayTypes(
+      dayTypes,
+      assignments,
+      EMPTY_OPERATING_DAYS,
+      EMPTY_PERIODS,
+      issueStore
+    );
+
+    assertEquals("[]", toStr(result, DAY_TYPE_1));
+    assertThat(listIssueTypes(issueStore)).contains("DayTypeAssignmentIgnored");
+  }
+
+  @Test
+  void ignoreOperatingPeriodWithoutDates() {
+    var dayTypes = new HierarchicalMapById<DayType>();
+    var assignments = new HierarchicalMultimap<String, DayTypeAssignment>();
+    var periods = new HierarchicalMapById<OperatingPeriod_VersionStructure>();
+    var issueStore = new DefaultDataImportIssueStore();
+
+    dayTypes.add(createDayType(DAY_TYPE_1, EVERYDAY));
+    periods.add(new OperatingPeriod().withId(OP_1));
+    assignments.add(DAY_TYPE_1, createDayTypeAssignmentWithPeriod(DAY_TYPE_1, OP_1, AVAILABLE));
+
+    Map<String, Set<LocalDate>> result = DayTypeAssignmentMapper.mapDayTypes(
+      dayTypes,
+      assignments,
+      EMPTY_OPERATING_DAYS,
+      periods,
+      issueStore
+    );
+
+    assertEquals("[]", toStr(result, DAY_TYPE_1));
+    assertThat(listIssueTypes(issueStore)).contains("DayTypeAssignmentIgnored");
+  }
+
+  @Test
+  void ignoreOperatingPeriodWithUnknownOperatingDays() {
+    var dayTypes = new HierarchicalMapById<DayType>();
+    var assignments = new HierarchicalMultimap<String, DayTypeAssignment>();
+    var periods = new HierarchicalMapById<OperatingPeriod_VersionStructure>();
+    var issueStore = new DefaultDataImportIssueStore();
+
+    dayTypes.add(createDayType(DAY_TYPE_1, EVERYDAY));
+    periods.add(createOperatingPeriodWithOperatingDays(OP_1, OPERATING_DAY_1, OPERATING_DAY_2));
+    assignments.add(DAY_TYPE_1, createDayTypeAssignmentWithPeriod(DAY_TYPE_1, OP_1, AVAILABLE));
+
+    Map<String, Set<LocalDate>> result = DayTypeAssignmentMapper.mapDayTypes(
+      dayTypes,
+      assignments,
+      EMPTY_OPERATING_DAYS,
+      periods,
+      issueStore
+    );
+
+    assertEquals("[]", toStr(result, DAY_TYPE_1));
+    assertThat(listIssueTypes(issueStore)).contains("DayTypeAssignmentIgnored");
+  }
+
   /* private helper methods */
 
   private String toStr(Map<String, Set<LocalDate>> result, String key) {
     return result.get(key).stream().sorted().toList().toString();
+  }
+
+  private static List<String> listIssueTypes(DefaultDataImportIssueStore issueStore) {
+    return issueStore.listIssues().stream().map(DataImportIssue::getType).toList();
   }
 }

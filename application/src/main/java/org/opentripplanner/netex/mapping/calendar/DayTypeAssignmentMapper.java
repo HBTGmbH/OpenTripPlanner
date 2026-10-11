@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nullable;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMap;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMapById;
@@ -51,6 +52,7 @@ public class DayTypeAssignmentMapper {
   private final DayType dayType;
   private final ReadOnlyHierarchicalMapById<OperatingDay> operatingDays;
   private final ReadOnlyHierarchicalMapById<OperatingPeriod_VersionStructure> operatingPeriods;
+  private final DataImportIssueStore issueStore;
 
   // Result data
   private final Set<LocalDate> dates = new HashSet<>();
@@ -63,11 +65,13 @@ public class DayTypeAssignmentMapper {
   private DayTypeAssignmentMapper(
     DayType dayType,
     ReadOnlyHierarchicalMapById<OperatingDay> operatingDays,
-    ReadOnlyHierarchicalMapById<OperatingPeriod_VersionStructure> operatingPeriods
+    ReadOnlyHierarchicalMapById<OperatingPeriod_VersionStructure> operatingPeriods,
+    DataImportIssueStore issueStore
   ) {
     this.dayType = dayType;
     this.operatingDays = operatingDays;
     this.operatingPeriods = operatingPeriods;
+    this.issueStore = issueStore;
   }
 
   /**
@@ -84,7 +88,12 @@ public class DayTypeAssignmentMapper {
     Map<String, Set<LocalDate>> result = new HashMap<>();
 
     for (var dayType : dayTypes.localValues()) {
-      var mapper = new DayTypeAssignmentMapper(dayType, operatingDays, operatingPeriods);
+      var mapper = new DayTypeAssignmentMapper(
+        dayType,
+        operatingDays,
+        operatingPeriods,
+        issueStore
+      );
 
       for (DayTypeAssignment it : assignments.lookup(dayType.getId())) {
         mapper.map(it);
@@ -144,8 +153,12 @@ public class DayTypeAssignmentMapper {
     else if (dayTypeAssignment.getOperatingPeriodRef() != null) {
       addOperatingPeriod(dayTypeAssignment);
     } else if (dayTypeAssignment.getOperatingDayRef() != null) {
-      var opd = operatingDays.lookup(dayTypeAssignment.getOperatingDayRef().getRef());
-      addDate(true, opd.getCalendarDate());
+      var date = lookupOperatingDay(dayTypeAssignment.getOperatingDayRef());
+      if (date == null) {
+        reportIgnoredAssignment(dayTypeAssignment, "the referenced operating day does not exist");
+        return;
+      }
+      addDate(true, date);
     }
   }
 
@@ -175,12 +188,18 @@ public class DayTypeAssignmentMapper {
     OperatingPeriod_VersionStructure period = operatingPeriods.lookup(ref);
 
     if (period instanceof OperatingPeriod operatingPeriod) {
+      LocalDateTime startDate = findOperatingPeriodStartDate(operatingPeriod);
+      LocalDateTime endDate = findOperatingPeriodEndDate(operatingPeriod);
+      if (startDate == null || endDate == null) {
+        reportIgnoredAssignment(
+          dayTypeAssignment,
+          "the operating period " + operatingPeriod.getId() + " has no resolvable start or end date"
+        );
+        return;
+      }
       Set<DayOfWeek> daysOfWeek = daysOfWeekForDayType(dayType);
       // Plus 1 to make the end date exclusive - simplify the loop test
-      LocalDateTime endDate = getOperatingPeriodEndDate(operatingPeriod).plusDays(1);
-      LocalDateTime date = getOperatingPeriodStartDate(operatingPeriod);
-
-      addDates(isAvailable, daysOfWeek, endDate, date);
+      addDates(isAvailable, daysOfWeek, endDate.plusDays(1), startDate);
     } else if (period instanceof UicOperatingPeriod uicOperatingPeriod) {
       LocalDateTime endDate = uicOperatingPeriod.getToDate().plusDays(1);
       LocalDateTime date = uicOperatingPeriod.getFromDate();
@@ -189,32 +208,42 @@ public class DayTypeAssignmentMapper {
     }
   }
 
-  private LocalDateTime getOperatingPeriodStartDate(OperatingPeriod operatingPeriod) {
+  @Nullable
+  private LocalDateTime findOperatingPeriodStartDate(OperatingPeriod operatingPeriod) {
     if (operatingPeriod.getFromDate() != null) {
       return operatingPeriod.getFromDate();
     }
     if (operatingPeriod.getFromOperatingDayRef() != null) {
       return lookupOperatingDay(operatingPeriod.getFromOperatingDayRef());
     }
-    throw new IllegalArgumentException(
-      "Missing start date for operating period " + operatingPeriod.getId()
-    );
+    return null;
   }
 
-  private LocalDateTime getOperatingPeriodEndDate(OperatingPeriod operatingPeriod) {
+  @Nullable
+  private LocalDateTime findOperatingPeriodEndDate(OperatingPeriod operatingPeriod) {
     if (operatingPeriod.getToDate() != null) {
       return operatingPeriod.getToDate();
     }
     if (operatingPeriod.getToOperatingDayRef() != null) {
       return lookupOperatingDay(operatingPeriod.getToOperatingDayRef());
     }
-    throw new IllegalArgumentException(
-      "Missing end date for operating period " + operatingPeriod.getId()
-    );
+    return null;
   }
 
+  @Nullable
   private LocalDateTime lookupOperatingDay(OperatingDayRefStructure operatingDayRef) {
-    return operatingDays.lookup(operatingDayRef.getRef()).getCalendarDate();
+    var operatingDay = operatingDays.lookup(operatingDayRef.getRef());
+    return operatingDay == null ? null : operatingDay.getCalendarDate();
+  }
+
+  private void reportIgnoredAssignment(DayTypeAssignment dayTypeAssignment, String reason) {
+    issueStore.add(
+      "DayTypeAssignmentIgnored",
+      "DayTypeAssignment %s for DayType %s is ignored, because %s.",
+      dayTypeAssignment.getId(),
+      dayType.getId(),
+      reason
+    );
   }
 
   private void addDates(
