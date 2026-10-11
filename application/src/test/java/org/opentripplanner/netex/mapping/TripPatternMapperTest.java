@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.core.model.id.FeedScopedIdForTestFactory;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMap;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMapById;
 import org.opentripplanner.transit.model.framework.Deduplicator;
@@ -59,7 +60,8 @@ class TripPatternMapperTest {
       ArrayListMultimap.create(),
       Map.of(NetexTestDataSample.SERVICE_JOURNEY_ID, SERVICE_ID),
       new Deduplicator(),
-      150
+      150,
+      NetexProfileSupport.NORDIC
     );
 
     Optional<TripPatternMapperResult> res = tripPatternMapper.mapTripPattern(
@@ -257,7 +259,8 @@ class TripPatternMapperTest {
       sample.getDatedServiceJourneyBySjId(),
       Map.of(NetexTestDataSample.SERVICE_JOURNEY_ID, SERVICE_ID),
       new Deduplicator(),
-      150
+      150,
+      NetexProfileSupport.NORDIC
     );
 
     Optional<TripPatternMapperResult> res = tripPatternMapper.mapTripPattern(

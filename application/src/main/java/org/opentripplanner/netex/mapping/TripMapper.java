@@ -8,6 +8,7 @@ import org.opentripplanner.core.model.accessibility.Accessibility;
 import org.opentripplanner.core.model.i18n.NonLocalizedString;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMap;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.opentripplanner.netex.mapping.support.NetexMainAndSubMode;
@@ -44,7 +45,7 @@ class TripMapper {
   > journeyPatternsById;
   private final Map<String, FeedScopedId> serviceIds;
   private final EntityById<Operator> operatorsById;
-  private final TransportModeMapper transportModeMapper = new TransportModeMapper();
+  private final TransportModeMapper transportModeMapper;
   private final EntityById<Trip> mappedTrips = new DefaultEntityById<>();
 
   TripMapper(
@@ -54,8 +55,10 @@ class TripMapper {
     EntityById<org.opentripplanner.transit.model.network.Route> otpRouteById,
     ReadOnlyHierarchicalMap<String, Route> routeById,
     ReadOnlyHierarchicalMap<String, JourneyPattern_VersionStructure> journeyPatternsById,
-    Map<String, FeedScopedId> serviceIds
+    Map<String, FeedScopedId> serviceIds,
+    NetexProfileSupport profileSupport
   ) {
+    this.transportModeMapper = new TransportModeMapper(profileSupport);
     this.idFactory = idFactory;
     this.issueStore = issueStore;
     this.otpRouteById = otpRouteById;

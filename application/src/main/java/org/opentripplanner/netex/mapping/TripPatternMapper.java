@@ -16,6 +16,7 @@ import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.model.StopTime;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMap;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMapById;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
@@ -111,7 +112,8 @@ class TripPatternMapper {
     Multimap<String, DatedServiceJourney> datedServiceJourneysBySJId,
     Map<String, FeedScopedId> serviceIds,
     DeduplicatorService deduplicator,
-    double maxStopToShapeSnapDistance
+    double maxStopToShapeSnapDistance,
+    NetexProfileSupport profileSupport
   ) {
     this.issueStore = issueStore;
     this.idFactory = idFactory;
@@ -126,7 +128,8 @@ class TripPatternMapper {
       otpRouteById,
       routeById,
       journeyPatternById,
-      serviceIds
+      serviceIds,
+      profileSupport
     );
     this.stopTimesMapper = new StopTimesMapper(
       issueStore,

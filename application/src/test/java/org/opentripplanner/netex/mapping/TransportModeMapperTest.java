@@ -20,7 +20,9 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.mapping.TransportModeMapper.UnsupportedModeException;
 import org.opentripplanner.transit.model.basic.SubMode;
 import org.opentripplanner.transit.model.basic.TransitMode;
@@ -157,6 +159,22 @@ class TransportModeMapperTest {
     assertThrows(UnsupportedModeException.class, () ->
       transportModeMapper.map(null, new TransportSubmodeStructure())
     );
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+    "FERRY, FERRY",
+    "TROLLEY_BUS, TROLLEYBUS",
+    "URBAN_RAIL, RAIL",
+    "INTERCITY_RAIL, RAIL",
+  })
+  void mapAdditionalModesWithExtendedNetex(
+    AllVehicleModesOfTransportEnumeration mode,
+    TransitMode expected
+  ) throws UnsupportedModeException {
+    var mapper = new TransportModeMapper(NetexProfileSupport.of(true, false));
+    assertEquals(expected, mapper.map(mode, null).mainMode());
+    assertThrows(UnsupportedModeException.class, () -> transportModeMapper.map(mode, null));
   }
 
   @Test

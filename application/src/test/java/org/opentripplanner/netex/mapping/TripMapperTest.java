@@ -17,6 +17,7 @@ import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMap;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMapById;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
@@ -67,7 +68,8 @@ class TripMapperTest {
       transitBuilder.getRoutes(),
       new HierarchicalMapById<>(),
       new HierarchicalMap<>(),
-      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID)
+      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      NetexProfileSupport.NORDIC
     );
 
     limitation.withWheelchairAccess(wheelchairLimitation);
@@ -99,7 +101,8 @@ class TripMapperTest {
       transitBuilder.getRoutes(),
       new HierarchicalMapById<>(),
       new HierarchicalMap<>(),
-      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID)
+      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      NetexProfileSupport.NORDIC
     );
 
     ServiceJourney serviceJourney = createExampleServiceJourney();
@@ -127,7 +130,8 @@ class TripMapperTest {
       transitBuilder.getRoutes(),
       new HierarchicalMapById<>(),
       new HierarchicalMap<>(),
-      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID)
+      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      NetexProfileSupport.NORDIC
     );
 
     ServiceJourney serviceJourney = createExampleServiceJourney();
@@ -174,7 +178,8 @@ class TripMapperTest {
       transitBuilder.getRoutes(),
       routeById,
       journeyPatternById,
-      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID)
+      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      NetexProfileSupport.NORDIC
     );
 
     Trip trip = tripMapper.mapServiceJourney(serviceJourney, this::headsign);
@@ -194,7 +199,8 @@ class TripMapperTest {
       transitBuilder.getRoutes(),
       new HierarchicalMapById<>(),
       new HierarchicalMap<>(),
-      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID)
+      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      NetexProfileSupport.NORDIC
     );
 
     ServiceJourney serviceJourney = createExampleServiceJourney();

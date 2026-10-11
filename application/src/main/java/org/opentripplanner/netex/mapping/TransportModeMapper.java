@@ -7,6 +7,7 @@ import static org.rutebanken.netex.model.WaterSubmodeEnumeration.REGIONAL_CAR_FE
 
 import java.util.Set;
 import javax.annotation.Nullable;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.mapping.support.NetexMainAndSubMode;
 import org.opentripplanner.transit.model.basic.SubMode;
 import org.opentripplanner.transit.model.basic.TransitMode;
@@ -28,6 +29,17 @@ class TransportModeMapper {
     LOCAL_CAR_FERRY.value(),
     HIGH_SPEED_VEHICLE_SERVICE.value()
   );
+
+  private final NetexProfileSupport profileSupport;
+
+  /** Create a mapper for the Nordic profile. */
+  TransportModeMapper() {
+    this(NetexProfileSupport.NORDIC);
+  }
+
+  TransportModeMapper(NetexProfileSupport profileSupport) {
+    this.profileSupport = profileSupport;
+  }
 
   public NetexMainAndSubMode map(
     AllVehicleModesOfTransportEnumeration netexMode,
@@ -54,8 +66,30 @@ class TransportModeMapper {
       case TAXI -> TransitMode.TAXI;
       case TRAM -> TransitMode.TRAM;
       case WATER -> TransitMode.FERRY;
-      default -> throw new UnsupportedModeException(mode);
+      default -> mapAdditionalMode(mode);
     };
+  }
+
+  /**
+   * EPIP (CEN/TS 16614-4) uses modes the Nordic profile does not allow. They are supported with
+   * extended NeTEx support only.
+   */
+  private TransitMode mapAdditionalMode(AllVehicleModesOfTransportEnumeration mode)
+    throws UnsupportedModeException {
+    if (profileSupport.extendedNetex()) {
+      switch (mode) {
+        case FERRY:
+          return TransitMode.FERRY;
+        case TROLLEY_BUS:
+          return TransitMode.TROLLEYBUS;
+        case URBAN_RAIL:
+        case INTERCITY_RAIL:
+          return TransitMode.RAIL;
+        default:
+          break;
+      }
+    }
+    throw new UnsupportedModeException(mode);
   }
 
   /**

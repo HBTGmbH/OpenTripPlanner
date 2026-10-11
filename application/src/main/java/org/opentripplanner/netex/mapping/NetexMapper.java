@@ -511,7 +511,8 @@ public class NetexMapper {
       currentMapperIndexes.getDatedServiceJourneysBySjId(),
       serviceIds,
       deduplicator,
-      maxStopToShapeSnapDistance
+      maxStopToShapeSnapDistance,
+      profileSupport
     );
 
     for (JourneyPattern_VersionStructure journeyPattern : currentNetexIndex

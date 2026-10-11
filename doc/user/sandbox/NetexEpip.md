@@ -49,6 +49,7 @@ The feature is under development. The following table lists what is supported so
 | Stop points assigned to a stop place only (no `QuayRef`): the quay with the lowest id is used; for a stop place without quays a stop is derived from the scheduled stop point (its location, otherwise the stop place centroid), with the id of the scheduled stop point | Supported |
 | Stop place without centroid and quays: located at the mean position of its scheduled stop points | Supported |
 | Operating days inside the `ServiceCalendar` | Supported |
+| Transport modes `ferry`, `trolleyBus`, `urbanRail` and `intercityRail` on lines and service journeys | Supported (`lift` and `other` are not supported) |
 
 ### Known limitations
 

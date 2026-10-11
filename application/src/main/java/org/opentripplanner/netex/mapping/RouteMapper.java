@@ -40,7 +40,7 @@ class RouteMapper {
 
   private final DataImportIssueStore issueStore;
   private final HexBinaryAdapter hexBinaryAdapter = new HexBinaryAdapter();
-  private final TransportModeMapper transportModeMapper = new TransportModeMapper();
+  private final TransportModeMapper transportModeMapper;
 
   private final FeedScopedIdFactory idFactory;
   private final EntityById<Agency> agenciesById;
@@ -77,6 +77,7 @@ class RouteMapper {
     this.authorityMapper = new AuthorityToAgencyMapper(idFactory, timeZone);
     this.ferryIdsNotAllowedForBicycle = ferryIdsNotAllowedForBicycle;
     this.profileSupport = profileSupport;
+    this.transportModeMapper = new TransportModeMapper(profileSupport);
   }
 
   Route mapRoute(Line_VersionStructure line) {
@@ -147,7 +148,7 @@ class RouteMapper {
     // but currently it doesn't look it is being parsed.
     // until there is better information from the operators we assume that all ferries allow
     // bicycles on board.
-    if (AllVehicleModesOfTransportEnumeration.WATER == line.getTransportMode()) {
+    if (isFerry(line.getTransportMode())) {
       if (ferryIdsNotAllowedForBicycle.contains(line.getId())) {
         builder.withBikesAllowed(BikeAccess.NOT_ALLOWED);
       } else {
@@ -156,6 +157,17 @@ class RouteMapper {
     }
 
     return builder.build();
+  }
+
+  /**
+   * The Nordic profile uses the mode water for ferries; EPIP also has the mode ferry, which is
+   * supported with extended NeTEx support.
+   */
+  private boolean isFerry(@Nullable AllVehicleModesOfTransportEnumeration mode) {
+    return (
+      mode == AllVehicleModesOfTransportEnumeration.WATER ||
+      (profileSupport.extendedNetex() && mode == AllVehicleModesOfTransportEnumeration.FERRY)
+    );
   }
 
   private Collection<GroupOfRoutes> getGroupOfRoutes(Line_VersionStructure line) {

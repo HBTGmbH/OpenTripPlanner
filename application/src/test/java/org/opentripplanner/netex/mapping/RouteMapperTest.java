@@ -224,6 +224,22 @@ class RouteMapperTest {
   }
 
   @Test
+  void mapFerryModeWithExtendedNetex() {
+    var line = createExampleLine();
+    line.setTransportMode(AllVehicleModesOfTransportEnumeration.FERRY);
+
+    Route route = createRouteMapper(
+      new NetexEntityIndex(),
+      new TransitDataImportBuilder(new SiteRepository(), DataImportIssueStore.NOOP),
+      DataImportIssueStore.NOOP,
+      NetexProfileSupport.of(true, false)
+    ).mapRoute(line);
+
+    assertEquals(TransitMode.FERRY, route.getMode());
+    assertEquals(BikeAccess.ALLOWED, route.getBikesAllowed());
+  }
+
+  @Test
   void mapRouteWithColor() {
     NetexEntityIndex netexEntityIndex = new NetexEntityIndex();
     Line line = createExampleLine();
