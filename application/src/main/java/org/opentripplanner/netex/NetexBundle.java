@@ -82,7 +82,10 @@ public class NetexBundle implements Closeable {
     this.routeToCentroidStopPlaceIds = Set.copyOf(routeToCentroidStopPlaceIds);
     this.maxStopToShapeSnapDistance = maxStopToShapeSnapDistance;
     this.noTransfersOnIsolatedStops = noTransfersOnIsolatedStops;
-    this.allowStopPlaceAsPassengerStopAssignment = allowStopPlaceAsPassengerStopAssignment;
+    this.allowStopPlaceAsPassengerStopAssignment =
+      profileSupport.allowStopPlaceAsPassengerStopAssignment(
+        allowStopPlaceAsPassengerStopAssignment
+      );
     this.ignoredFeatures = Set.copyOf(ignorableFeatures);
     this.profileSupport = profileSupport;
   }

@@ -31,6 +31,14 @@ class NetexProfileSupportTest {
   }
 
   @Test
+  void allowStopPlaceAsPassengerStopAssignment() {
+    assertFalse(NetexProfileSupport.NORDIC.allowStopPlaceAsPassengerStopAssignment(false));
+    assertTrue(NetexProfileSupport.NORDIC.allowStopPlaceAsPassengerStopAssignment(true));
+    assertTrue(NetexProfileSupport.of(true, false).allowStopPlaceAsPassengerStopAssignment(false));
+    assertTrue(NetexProfileSupport.of(false, true).allowStopPlaceAsPassengerStopAssignment(false));
+  }
+
+  @Test
   void ofFeatures() {
     assertSame(NetexProfileSupport.NORDIC, NetexProfileSupport.ofFeatures());
     OTPFeature.NetexEpip.testOn(() -> assertTrue(NetexProfileSupport.ofFeatures().epip()));

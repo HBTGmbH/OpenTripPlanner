@@ -52,6 +52,15 @@ public final class NetexProfileSupport {
     return epip || vdv462;
   }
 
+  /**
+   * EPIP and VDV 462 assign scheduled stop points to a stop place; the quay is optional (EPIP) or
+   * not used at all (VDV 462). With extended NeTEx support, such assignments are always accepted,
+   * independent of the feed configuration.
+   */
+  public boolean allowStopPlaceAsPassengerStopAssignment(boolean configured) {
+    return configured || extendedNetex();
+  }
+
   @Override
   public String toString() {
     return ToStringBuilder.of(NetexProfileSupport.class)
