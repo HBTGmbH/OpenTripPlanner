@@ -1,5 +1,6 @@
 package org.opentripplanner.netex.validation;
 
+import javax.annotation.Nullable;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.netex.issues.ObjectNotFound;
 import org.rutebanken.netex.model.ServiceJourney;
@@ -18,7 +19,9 @@ class JourneyPatternNotFoundInSJ extends AbstractHMapValidationRule<String, Serv
     return new ObjectNotFound("ServiceJourney", sj.getId(), "JourneyPattern", getPatternId(sj));
   }
 
+  @Nullable
   private String getPatternId(ServiceJourney sj) {
-    return sj.getJourneyPatternRef().getValue().getRef();
+    var ref = sj.getJourneyPatternRef();
+    return ref == null ? null : ref.getValue().getRef();
   }
 }
