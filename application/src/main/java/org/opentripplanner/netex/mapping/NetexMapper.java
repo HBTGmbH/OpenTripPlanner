@@ -589,6 +589,11 @@ public class NetexMapper {
     String timeZone = currentNetexIndex.getTimeZone();
     if (timeZone == null) {
       LocalDateTime time = LocalDateTime.now(ZoneId.of("UTC"));
+      // The time zone is only missing for file levels where no frame was parsed. The time is only
+      // used to check the validity of tariff zones, so only report it if there are any.
+      if (currentNetexIndex.getTariffZonesById().localKeys().isEmpty()) {
+        return time;
+      }
       issueStore.add(
         "NetexImportTimeZone",
         "No timezone set for the current NeTEx input data file. The import " +
