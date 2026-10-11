@@ -70,6 +70,13 @@ public class NetexMapper {
   private final double maxStopToShapeSnapDistance;
   private final boolean noTransfersOnIsolatedStops;
 
+  /**
+   * Map entries that cross reference entities in the shared files, for example Interchanges. The
+   * Nordic profile does not allow timetable data in shared files, but other profiles may deliver
+   * all data in one file, which can be configured as a shared file.
+   */
+  private final GroupNetexMapper sharedGroupMapper;
+
   /** Map entries that cross reference entities within a group/operator, for example Interchanges. */
   private GroupNetexMapper groupMapper;
 
@@ -108,6 +115,7 @@ public class NetexMapper {
     this.maxStopToShapeSnapDistance = maxStopToShapeSnapDistance;
     this.calendarServiceBuilder = new CalendarServiceBuilder(idFactory);
     this.tripCalendarBuilder = new TripCalendarBuilder(this.calendarServiceBuilder, issueStore);
+    this.sharedGroupMapper = new GroupNetexMapper(idFactory, issueStore, transitBuilder);
   }
 
   /**
@@ -141,6 +149,8 @@ public class NetexMapper {
    * all other mapping is complete. Note! Hierarchical data structures are not accessible anymore.
    */
   public void finishUp() {
+    sharedGroupMapper.mapGroupEntries();
+
     // Add Calendar data created during the mapping of dayTypes, dayTypeAssignments,
     // datedServiceJourney and ServiceJourneys
     transitBuilder.getCalendarDates().addAll(calendarServiceBuilder.createServiceCalendar());
@@ -499,7 +509,9 @@ public class NetexMapper {
 
     transitBuilder.getTripPatterns().put(stopPattern, result.tripPattern());
     currentMapperIndexes.addStopTimesByNetexId(result.stopTimeByNetexId());
-    groupMapper.scheduledStopPointsIndex.putAll(Multimaps.asMap(result.scheduledStopPointsIndex()));
+    currentGroupMapper().scheduledStopPointsIndex.putAll(
+      Multimaps.asMap(result.scheduledStopPointsIndex())
+    );
     transitBuilder.getTripOnServiceDates().addAll(result.tripOnServiceDates());
   }
 
@@ -523,11 +535,13 @@ public class NetexMapper {
   }
 
   private void addEntriesToGroupMapperForPostProcessingLater() {
-    if (level != 0) {
-      groupMapper.addInterchange(
-        currentNetexIndex.getServiceJourneyInterchangeById().localValues()
-      );
-    }
+    currentGroupMapper().addInterchange(
+      currentNetexIndex.getServiceJourneyInterchangeById().localValues()
+    );
+  }
+
+  private GroupNetexMapper currentGroupMapper() {
+    return level == LEVEL_SHARED ? sharedGroupMapper : groupMapper;
   }
 
   private void mapScheduledStopPointsToQuays() {
