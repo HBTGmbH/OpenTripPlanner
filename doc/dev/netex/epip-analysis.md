@@ -458,6 +458,28 @@ schema-checked against `NeTEx_publication-NoConstraint.xsd` (the files reference
 another file). `EpipRoutingIntegrationTest` builds a graph with `NetexEpip` and plans a trip with
 one transfer (bus A → tram B at a stop place without quays).
 
+### Increment 3b – fixes found with the DELFI data set (done)
+
+All with `NetexEpip` or `NetexVdv462` enabled; details and numbers in §8.
+
+| Finding | Change                                                                                                                       |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| L1      | EPIP patterns accept a directory prefix and group by directory (D9); zip directory entries and non-XML files are ignored.    |
+| S8      | Scheduled stop points used for boarding or alighting without any assignment become stops without parent station.             |
+| J7      | Notices on every stop point of a journey pattern are attached to the journeys (28.5 → 1.35 million assignments for Hamburg). |
+| S9      | `StopPlaceWithoutQuays` is no longer reported; stop places without quays are valid in EPIP.                                  |
+| M3      | The mode `unknown` is treated like a missing mode; journeys with mode `unknown` use the mode of their line.                  |
+| S10     | Quays without coordinates are placed at their stop place (`QuayLocatedAtStopPlace`).                                         |
+
+### Increment 5 – VDV 462 (partly done)
+
+| Finding | Status                                                                                                                                                     |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| J1      | Done: passing times derived from the timing model (`ext/netexprofile/vdv462/TimingModelPassingTimes`), with a hand-built VDV 462 data set and import test. |
+| I5      | Deferred: expanding `InterchangeRule`s (stop, line, direction, time band) to journeys needs real VDV 462 data to get the semantics right.                  |
+| L5      | Deferred for the same reason; journeys are restricted by their day types, so merged frames with disjoint validity mainly affect versioned stops and lines. |
+| J3      | Open (Q11): family C (`VehicleJourney` + `ServicePattern`).                                                                                                |
+
 ## 8. Real data: German DELFI data set (October 2026)
 
 Source: `20261005_fahrplaene_gesamtdeutschland.zip` (DELFI e.V., "NeTEx EU-Profil (final draft
