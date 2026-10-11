@@ -31,11 +31,13 @@ import org.opentripplanner.transit.model.organization.Operator;
 import org.opentripplanner.transit.service.SiteRepository;
 import org.rutebanken.netex.model.AllVehicleModesOfTransportEnumeration;
 import org.rutebanken.netex.model.Authority;
+import org.rutebanken.netex.model.AuthorityRef;
 import org.rutebanken.netex.model.BrandingRefStructure;
 import org.rutebanken.netex.model.GroupOfLinesRefStructure;
 import org.rutebanken.netex.model.Line;
 import org.rutebanken.netex.model.MultilingualString;
 import org.rutebanken.netex.model.Network;
+import org.rutebanken.netex.model.OperatorRefStructure;
 import org.rutebanken.netex.model.PresentationStructure;
 import org.rutebanken.netex.model.TransportOrganisationRefStructure;
 import org.rutebanken.netex.model.TransportOrganisationRefs_RelStructure;
@@ -237,6 +239,49 @@ class RouteMapperTest {
 
     assertEquals(TransitMode.FERRY, route.getMode());
     assertEquals(BikeAccess.ALLOWED, route.getBikesAllowed());
+  }
+
+  @Test
+  void useOperatorAsAgencyIfLineHasNoAuthority() {
+    var transitBuilder = new TransitDataImportBuilder(
+      new SiteRepository(),
+      DataImportIssueStore.NOOP
+    );
+    transitBuilder.getOperatorsById().add(createOperator(OPERATOR_ID));
+    var line = createExampleLine()
+      .withRepresentedByGroupRef(null)
+      .withOperatorRef(new OperatorRefStructure().withRef(OPERATOR_ID));
+    var issueStore = new DefaultDataImportIssueStore();
+
+    Route route = createRouteMapper(
+      new NetexEntityIndex(),
+      transitBuilder,
+      issueStore,
+      NetexProfileSupport.of(true, false)
+    ).mapRoute(line);
+
+    assertEquals(OPERATOR_ID, route.getAgency().getId().getId());
+    assertEquals("Operator", route.getAgency().getName());
+    assertThat(listIssueTypes(issueStore)).containsExactly("AgencyDerivedFromOperator");
+  }
+
+  @Test
+  void useAuthorityRefIfGroupOfLinesCannotBeResolved() {
+    var transitBuilder = new TransitDataImportBuilder(
+      new SiteRepository(),
+      DataImportIssueStore.NOOP
+    );
+    transitBuilder.getAgenciesById().add(createAgency());
+    var line = createExampleLine().withAuthorityRef(new AuthorityRef().withRef(AUTHORITY_ID));
+
+    Route route = createRouteMapper(
+      new NetexEntityIndex(),
+      transitBuilder,
+      DataImportIssueStore.NOOP,
+      NetexProfileSupport.of(true, false)
+    ).mapRoute(line);
+
+    assertEquals(AUTHORITY_ID, route.getAgency().getId().getId());
   }
 
   @Test

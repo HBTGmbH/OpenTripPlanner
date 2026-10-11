@@ -210,9 +210,52 @@ class RouteMapper {
     } else if (line.getAuthorityRef() != null) {
       agency = agenciesById.get(idFactory.createId(line.getAuthorityRef().getRef()));
     }
+    if (agency == null && profileSupport.extendedNetex()) {
+      agency = findAgencyWithExtendedNetex(line);
+    }
     // No authority found in Network or GroupOfLines.
     // Use the dummy agency, create if necessary
     return agency != null ? agency : createOrGetDummyAgency(line);
+  }
+
+  /**
+   * In EPIP a line references either its operator or its authority, and additional transport
+   * organisations may be operators or authorities (CEN/TS 16614-4, 7.1.1). VDV 462 has no
+   * authority at all. Look for an authority in all these places, and use the operator of the line
+   * as agency if there is no authority.
+   */
+  @Nullable
+  private Agency findAgencyWithExtendedNetex(Line_VersionStructure line) {
+    if (line.getAuthorityRef() != null) {
+      var agency = agenciesById.get(idFactory.createId(line.getAuthorityRef().getRef()));
+      if (agency != null) {
+        return agency;
+      }
+    }
+    if (line.getAdditionalOperators() != null) {
+      for (var ref : line.getAdditionalOperators().getTransportOrganisationRef()) {
+        var agency = agenciesById.get(idFactory.createId(ref.getValue().getRef()));
+        if (agency != null) {
+          return agency;
+        }
+      }
+    }
+    var operator = findOperator(line);
+    if (operator == null) {
+      return null;
+    }
+    issueStore.add(
+      "AgencyDerivedFromOperator",
+      "Line %s has no authority, the operator %s is used as agency.",
+      line.getId(),
+      operator.getId()
+    );
+    var agency = agenciesById.get(operator.getId());
+    if (agency == null) {
+      agency = authorityMapper.mapOperatorToAgency(operator);
+      agenciesById.add(agency);
+    }
+    return agency;
   }
 
   private Agency createOrGetDummyAgency(Line_VersionStructure line) {

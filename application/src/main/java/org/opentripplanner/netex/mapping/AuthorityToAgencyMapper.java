@@ -5,6 +5,7 @@ import static org.opentripplanner.netex.mapping.support.NetexObjectDecorator.wit
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.opentripplanner.transit.model.organization.Agency;
 import org.opentripplanner.transit.model.organization.AgencyBuilder;
+import org.opentripplanner.transit.model.organization.Operator;
 import org.opentripplanner.utils.lang.StringUtils;
 import org.rutebanken.netex.model.Authority;
 
@@ -47,6 +48,19 @@ class AuthorityToAgencyMapper {
       target.withPhone(c.getPhone());
     });
     return target.build();
+  }
+
+  /**
+   * Create an agency for an operator. This is used for lines without an authority, when the
+   * operator is the only known transport organisation. The agency gets the id of the operator.
+   */
+  Agency mapOperatorToAgency(Operator operator) {
+    return Agency.of(operator.getId())
+      .withName(operator.getName())
+      .withTimezone(timeZone)
+      .withUrl(operator.getUrl())
+      .withPhone(operator.getPhone())
+      .build();
   }
 
   /**
