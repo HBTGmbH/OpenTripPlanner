@@ -39,8 +39,9 @@ operating units by their national id (DHID).
 ## Evidence
 
 - Hand-built EPIP data set with a routing integration test (one transfer), schema-validated.
-- German DELFI data set of October 2026 (28 289 files, 79 GB): imports completely; the Hamburg part
-  (1 359 files) builds a graph with OSM and plans trips including bus–U-Bahn transfers.
+- German DELFI data set of October 2026 (28 289 files, 79 GB): imports without failure in 12 minutes
+  (4.75 million journeys; 2.7 % dropped, mostly call-collective taxis with mode `unknown`); the
+  Hamburg part (1 359 files) builds a graph with OSM and plans trips including bus–U-Bahn transfers.
 - Details: `doc/dev/netex/epip-analysis.md`.
 
 ## Open questions for the maintainers
