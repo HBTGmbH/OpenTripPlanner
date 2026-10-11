@@ -2,6 +2,7 @@ package org.opentripplanner.netex.mapping;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.opentripplanner.netex.mapping.MappingSupport.ID_FACTORY;
 
 import java.math.BigDecimal;
@@ -95,6 +96,26 @@ class ScheduledStopPointStopMapperTest {
     );
 
     assertEquals(new WgsCoordinate(53.5, 10.5), result.get(STOP_PLACE_ID));
+  }
+
+  @Test
+  void deriveStopsForUsedScheduledStopPointsWithoutAssignment() {
+    scheduledStopPoints.add(scheduledStopPoint(SSP_ID_1, "Amtsgericht", 53.9, 10.3));
+    scheduledStopPoints.add(new ScheduledStopPoint().withId(SSP_ID_2));
+    scheduledStopPoints.add(scheduledStopPoint("SSP_ASSIGNED", "Assigned", 53.9, 10.3));
+    scheduledStopPoints.add(scheduledStopPoint("SSP_UNUSED", "Unused", 53.9, 10.3));
+
+    var stops = subject.mapStopsWithoutAssignment(
+      List.of(SSP_ID_1, SSP_ID_2, "SSP_ASSIGNED"),
+      scheduledStopPoints,
+      "SSP_ASSIGNED"::equals
+    );
+
+    assertThat(stops.keySet()).containsExactly(SSP_ID_1);
+    var stop = stops.get(SSP_ID_1);
+    assertEquals("Amtsgericht", stop.getName().toString());
+    assertNull(stop.getParentStation());
+    assertThat(listIssueTypes()).containsExactly("StopDerivedFromUnassignedScheduledStopPoint");
   }
 
   private Map<String, RegularStop> mapStops() {

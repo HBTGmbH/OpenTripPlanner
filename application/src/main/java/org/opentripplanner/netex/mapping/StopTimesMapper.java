@@ -456,6 +456,13 @@ class StopTimesMapper {
       } else {
         stopLocation = groupStop;
       }
+    } else if (profileSupport.extendedNetex()) {
+      // A stop derived from a scheduled stop point without assignment, see
+      // ScheduledStopPointStopMapper#mapStopsWithoutAssignment
+      var derivedStop = stopsById.get(idFactory.createId(stopPointRef));
+      if (derivedStop != null && derivedStop.getParentStation() == null) {
+        stopLocation = derivedStop;
+      }
     }
 
     return stopLocation;

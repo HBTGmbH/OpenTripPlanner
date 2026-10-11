@@ -1,9 +1,11 @@
 package org.opentripplanner.netex.mapping;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import javax.annotation.Nullable;
 import org.opentripplanner.core.model.accessibility.Accessibility;
 import org.opentripplanner.core.model.i18n.I18NString;
@@ -96,6 +98,57 @@ class ScheduledStopPointStopMapper {
         stopPointRef,
         stopPlace,
         station
+      );
+      result.put(stopPointRef, stop);
+    }
+    return result;
+  }
+
+  /**
+   * Create a stop for every scheduled stop point which is used in a journey pattern of the local
+   * index, but is not assigned to any quay, stop place or flexible stop place. A passenger stop
+   * assignment is required for each scheduled stop point, but some exports omit it (seen in the
+   * German DELFI data set). The stop is located at the scheduled stop point and has no parent
+   * station. A scheduled stop point without name or location is skipped.
+   *
+   * @param usedStopPointRefs the scheduled stop points used in the local journey patterns
+   * @param isAssigned        tells if a scheduled stop point is assigned to a stop
+   * @return the created stops by scheduled stop point id
+   */
+  Map<String, RegularStop> mapStopsWithoutAssignment(
+    Collection<String> usedStopPointRefs,
+    ReadOnlyHierarchicalMapById<ScheduledStopPoint> scheduledStopPointById,
+    Predicate<String> isAssigned
+  ) {
+    Map<String, RegularStop> result = new HashMap<>();
+    for (String stopPointRef : usedStopPointRefs) {
+      if (isAssigned.test(stopPointRef)) {
+        continue;
+      }
+      var scheduledStopPoint = scheduledStopPointById.lookup(stopPointRef);
+      var coordinate = location(scheduledStopPoint);
+      var name =
+        scheduledStopPoint == null || scheduledStopPoint.getName() == null
+          ? null
+          : NonLocalizedString.ofNullable(scheduledStopPoint.getName().getValue());
+      if (coordinate == null || name == null) {
+        continue;
+      }
+      var stop = siteRepositoryBuilder.computeRegularStopIfAbsent(
+        idFactory.createId(stopPointRef),
+        it -> {
+          issueStore.add(
+            "StopDerivedFromUnassignedScheduledStopPoint",
+            "Scheduled stop point %s is not assigned to a stop. A stop without parent station is created at its location.",
+            stopPointRef
+          );
+          return siteRepositoryBuilder
+            .regularStop(it)
+            .withName(name)
+            .withPlatformCode(publicCode(scheduledStopPoint))
+            .withCoordinate(coordinate)
+            .build();
+        }
       );
       result.put(stopPointRef, stop);
     }

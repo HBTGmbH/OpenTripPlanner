@@ -6,6 +6,8 @@ import jakarta.xml.bind.JAXBElement;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -41,6 +43,7 @@ import org.rutebanken.netex.model.Line;
 import org.rutebanken.netex.model.LineRefs_RelStructure;
 import org.rutebanken.netex.model.NoticeAssignment;
 import org.rutebanken.netex.model.StopPlace;
+import org.rutebanken.netex.model.StopPointInJourneyPattern;
 import org.rutebanken.netex.model.VersionOfObjectRefStructure;
 
 /**
@@ -378,10 +381,47 @@ public class NetexMapper {
       currentNetexIndex.getScheduledStopPointById(),
       currentNetexIndex.getStopPlaceById()
     );
+    stops = new HashMap<>(stops);
+    stops.putAll(
+      mapper.mapStopsWithoutAssignment(
+        stopPointRefsUsedInLocalJourneyPatterns(),
+        currentNetexIndex.getScheduledStopPointById(),
+        ref ->
+          currentNetexIndex.getQuayIdByStopPointRef().containsKey(ref) ||
+          currentNetexIndex.getStopPlaceIdByStopPointRef().containsKey(ref) ||
+          currentNetexIndex.getFlexibleStopPlaceByStopPointRef().containsKey(ref)
+      )
+    );
     transitBuilder.siteRepository().withRegularStops(stops.values());
     stops.forEach((stopPointRef, stop) ->
       transitBuilder.addStopByScheduledStopPoint(idFactory.createId(stopPointRef), stop)
     );
+  }
+
+  /** The scheduled stop points of the local journey patterns used for boarding or alighting. */
+  private Set<String> stopPointRefsUsedInLocalJourneyPatterns() {
+    var result = new HashSet<String>();
+    for (var journeyPattern : currentNetexIndex.getJourneyPatternsById().localValues()) {
+      if (journeyPattern.getPointsInSequence() == null) {
+        continue;
+      }
+      for (var point : journeyPattern
+        .getPointsInSequence()
+        .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()) {
+        // Stop points without boarding and alighting are skipped when mapping the stop times
+        if (
+          point instanceof StopPointInJourneyPattern stopPoint &&
+          stopPoint.getScheduledStopPointRef() != null &&
+          !(
+            Boolean.FALSE.equals(stopPoint.isForBoarding()) &&
+            Boolean.FALSE.equals(stopPoint.isForAlighting())
+          )
+        ) {
+          result.add(stopPoint.getScheduledStopPointRef().getValue().getRef());
+        }
+      }
+    }
+    return result;
   }
 
   private void mapMultiModalStopPlaces() {
