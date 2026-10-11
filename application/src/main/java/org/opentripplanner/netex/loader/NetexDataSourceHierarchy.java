@@ -91,6 +91,11 @@ public class NetexDataSourceHierarchy {
     return groupEntries.values();
   }
 
+  /** Only XML files matching none of the patterns are loaded as groups, if enabled. */
+  public static boolean isXmlFile(String name) {
+    return name.toLowerCase(Locale.ROOT).endsWith(".xml");
+  }
+
   /** The names of the files which match none of the patterns. */
   public List<String> unmatchedEntryNames() {
     return unmatchedEntryNames;
@@ -147,10 +152,6 @@ public class NetexDataSourceHierarchy {
           );
         }
       }
-    }
-
-    private static boolean isXmlFile(String name) {
-      return name.toLowerCase(Locale.ROOT).endsWith(".xml");
     }
 
     private boolean ignoredFile(String name) {

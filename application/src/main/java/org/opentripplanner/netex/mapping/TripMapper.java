@@ -19,6 +19,7 @@ import org.opentripplanner.transit.model.framework.EntityById;
 import org.opentripplanner.transit.model.organization.Operator;
 import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.VehicleAssignment;
+import org.rutebanken.netex.model.AllVehicleModesOfTransportEnumeration;
 import org.rutebanken.netex.model.Direction;
 import org.rutebanken.netex.model.DirectionRefStructure;
 import org.rutebanken.netex.model.DirectionTypeEnumeration;
@@ -127,7 +128,9 @@ class TripMapper {
       )
     );
 
-    if (serviceJourney.getTransportMode() != null) {
+    // The NeTEx mode "unknown" means no information; with extended NeTEx support the journey then
+    // uses the mode of its line, as if no mode was given.
+    if (serviceJourney.getTransportMode() != null && !isUnknownWithExtendedNetex(serviceJourney)) {
       NetexMainAndSubMode transitMode = null;
       try {
         transitMode = transportModeMapper.map(
@@ -273,5 +276,12 @@ class TripMapper {
       return null;
     }
     return operatorsById.get(idFactory.createId(opeRef.getRef()));
+  }
+
+  private boolean isUnknownWithExtendedNetex(ServiceJourney serviceJourney) {
+    return (
+      profileSupport.extendedNetex() &&
+      serviceJourney.getTransportMode() == AllVehicleModesOfTransportEnumeration.UNKNOWN
+    );
   }
 }

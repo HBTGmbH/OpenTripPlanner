@@ -111,12 +111,16 @@ class RouteMapper {
 
     var transportMode = line.getTransportMode();
     var transportSubmode = line.getTransportSubmode();
-    if (transportMode == null && profileSupport.extendedNetex()) {
+    // The NeTEx mode "unknown" means no information, like a missing mode
+    if (
+      profileSupport.extendedNetex() &&
+      (transportMode == null || transportMode == AllVehicleModesOfTransportEnumeration.UNKNOWN)
+    ) {
       var derived = lineTransportModeResolver.resolve(line.getId());
       if (derived != null) {
         issueStore.add(
           "LineTransportModeDerived",
-          "Line %s has no TransportMode, using %s derived from its %s.",
+          "Line %s has no or an unknown TransportMode, using %s derived from its %s.",
           line.getId(),
           derived.mode().value(),
           derived.source()

@@ -281,6 +281,29 @@ class RouteMapperTest {
   }
 
   @Test
+  void deriveLineModeIfTheModeIsUnknownWithExtendedNetex() {
+    var line = createExampleLine();
+    line.setTransportMode(AllVehicleModesOfTransportEnumeration.UNKNOWN);
+    var index = new NetexEntityIndex();
+    index.serviceJourneyById.add(
+      serviceJourneyOfLine("SJ-1", AllVehicleModesOfTransportEnumeration.UNKNOWN)
+    );
+    index.serviceJourneyById.add(
+      serviceJourneyOfLine("SJ-2", AllVehicleModesOfTransportEnumeration.BUS)
+    );
+
+    Route route = createRouteMapper(
+      index,
+      new TransitDataImportBuilder(new SiteRepository(), DataImportIssueStore.NOOP),
+      DataImportIssueStore.NOOP,
+      NetexProfileSupport.of(true, false)
+    ).mapRoute(line);
+
+    assertEquals(TransitMode.BUS, route.getMode());
+    assertNull(createRouteMapper(index, DataImportIssueStore.NOOP).mapRoute(line));
+  }
+
+  @Test
   void deriveLineModeFromStopPlacesWithExtendedNetex() {
     var line = createExampleLine();
     line.setTransportMode(null);

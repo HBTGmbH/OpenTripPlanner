@@ -21,7 +21,7 @@ import org.rutebanken.netex.model.TransportSubmodeStructure;
  * TS 16614-4 §7.1.1), but OTP needs a mode for each route. This class derives the mode of a line
  * without mode from the service journeys of the line, or if they have no mode either, from the
  * stop places they serve. If the journeys or stop places have different modes, the most frequent
- * mode is used.
+ * mode is used. The mode {@code unknown} is treated like a missing mode.
  * <p>
  * Only the service journeys of the current file level are used, so the mode of a line in a shared
  * file can not be derived from journeys in a group file.
@@ -133,7 +133,9 @@ class LineTransportModeResolver {
     Stream<AllVehicleModesOfTransportEnumeration> modes
   ) {
     Map<AllVehicleModesOfTransportEnumeration, Integer> counts = new LinkedHashMap<>();
-    modes.filter(Objects::nonNull).forEach(it -> counts.merge(it, 1, Integer::sum));
+    modes
+      .filter(it -> it != null && it != AllVehicleModesOfTransportEnumeration.UNKNOWN)
+      .forEach(it -> counts.merge(it, 1, Integer::sum));
     AllVehicleModesOfTransportEnumeration result = null;
     for (var it : counts.entrySet()) {
       if (result == null || it.getValue() > counts.get(result)) {

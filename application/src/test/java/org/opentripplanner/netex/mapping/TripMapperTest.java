@@ -28,6 +28,7 @@ import org.opentripplanner.transit.service.SiteRepository;
 import org.rutebanken.netex.model.AccessibilityAssessment;
 import org.rutebanken.netex.model.AccessibilityLimitation;
 import org.rutebanken.netex.model.AccessibilityLimitations_RelStructure;
+import org.rutebanken.netex.model.AllVehicleModesOfTransportEnumeration;
 import org.rutebanken.netex.model.DirectionRefStructure;
 import org.rutebanken.netex.model.DirectionTypeEnumeration;
 import org.rutebanken.netex.model.JourneyPattern;
@@ -170,6 +171,36 @@ class TripMapperTest {
 
     assertEquals(trip.getId(), ID_FACTORY.createId(SERVICE_JOURNEY_ID));
     assertNull(trip.getVehicleAssignment());
+  }
+
+  @Test
+  void journeyWithUnknownModeUsesTheModeOfTheLineWithExtendedNetex() {
+    assertNotNull(mapTripWithUnknownMode(NetexProfileSupport.of(true, false)));
+    assertNull(mapTripWithUnknownMode(NetexProfileSupport.NORDIC));
+  }
+
+  private Trip mapTripWithUnknownMode(NetexProfileSupport profileSupport) {
+    TransitDataImportBuilder transitBuilder = new TransitDataImportBuilder(
+      new SiteRepository(),
+      ISSUE_STORE
+    );
+    transitBuilder.getRoutes().add(TransitRepositoryForTest.route(ROUTE_ID).build());
+    TripMapper tripMapper = new TripMapper(
+      ID_FACTORY,
+      ISSUE_STORE,
+      transitBuilder.getOperatorsById(),
+      transitBuilder.getRoutes(),
+      new HierarchicalMapById<>(),
+      new HierarchicalMap<>(),
+      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      new HierarchicalMapById<>(),
+      profileSupport
+    );
+    ServiceJourney serviceJourney = createExampleServiceJourney();
+    serviceJourney.setLineRef(LINE_REF);
+    serviceJourney.setTransportMode(AllVehicleModesOfTransportEnumeration.UNKNOWN);
+
+    return tripMapper.mapServiceJourney(serviceJourney, this::headsign);
   }
 
   @Test

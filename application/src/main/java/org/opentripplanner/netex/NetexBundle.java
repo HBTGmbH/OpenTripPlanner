@@ -113,8 +113,11 @@ public class NetexBundle implements Closeable {
       for (String name : hierarchy.unmatchedEntryNames()) {
         issueStore.add(
           "NetexFileNotMatchingPatterns",
-          "The NeTEx file %s matches none of the file patterns. It is loaded as a group of its own.",
-          name
+          "The NeTEx file %s matches none of the file patterns. %s",
+          name,
+          NetexDataSourceHierarchy.isXmlFile(name)
+            ? "It is loaded as a group of its own."
+            : "It is ignored, because it is not an XML file."
         );
       }
     }
