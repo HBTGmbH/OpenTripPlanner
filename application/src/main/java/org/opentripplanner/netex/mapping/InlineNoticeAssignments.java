@@ -6,6 +6,9 @@ import jakarta.xml.bind.JAXBElement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
@@ -27,6 +30,12 @@ import org.rutebanken.netex.model.StopPointInJourneyPattern;
  * Assignments on a journey pattern are applied to all service journeys of the pattern, because the
  * OTP model has no entity a notice can be attached to for a journey pattern. Assignments on stop
  * points without boarding and alighting are ignored.
+ * <p>
+ * A notice assigned to every stop point of a journey pattern (used for boarding or alighting) is
+ * treated like a notice on the journey pattern. The German DELFI data set repeats journey wide
+ * notices, like "wheelchair accessible", on every stop point: in the Hamburg part this applies to
+ * 99.6 % of the notices on stop points, and attaching them to every stop time would create 28
+ * million notice assignments instead of about one per journey and notice.
  */
 class InlineNoticeAssignments {
 
@@ -65,13 +74,10 @@ class InlineNoticeAssignments {
       if (journeyPattern.getPointsInSequence() == null) {
         continue;
       }
-      for (var point : journeyPattern
-        .getPointsInSequence()
-        .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()) {
-        if (point instanceof StopPointInJourneyPattern stopPoint && isForPassengers(stopPoint)) {
-          result.addAll(stopPoint.getId(), stopPoint.getNoticeAssignments());
-        }
-      }
+      result.addStopPointAssignments(
+        journeyPattern,
+        serviceJourneyIdsByPatternId.get(journeyPattern.getId())
+      );
     }
     return result;
   }
@@ -86,18 +92,90 @@ class InlineNoticeAssignments {
   }
 
   private void addAll(String noticedObjectId, @Nullable NoticeAssignments_RelStructure container) {
-    if (container == null) {
-      return;
+    for (NoticeAssignment noticeAssignment : noticeAssignments(container)) {
+      assignments.add(new Assignment(noticedObjectId, noticeAssignment));
     }
+  }
+
+  /**
+   * Add the assignments of the stop points of the pattern. Notices assigned to every stop point
+   * are assigned to the service journeys of the pattern instead.
+   */
+  private void addStopPointAssignments(
+    JourneyPattern_VersionStructure journeyPattern,
+    Collection<String> serviceJourneyIds
+  ) {
+    var stopPoints = journeyPattern
+      .getPointsInSequence()
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
+      .stream()
+      .filter(StopPointInJourneyPattern.class::isInstance)
+      .map(StopPointInJourneyPattern.class::cast)
+      .filter(InlineNoticeAssignments::isForPassengers)
+      .toList();
+
+    // The first assignment of each notice, and the number of stop points it is assigned to
+    Map<String, NoticeAssignment> firstAssignmentByNoticeId = new LinkedHashMap<>();
+    Map<String, Integer> stopPointCountByNoticeId = new HashMap<>();
+    for (var stopPoint : stopPoints) {
+      var noticeIds = new HashSet<String>();
+      for (NoticeAssignment it : noticeAssignments(stopPoint.getNoticeAssignments())) {
+        var noticeId = noticeId(it);
+        if (noticeId != null && noticeIds.add(noticeId)) {
+          firstAssignmentByNoticeId.putIfAbsent(noticeId, it);
+          stopPointCountByNoticeId.merge(noticeId, 1, Integer::sum);
+        }
+      }
+    }
+    var journeyWideNoticeIds = new LinkedHashSet<String>();
+    for (String noticeId : firstAssignmentByNoticeId.keySet()) {
+      if (stopPointCountByNoticeId.get(noticeId) == stopPoints.size()) {
+        journeyWideNoticeIds.add(noticeId);
+      }
+    }
+
+    for (String serviceJourneyId : serviceJourneyIds) {
+      for (String noticeId : journeyWideNoticeIds) {
+        assignments.add(new Assignment(serviceJourneyId, firstAssignmentByNoticeId.get(noticeId)));
+      }
+    }
+    for (var stopPoint : stopPoints) {
+      for (NoticeAssignment it : noticeAssignments(stopPoint.getNoticeAssignments())) {
+        if (!journeyWideNoticeIds.contains(noticeId(it))) {
+          assignments.add(new Assignment(stopPoint.getId(), it));
+        }
+      }
+    }
+  }
+
+  /** The notice assignments of the container; notices defined inside them are indexed. */
+  private List<NoticeAssignment> noticeAssignments(
+    @Nullable NoticeAssignments_RelStructure container
+  ) {
+    if (container == null) {
+      return List.of();
+    }
+    var result = new ArrayList<NoticeAssignment>();
     for (JAXBElement<?> element : container.getNoticeAssignment_OrNoticeAssignmentView()) {
       if (element.getValue() instanceof NoticeAssignment noticeAssignment) {
-        assignments.add(new Assignment(noticedObjectId, noticeAssignment));
+        result.add(noticeAssignment);
         var notice = noticeAssignment.getNotice();
         if (notice != null && notice.getId() != null) {
           noticesById.putIfAbsent(notice.getId(), notice);
         }
       }
     }
+    return result;
+  }
+
+  @Nullable
+  private static String noticeId(NoticeAssignment noticeAssignment) {
+    if (noticeAssignment.getNotice() != null) {
+      return noticeAssignment.getNotice().getId();
+    }
+    return noticeAssignment.getNoticeRef() == null
+      ? null
+      : noticeAssignment.getNoticeRef().getRef();
   }
 
   /**

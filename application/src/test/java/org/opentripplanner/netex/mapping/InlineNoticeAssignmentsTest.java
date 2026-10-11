@@ -53,7 +53,8 @@ class InlineNoticeAssignmentsTest {
       .withPointsInSequence(
         new PointsInJourneyPattern_RelStructure().withPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern(
           stopPoint,
-          nonPassengerStopPoint
+          nonPassengerStopPoint,
+          new StopPointInJourneyPattern().withId("DE::StopPointInJourneyPattern:3::")
         )
       );
     var journey1 = journey(JOURNEY_ID_1, PATTERN_ID).withNoticeAssignments(
@@ -83,6 +84,46 @@ class InlineNoticeAssignmentsTest {
       STOP_POINT_ID
     );
     assertThat(result.noticesById().keySet()).containsExactly(NOTICE_ID);
+  }
+
+  @Test
+  void assignNoticesOnEveryStopPointToTheJourneys() {
+    var pattern = new ServiceJourneyPattern()
+      .withId(PATTERN_ID)
+      .withPointsInSequence(
+        new PointsInJourneyPattern_RelStructure().withPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern(
+          stopPointWithNotice(STOP_POINT_ID, withNotice()),
+          stopPointWithNotice("DE::StopPointInJourneyPattern:2::", withNoticeRef())
+        )
+      );
+
+    var result = InlineNoticeAssignments.collect(
+      List.of(pattern),
+      List.of(),
+      List.of(journey(JOURNEY_ID_1, PATTERN_ID), journey(JOURNEY_ID_2, PATTERN_ID))
+    );
+
+    assertThat(
+      result
+        .assignments()
+        .stream()
+        .map(InlineNoticeAssignments.Assignment::noticedObjectId)
+        .toList()
+    ).containsExactly(JOURNEY_ID_1, JOURNEY_ID_2);
+    assertThat(result.noticesById().keySet()).containsExactly(NOTICE_ID);
+  }
+
+  private static StopPointInJourneyPattern stopPointWithNotice(
+    String id,
+    NoticeAssignment assignment
+  ) {
+    return new StopPointInJourneyPattern()
+      .withId(id)
+      .withNoticeAssignments(
+        new Call_VersionedChildStructure.NoticeAssignments().withNoticeAssignment_OrNoticeAssignmentView(
+          createJaxbElement(assignment)
+        )
+      );
   }
 
   private static ServiceJourney journey(String id, String patternId) {

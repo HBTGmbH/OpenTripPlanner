@@ -45,6 +45,7 @@ The feature is under development. The following table lists what is supported so
 | Robustness: invalid or incomplete data is reported instead of aborting the build | In core OTP, independent of this feature |
 | XML files matching none of the file patterns are loaded as a group of their own instead of being ignored (`NetexFileNotMatchingPatterns`); other files are ignored | Supported |
 | Notices: notice assignments embedded in the noticed element (stop point in journey pattern, journey pattern, line, service journey), notices referenced by `NoticeRef` from an earlier embedded assignment | Supported |
+| Notices assigned to every stop point of a journey pattern are attached to the service journeys instead of every stop time (the DELFI data repeats journey wide notices on each stop point) | Supported |
 | Operator of a line given only as additional operator (`additionalOperators`) | Supported |
 | Agency of a line without authority: `AuthorityRef`, an authority among the additional operators, otherwise the operator of the line is used as agency (`AgencyDerivedFromOperator`) | Supported |
 | Stop points assigned to a stop place only (no `QuayRef`): the quay with the lowest id is used; for a stop place without quays a stop is derived from the scheduled stop point (its location, otherwise the stop place centroid), with the id of the scheduled stop point | Supported |
