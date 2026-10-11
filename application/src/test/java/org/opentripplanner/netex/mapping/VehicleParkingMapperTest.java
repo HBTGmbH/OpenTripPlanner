@@ -71,6 +71,19 @@ class VehicleParkingMapperTest {
     );
   }
 
+  @Test
+  void dropParkingWithoutCentroid() {
+    var parking = parking(Set.of(CAR));
+    parking.setCentroid(null);
+    var issueStore = new DefaultDataImportIssueStore();
+    var vp = mapper(issueStore).map(parking);
+    assertNull(vp);
+    assertEquals(
+      List.of("ParkingWithoutCoordinates"),
+      issueStore.listIssues().stream().map(DataImportIssue::getType).toList()
+    );
+  }
+
   private VehicleParkingMapper mapper() {
     return mapper(DataImportIssueStore.NOOP);
   }

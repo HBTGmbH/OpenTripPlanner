@@ -10,6 +10,9 @@ class WgsCoordinateMapper {
 
   /**
    * Maps a NeTEx {@code SimplePoint_VersionStructure} to a {@code WgsCoordinate}.
+   *
+   * @return the coordinate, or {@code null} if the point is missing or does not contain a valid
+   * location
    */
   @Nullable
   static WgsCoordinate mapToDomain(SimplePoint_VersionStructure point) {
@@ -26,7 +29,9 @@ class WgsCoordinateMapper {
       var coordinates = pos.getValue();
       return new WgsCoordinate(coordinates.getFirst(), coordinates.get(1));
     } else {
-      throw new IllegalArgumentException("Coordinate is not valid: " + loc);
+      // Neither latitude/longitude nor a usable gml:pos - the callers report the element as
+      // having no coordinate.
+      return null;
     }
   }
 }

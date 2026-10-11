@@ -2,7 +2,6 @@ package org.opentripplanner.netex.mapping;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.math.BigDecimal;
 import net.opengis.gml._3.DirectPositionType;
@@ -54,7 +53,7 @@ class WgsCoordinateMapperTest {
       new LocationStructure().withLongitude(LONGITUDE)
     );
 
-    assertThrows(IllegalArgumentException.class, () -> WgsCoordinateMapper.mapToDomain(p));
+    assertNull(WgsCoordinateMapper.mapToDomain(p));
   }
 
   @Test
@@ -62,7 +61,7 @@ class WgsCoordinateMapperTest {
     var p = new SimplePoint_VersionStructure().withLocation(
       new LocationStructure().withLatitude(LATITUDE)
     );
-    assertThrows(IllegalArgumentException.class, () -> WgsCoordinateMapper.mapToDomain(p));
+    assertNull(WgsCoordinateMapper.mapToDomain(p));
   }
 
   @Test
@@ -97,6 +96,6 @@ class WgsCoordinateMapperTest {
       new LocationStructure().withPos(new DirectPositionType())
     );
 
-    assertThrows(IllegalArgumentException.class, () -> WgsCoordinateMapper.mapToDomain(p));
+    assertNull(WgsCoordinateMapper.mapToDomain(p));
   }
 }

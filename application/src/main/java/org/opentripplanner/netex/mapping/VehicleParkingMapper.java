@@ -43,6 +43,14 @@ class VehicleParkingMapper {
       );
       return null;
     }
+    if (WgsCoordinateMapper.mapToDomain(parking.getCentroid()) == null) {
+      issueStore.add(
+        "ParkingWithoutCoordinates",
+        "NeTEx Parking '%s' does not contain a valid centroid",
+        parkingDebugId(parking)
+      );
+      return null;
+    }
     return VehicleParking.of()
       .id(idFactory.createId(parking.getId()))
       .name(NonLocalizedString.ofNullable(parking.getName().getValue()))
