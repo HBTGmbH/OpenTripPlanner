@@ -106,7 +106,7 @@ public class NetexDocumentParser {
         )
       );
     } else if (value instanceof SiteFrame frame) {
-      parse(frame, new SiteFrameParser(ignoredFeatures));
+      parse(frame, new SiteFrameParser(ignoredFeatures, profileSupport));
     } else if (!ignoredFeatures.contains(FARE_FRAME) && value instanceof FareFrame fareFrame) {
       parse(fareFrame, new FareFrameParser());
     } else if (value instanceof CompositeFrame frame) {

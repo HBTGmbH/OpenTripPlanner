@@ -5,10 +5,12 @@ import static org.opentripplanner.netex.config.IgnorableFeature.PARKING;
 import jakarta.xml.bind.JAXBElement;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.opentripplanner.framework.application.OTPFeature;
 import org.opentripplanner.netex.config.IgnorableFeature;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.netex.support.JAXBUtils;
 import org.rutebanken.netex.model.FlexibleStopPlace;
@@ -29,6 +31,8 @@ class SiteFrameParser extends NetexParser<Site_VersionFrameStructure> {
 
   private static final Logger LOG = LoggerFactory.getLogger(SiteFrameParser.class);
 
+  private static final String EPIP_GENERAL_STOP_PLACE = "epip:general";
+
   private final Collection<FlexibleStopPlace> flexibleStopPlaces = new ArrayList<>();
 
   private final Collection<GroupOfStopPlaces> groupsOfStopPlaces = new ArrayList<>();
@@ -45,8 +49,11 @@ class SiteFrameParser extends NetexParser<Site_VersionFrameStructure> {
 
   private final Set<IgnorableFeature> ignoredFeatures;
 
-  SiteFrameParser(Set<IgnorableFeature> ignoredFeatures) {
+  private final NetexProfileSupport profileSupport;
+
+  SiteFrameParser(Set<IgnorableFeature> ignoredFeatures, NetexProfileSupport profileSupport) {
     this.ignoredFeatures = ignoredFeatures;
+    this.profileSupport = profileSupport;
   }
 
   @Override
@@ -111,9 +118,15 @@ class SiteFrameParser extends NetexParser<Site_VersionFrameStructure> {
   }
 
   private void parseStopPlaces(List<JAXBElement<? extends Site_VersionStructure>> stopPlaceList) {
+    Set<String> parentStopPlaceIds = profileSupport.extendedNetex()
+      ? parentStopPlaceIds(stopPlaceList)
+      : Set.of();
     for (JAXBElement<? extends Site_VersionStructure> jaxBStopPlace : stopPlaceList) {
       StopPlace stopPlace = (StopPlace) jaxBStopPlace.getValue();
-      if (isMultiModalStopPlace(stopPlace)) {
+      if (
+        isMultiModalStopPlace(stopPlace) ||
+        isParentStopPlaceWithoutQuays(stopPlace, parentStopPlaceIds)
+      ) {
         multiModalStopPlaces.add(stopPlace);
       } else {
         stopPlaces.add(stopPlace);
@@ -135,6 +148,47 @@ class SiteFrameParser extends NetexParser<Site_VersionFrameStructure> {
       return;
     }
     JAXBUtils.forEachJAXBElementValue(Quay.class, quayRefOrQuay.getQuayRefOrQuay(), quays::add);
+  }
+
+  /**
+   * EPIP (CEN/TS 16614-4, 6.1) nests stop places with ParentSiteRef: a "general" stop place may
+   * contain "monomodal" stop places, and each stop place is typed as {@code epip:general} or
+   * {@code epip:monomodal}. A general stop place without own quays is mapped as multimodal station.
+   */
+  private static boolean isParentStopPlaceWithoutQuays(
+    StopPlace stopPlace,
+    Set<String> parentStopPlaceIds
+  ) {
+    boolean hasQuays =
+      stopPlace.getQuays() != null && !stopPlace.getQuays().getQuayRefOrQuay().isEmpty();
+    if (hasQuays) {
+      return false;
+    }
+    return parentStopPlaceIds.contains(stopPlace.getId()) || isTypedAsGeneral(stopPlace);
+  }
+
+  private static boolean isTypedAsGeneral(StopPlace stopPlace) {
+    return (
+      stopPlace.getPlaceTypes() != null &&
+      stopPlace
+        .getPlaceTypes()
+        .getTypeOfPlaceRef()
+        .stream()
+        .anyMatch(ref -> EPIP_GENERAL_STOP_PLACE.equals(ref.getRef()))
+    );
+  }
+
+  private static Set<String> parentStopPlaceIds(
+    List<JAXBElement<? extends Site_VersionStructure>> stopPlaceList
+  ) {
+    Set<String> result = new HashSet<>();
+    for (var it : stopPlaceList) {
+      var parentRef = it.getValue().getParentSiteRef();
+      if (parentRef != null && parentRef.getRef() != null) {
+        result.add(parentRef.getRef());
+      }
+    }
+    return result;
   }
 
   private boolean isMultiModalStopPlace(StopPlace stopPlace) {
