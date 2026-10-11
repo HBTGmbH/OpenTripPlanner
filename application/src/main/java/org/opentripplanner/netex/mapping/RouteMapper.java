@@ -168,7 +168,7 @@ class RouteMapper {
       // Find authority, first in *GroupOfLines* and then if not found look in *Network*
       Network network = netexIndex.lookupNetworkForLine(groupRef);
 
-      if (network != null) {
+      if (network != null && network.getTransportOrganisationRef() != null) {
         String orgRef = network.getTransportOrganisationRef().getValue().getRef();
         agency = agenciesById.get(idFactory.createId(orgRef));
       }

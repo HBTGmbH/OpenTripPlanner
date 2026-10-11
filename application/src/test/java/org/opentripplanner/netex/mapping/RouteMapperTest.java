@@ -1,5 +1,6 @@
 package org.opentripplanner.netex.mapping;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -12,7 +13,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
@@ -109,6 +112,18 @@ class RouteMapperTest {
     Route route = routeMapper.mapRoute(line);
 
     assertEquals(AUTHORITY_ID, route.getAgency().getId().getId());
+  }
+
+  @Test
+  void mapRouteWithNetworkWithoutTransportOrganisation() {
+    NetexEntityIndex netexIndex = new NetexEntityIndex();
+    netexIndex.networkById.add(new Network().withId(NETWORK_ID));
+    var issueStore = new DefaultDataImportIssueStore();
+
+    Route route = createRouteMapper(netexIndex, issueStore).mapRoute(createExampleLine());
+
+    assertEquals("N/A", route.getAgency().getName());
+    assertThat(listIssueTypes(issueStore)).containsExactly("LineWithoutAuthority");
   }
 
   @Test
@@ -257,6 +272,29 @@ class RouteMapperTest {
     assertEquals(2, groupsOfLines.size());
     assertTrue(groupsOfLines.stream().anyMatch(gol -> GOL_ID_1.equals(gol.getId().getId())));
     assertTrue(groupsOfLines.stream().anyMatch(gol -> GOL_ID_2.equals(gol.getId().getId())));
+  }
+
+  private RouteMapper createRouteMapper(
+    NetexEntityIndex netexIndex,
+    DataImportIssueStore issueStore
+  ) {
+    var transitBuilder = new TransitDataImportBuilder(new SiteRepository(), issueStore);
+    return new RouteMapper(
+      issueStore,
+      MappingSupport.ID_FACTORY,
+      transitBuilder.getAgenciesById(),
+      transitBuilder.getOperatorsById(),
+      transitBuilder.getBrandingsById(),
+      transitBuilder.getGroupsOfRoutesByRouteId(),
+      transitBuilder.getGroupOfRouteById(),
+      netexIndex.readOnlyView(),
+      TransitRepositoryForTest.TIME_ZONE_ID,
+      EMPTY_FERRY_WITHOUT_BICYCLE_IDS
+    );
+  }
+
+  private static List<String> listIssueTypes(DefaultDataImportIssueStore issueStore) {
+    return issueStore.listIssues().stream().map(DataImportIssue::getType).toList();
   }
 
   private Line createExampleLine() {
