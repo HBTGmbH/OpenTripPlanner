@@ -149,6 +149,16 @@ public enum OTPFeature {
       "(transit-group-priority) is kept, even if the max-limit is exceeded. This is turned off by default " +
       "for now, until this feature is well tested."
   ),
+  NetexEpip(
+    false,
+    true,
+    "Improve the NeTEx import of data following the European Passenger Information Profile (EPIP, CEN/TS 16614-4)."
+  ),
+  NetexVdv462(
+    false,
+    true,
+    "Improve the NeTEx import of data following the German VDV 462 profile."
+  ),
   OjpApi(false, true, "OJP v2.0 API."),
   RealtimeResolver(
     false,

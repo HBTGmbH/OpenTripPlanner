@@ -129,6 +129,8 @@ nav:
     - Vehicle Rental Geofencing: 'sandbox/VehicleRentalGeofencing.md'
     - Mapbox Vector Tiles API: 'sandbox/MapboxVectorTilesApi.md'
     - Flex Routing: 'sandbox/Flex.md'
+    - NeTEx EPIP Import: 'sandbox/NetexEpip.md'
+    - NeTEx VDV 462 Import: 'sandbox/NetexVdv462.md'
     - Report API: 'sandbox/ReportApi.md'
     - Interactive OTP Launcher: 'sandbox/InteractiveOtpMain.md'
     - Park and Ride API: 'sandbox/ParkAndRideApi.md'
