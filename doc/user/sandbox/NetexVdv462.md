@@ -53,6 +53,7 @@ The feature is under development. The following table lists what is supported so
 | Site connections (`SiteConnection` with walk transfer duration) between or within stop places and quays: mapped to constrained transfers with a minimum transfer time | Supported |
 | Transport modes `ferry`, `trolleyBus`, `urbanRail` and `intercityRail` on lines and service journeys | Supported (`lift` and `other` are not supported) |
 | Trip direction from the service journey, the journey pattern or a referenced `Direction` (`DirectionRef`), not only from the route | Supported |
+| Destination display on the journey pattern, used as headsign until a stop point states another one | Supported |
 | Data without time zone (`FrameDefaults/DefaultLocale/TimeZone`): the `transitModelTimeZone` of the build configuration is used instead of GMT (`NetexTimeZoneFallback`) | Supported |
 
 ### Known limitations

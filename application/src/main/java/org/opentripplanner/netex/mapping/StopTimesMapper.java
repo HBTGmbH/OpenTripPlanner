@@ -15,6 +15,7 @@ import javax.annotation.Nullable;
 import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.model.StopTime;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMap;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMapById;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
@@ -75,6 +76,7 @@ class StopTimesMapper {
 
   private final ReadOnlyHierarchicalMapById<FlexibleLine> flexibleLinesById;
   private final HeadsignMapper headsignMapper;
+  private final NetexProfileSupport profileSupport;
 
   private I18NString currentHeadSign;
 
@@ -92,8 +94,10 @@ class StopTimesMapper {
     ReadOnlyHierarchicalMap<String, String> quayIdByStopPointRef,
     ReadOnlyHierarchicalMap<String, String> flexibleStopPlaceIdByStopPointRef,
     ReadOnlyHierarchicalMapById<FlexibleLine> flexibleLinesById,
-    ReadOnlyHierarchicalMap<String, Route> routeById
+    ReadOnlyHierarchicalMap<String, Route> routeById,
+    NetexProfileSupport profileSupport
   ) {
+    this.profileSupport = profileSupport;
     this.issueStore = issueStore;
     this.idFactory = idFactory;
     this.destinationDisplayById = destinationDisplayById;
@@ -129,6 +133,12 @@ class StopTimesMapper {
   ) {
     StopTimesMapperResult result = new StopTimesMapperResult();
     List<String> scheduledStopPointIds = new ArrayList<>();
+
+    var patternDestinationDisplay = findPatternDestinationDisplay(journeyPattern);
+    if (patternDestinationDisplay != null) {
+      currentHeadSign = headsignMapper.map(patternDestinationDisplay);
+      currentHeadSignVias = null;
+    }
 
     for (int i = 0; i < passingTimes.size(); i++) {
       TimetabledPassingTime currentPassingTime = passingTimes.get(i);
@@ -214,7 +224,10 @@ class StopTimesMapper {
     }
 
     if (stopPoint.getDestinationDisplayRef() == null) {
-      return null;
+      var patternDestinationDisplay = findPatternDestinationDisplay(journeyPattern);
+      return patternDestinationDisplay == null
+        ? null
+        : MultilingualStringMapper.nullableValueOf(patternDestinationDisplay.getFrontText());
     }
 
     var destinationDisplay = destinationDisplayById.lookup(
@@ -224,6 +237,20 @@ class StopTimesMapper {
     return destinationDisplay == null
       ? null
       : MultilingualStringMapper.nullableValueOf(destinationDisplay.getFrontText());
+  }
+
+  /**
+   * EPIP (CEN/TS 16614-4, 7.3.1) allows the destination display on the journey pattern; it applies
+   * until a stop point states another one. Used with extended NeTEx support only.
+   */
+  @Nullable
+  private DestinationDisplay findPatternDestinationDisplay(
+    JourneyPattern_VersionStructure journeyPattern
+  ) {
+    if (!profileSupport.extendedNetex() || journeyPattern.getDestinationDisplayRef() == null) {
+      return null;
+    }
+    return destinationDisplayById.lookup(journeyPattern.getDestinationDisplayRef().getRef());
   }
 
   @Nullable

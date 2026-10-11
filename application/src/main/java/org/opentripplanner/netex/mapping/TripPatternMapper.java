@@ -146,7 +146,8 @@ class TripPatternMapper {
       quayIdByStopPointRef,
       flexibleStopPlaceIdByStopPointRef,
       flexibleLineById,
-      routeById
+      routeById,
+      profileSupport
     );
     this.serviceLinkMapper = new ServiceLinkMapper(
       idFactory,

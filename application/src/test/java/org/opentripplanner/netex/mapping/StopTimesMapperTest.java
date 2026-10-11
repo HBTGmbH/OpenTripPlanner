@@ -18,6 +18,7 @@ import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.model.StopTime;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMap;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMapById;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
@@ -25,6 +26,7 @@ import org.opentripplanner.transit.model.framework.DefaultEntityById;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.Station;
 import org.opentripplanner.transit.model.timetable.Trip;
+import org.rutebanken.netex.model.DestinationDisplayRefStructure;
 import org.rutebanken.netex.model.StopPointInJourneyPattern;
 import org.rutebanken.netex.model.TimetabledPassingTime;
 
@@ -60,7 +62,8 @@ public class StopTimesMapperTest {
       sample.getQuayIdByStopPointRef(),
       new HierarchicalMap<>(),
       new HierarchicalMapById<>(),
-      new HierarchicalMap<>()
+      new HierarchicalMap<>(),
+      NetexProfileSupport.NORDIC
     );
 
     StopTimesMapperResult result = stopTimesMapper.mapToStopTimes(
@@ -133,7 +136,8 @@ public class StopTimesMapperTest {
       new HierarchicalMap<>(),
       new HierarchicalMap<>(),
       new HierarchicalMapById<>(),
-      new HierarchicalMap<>()
+      new HierarchicalMap<>(),
+      NetexProfileSupport.NORDIC
     );
 
     StopTimesMapperResult result = stopTimesMapper.mapToStopTimes(
@@ -234,7 +238,8 @@ public class StopTimesMapperTest {
       quayIdByStopPointRef,
       new HierarchicalMap<>(),
       new HierarchicalMapById<>(),
-      new HierarchicalMap<>()
+      new HierarchicalMap<>(),
+      NetexProfileSupport.NORDIC
     );
   }
 
@@ -278,7 +283,8 @@ public class StopTimesMapperTest {
       new HierarchicalMap<>(),
       new HierarchicalMap<>(),
       new HierarchicalMapById<>(),
-      new HierarchicalMap<>()
+      new HierarchicalMap<>(),
+      NetexProfileSupport.NORDIC
     );
 
     StopTimesMapperResult result = stopTimesMapper.mapToStopTimes(
@@ -293,6 +299,53 @@ public class StopTimesMapperTest {
     for (int i = 0; i < stopTimes.size(); i++) {
       assertEquals(stopPointRefs.get(i), stopTimes.get(i).getStop().getId().getId());
     }
+  }
+
+  /**
+   * EPIP allows the destination display on the journey pattern. With extended NeTEx support it is
+   * used until a stop point states another destination display.
+   */
+  @Test
+  public void testDestinationDisplayOnJourneyPattern() {
+    NetexTestDataSample sample = new NetexTestDataSample();
+    var journeyPattern = sample.getJourneyPattern();
+    journeyPattern
+      .getPointsInSequence()
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
+      .forEach(point -> ((StopPointInJourneyPattern) point).setDestinationDisplayRef(null));
+    journeyPattern.setDestinationDisplayRef(
+      new DestinationDisplayRefStructure().withRef("NSR:DestinationDisplay:2")
+    );
+
+    StopTimesMapper stopTimesMapper = new StopTimesMapper(
+      DataImportIssueStore.NOOP,
+      MappingSupport.ID_FACTORY,
+      sample.getStopsById(),
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      sample.getDestinationDisplayById(),
+      new HierarchicalMap<>(),
+      sample.getQuayIdByStopPointRef(),
+      new HierarchicalMap<>(),
+      new HierarchicalMapById<>(),
+      new HierarchicalMap<>(),
+      NetexProfileSupport.of(true, false)
+    );
+
+    var stopTimes = stopTimesMapper
+      .mapToStopTimes(journeyPattern, TRIP, sample.getTimetabledPassingTimes(), null)
+      .stopTimes;
+
+    assertEquals("Stavanger", stopTimes.getFirst().getStopHeadsign().toString());
+    assertEquals("Stavanger", stopTimes.getLast().getStopHeadsign().toString());
+    assertEquals(
+      "Stavanger",
+      stopTimesMapper.findTripHeadsign(
+        journeyPattern,
+        sample.getTimetabledPassingTimes().getFirst()
+      )
+    );
   }
 
   @Test
@@ -350,7 +403,8 @@ public class StopTimesMapperTest {
       netexSample.getQuayIdByStopPointRef(),
       new HierarchicalMap<>(),
       new HierarchicalMapById<>(),
-      new HierarchicalMap<>()
+      new HierarchicalMap<>(),
+      NetexProfileSupport.NORDIC
     );
 
     StopTimesMapperResult result = stopTimesMapper.mapToStopTimes(
