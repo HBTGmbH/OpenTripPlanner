@@ -197,7 +197,10 @@ class StopTimesMapper {
       stopTime.setDropOffBookingInfo(bookingInfo);
       stopTime.setPickupBookingInfo(bookingInfo);
 
-      result.addStopTime(currentPassingTime.getId(), stopTime);
+      result.addStopTime(
+        StopTimesMapperResult.stopTimeKey(serviceJourney, currentPassingTime),
+        stopTime
+      );
     }
     result.setScheduledStopPointIds(scheduledStopPointIds);
 

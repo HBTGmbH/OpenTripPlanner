@@ -1,5 +1,6 @@
 package org.opentripplanner.netex.mapping;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.google.common.collect.Multimap;
@@ -134,6 +135,64 @@ public class NoticeAssignmentMapperTest {
 
     assertEquals(NOTICE_ID, notice2a.getId().getId());
     assertEquals(NOTICE_ID, notice2b.getId().getId());
+  }
+
+  /** The id of a timetabled passing time is optional, see EPIP TS 16614-4 §7.6.5. */
+  @Test
+  public void mapNoticeAssignmentOnStopPointWithPassingTimesWithoutId() {
+    var otherStopPointId = "RUT:StopPointInJourneyPattern:2";
+    var sj1 = new ServiceJourney()
+      .withId("RUT:ServiceJourney:1")
+      .withPassingTimes(
+        new TimetabledPassingTimes_RelStructure().withTimetabledPassingTime(
+          createTimetabledPassingTime(null, STOP_POINT_ID),
+          createTimetabledPassingTime(null, otherStopPointId)
+        )
+      );
+    var sj2 = new ServiceJourney()
+      .withId("RUT:ServiceJourney:2")
+      .withPassingTimes(
+        new TimetabledPassingTimes_RelStructure().withTimetabledPassingTime(
+          createTimetabledPassingTime(null, STOP_POINT_ID)
+        )
+      );
+
+    var trip1 = TransitRepositoryForTest.trip("1").build();
+    var trip2 = TransitRepositoryForTest.trip("2").build();
+    var stopTimesById = new HierarchicalMap<String, StopTime>();
+    for (var sj : List.of(sj1, sj2)) {
+      var trip = sj == sj1 ? trip1 : trip2;
+      var passingTimes = sj.getPassingTimes().getTimetabledPassingTime();
+      for (int i = 0; i < passingTimes.size(); i++) {
+        stopTimesById.add(
+          StopTimesMapperResult.stopTimeKey(sj, passingTimes.get(i)),
+          createStopTime(i, trip)
+        );
+      }
+    }
+
+    var noticesById = new HierarchicalMapById<Notice>();
+    noticesById.add(NOTICE);
+
+    var noticesByElement = new NoticeAssignmentMapper(
+      DataImportIssueStore.NOOP,
+      MappingSupport.ID_FACTORY,
+      List.of(sj1, sj2),
+      noticesById,
+      Map.of(),
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      stopTimesById
+    ).map(
+      new NoticeAssignment()
+        .withNoticedObjectRef(new VersionOfObjectRefStructure().withRef(STOP_POINT_ID))
+        .withNoticeRef(new NoticeRefStructure().withRef(NOTICE_ID))
+    );
+
+    assertThat(noticesByElement.keySet()).containsExactly(
+      createStopTime(0, trip1).getId(),
+      createStopTime(0, trip2).getId()
+    );
   }
 
   @Test

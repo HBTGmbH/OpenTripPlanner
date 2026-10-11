@@ -31,8 +31,8 @@ class NoticeAssignmentMapper {
 
   private final FeedScopedIdFactory idFactory;
 
-  private final Multimap<String, TimetabledPassingTime> passingTimeByStopPointId =
-    ArrayListMultimap.create();
+  /** The keys of the stop times by stop point in journey pattern id. */
+  private final Multimap<String, String> stopTimeKeysByStopPointId = ArrayListMultimap.create();
 
   private final ReadOnlyHierarchicalMap<String, org.rutebanken.netex.model.Notice> noticesById;
 
@@ -70,7 +70,10 @@ class NoticeAssignmentMapper {
     // Index passing time by stopPoint id
     for (ServiceJourney sj : serviceJourneys) {
       for (TimetabledPassingTime it : sj.getPassingTimes().getTimetabledPassingTime()) {
-        passingTimeByStopPointId.put(it.getPointInJourneyPatternRef().getValue().getRef(), it);
+        stopTimeKeysByStopPointId.put(
+          it.getPointInJourneyPatternRef().getValue().getRef(),
+          StopTimesMapperResult.stopTimeKey(sj, it)
+        );
       }
     }
   }
@@ -105,10 +108,10 @@ class NoticeAssignmentMapper {
 
     // Special case for StopPointInJourneyPattern. The OTP model do not have this element, so
     // we attach the notice to all StopTimes for the pattern at the given stop.
-    Collection<TimetabledPassingTime> times = passingTimeByStopPointId.get(noticedObjectId);
-    if (times != null && !times.isEmpty()) {
-      for (TimetabledPassingTime time : times) {
-        addStopTimeNotice(noticiesByEntity, time.getId(), otpNotice);
+    Collection<String> stopTimeKeys = stopTimeKeysByStopPointId.get(noticedObjectId);
+    if (!stopTimeKeys.isEmpty()) {
+      for (String stopTimeKey : stopTimeKeys) {
+        addStopTimeNotice(noticiesByEntity, stopTimeKey, otpNotice);
       }
     } else if (stopTimesByNetexId.containsKey(noticedObjectId)) {
       addStopTimeNotice(noticiesByEntity, noticedObjectId, otpNotice);
