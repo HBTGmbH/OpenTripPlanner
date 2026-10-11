@@ -7,6 +7,7 @@ import static org.opentripplanner.netex.NetexTestDataSupport.createQuay;
 import static org.opentripplanner.netex.NetexTestDataSupport.createStopPlace;
 
 import java.time.ZoneId;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.netex.NetexTestDataSupport;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
+import org.opentripplanner.street.geometry.WgsCoordinate;
 import org.opentripplanner.transit.model.site.Station;
 import org.opentripplanner.transit.service.SiteRepository;
 import org.rutebanken.netex.model.Quay;
@@ -32,7 +34,8 @@ class StationMapperTest {
       ZoneId.of("UTC"),
       false,
       Set.of(),
-      SiteRepository.of()
+      SiteRepository.of(),
+      Map.of()
     );
   }
 
@@ -53,7 +56,8 @@ class StationMapperTest {
       ZoneId.of("UTC"),
       false,
       Set.of(),
-      SiteRepository.of()
+      SiteRepository.of(),
+      Map.of()
     );
     StopPlace stopPlace = createStopPlace();
     stopPlace.withCentroid(null);
@@ -62,6 +66,24 @@ class StationMapperTest {
     assertThat(issueStore.listIssues().stream().map(DataImportIssue::getType).toList()).contains(
       "StopPlaceWithoutCoordinates"
     );
+  }
+
+  @Test
+  void testMappingWithFallbackCoordinate() {
+    var fallback = new WgsCoordinate(53.5, 10.0);
+    var mapper = new StationMapper(
+      DataImportIssueStore.NOOP,
+      new FeedScopedIdFactory("FEED_ID"),
+      ZoneId.of("UTC"),
+      false,
+      Set.of(),
+      SiteRepository.of(),
+      Map.of(NetexTestDataSupport.STOP_PLACE_ID, fallback)
+    );
+    StopPlace stopPlace = createStopPlace();
+    stopPlace.withCentroid(null);
+
+    assertEquals(fallback, mapper.map(stopPlace).getCoordinate());
   }
 
   @Test

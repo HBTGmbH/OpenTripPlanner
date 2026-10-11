@@ -11,6 +11,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -24,6 +25,7 @@ import org.opentripplanner.netex.issues.StopPlaceWithoutQuays;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.opentripplanner.netex.mapping.support.NetexMainAndSubMode;
 import org.opentripplanner.netex.mapping.support.StopPlaceVersionAndValidityComparator;
+import org.opentripplanner.street.geometry.WgsCoordinate;
 import org.opentripplanner.transit.model.site.FareZone;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.Station;
@@ -73,7 +75,8 @@ class StopAndStationMapper {
     ZoneId defaultTimeZone,
     DataImportIssueStore issueStore,
     boolean noTransfersOnIsolatedStops,
-    Set<FeedScopedId> routeToCentroidStopPlaceIds
+    Set<FeedScopedId> routeToCentroidStopPlaceIds,
+    Map<String, WgsCoordinate> fallbackCoordinateByStopPlaceId
   ) {
     this.stationMapper = new StationMapper(
       issueStore,
@@ -81,7 +84,8 @@ class StopAndStationMapper {
       defaultTimeZone,
       noTransfersOnIsolatedStops,
       routeToCentroidStopPlaceIds,
-      siteRepositoryBuilder
+      siteRepositoryBuilder,
+      fallbackCoordinateByStopPlaceId
     );
     this.quayMapper = new QuayMapper(idFactory, issueStore, siteRepositoryBuilder);
     this.tariffZoneMapper = tariffZoneMapper;

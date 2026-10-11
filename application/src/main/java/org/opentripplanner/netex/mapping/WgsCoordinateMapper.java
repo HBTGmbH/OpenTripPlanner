@@ -16,11 +16,19 @@ class WgsCoordinateMapper {
    */
   @Nullable
   static WgsCoordinate mapToDomain(SimplePoint_VersionStructure point) {
-    if (point == null || point.getLocation() == null) {
+    return point == null ? null : mapLocationToDomain(point.getLocation());
+  }
+
+  /**
+   * Maps a NeTEx {@code LocationStructure} to a {@code WgsCoordinate}.
+   *
+   * @return the coordinate, or {@code null} if the location is missing or not valid
+   */
+  @Nullable
+  static WgsCoordinate mapLocationToDomain(@Nullable LocationStructure loc) {
+    if (loc == null) {
       return null;
     }
-    LocationStructure loc = point.getLocation();
-
     final DirectPositionType pos = loc.getPos();
     if (loc.getLongitude() != null && loc.getLatitude() != null) {
       return new WgsCoordinate(loc.getLatitude().doubleValue(), loc.getLongitude().doubleValue());

@@ -238,6 +238,63 @@ public class StopTimesMapperTest {
     );
   }
 
+  /**
+   * A scheduled stop point assigned to a stop place without quays gets its own stop, derived from
+   * the scheduled stop point (see ScheduledStopPointStopMapper). The stop time must use this stop.
+   */
+  @Test
+  public void testMapStopTimesWithStopsDerivedFromScheduledStopPoints() {
+    NetexTestDataSample sample = new NetexTestDataSample();
+    var testModel = TransitRepositoryForTest.of();
+
+    Station station = testModel.station("NSR:StopPlace:1").build();
+    DefaultEntityById<Station> stationsById = new DefaultEntityById<>();
+    stationsById.add(station);
+
+    DefaultEntityById<RegularStop> stopsById = new DefaultEntityById<>();
+    HierarchicalMap<String, String> stopPlaceIdByStopPointRef = new HierarchicalMap<>();
+    List<String> stopPointRefs = sample
+      .getJourneyPattern()
+      .getPointsInSequence()
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
+      .stream()
+      .map(StopPointInJourneyPattern.class::cast)
+      .map(stopPoint -> stopPoint.getScheduledStopPointRef().getValue().getRef())
+      .toList();
+    for (String ref : stopPointRefs) {
+      stopPlaceIdByStopPointRef.add(ref, station.getId().getId());
+      stopsById.add(testModel.stop(ref).withParentStation(station).build());
+    }
+
+    StopTimesMapper stopTimesMapper = new StopTimesMapper(
+      DataImportIssueStore.NOOP,
+      MappingSupport.ID_FACTORY,
+      stopsById,
+      stationsById,
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      sample.getDestinationDisplayById(),
+      stopPlaceIdByStopPointRef,
+      new HierarchicalMap<>(),
+      new HierarchicalMap<>(),
+      new HierarchicalMapById<>(),
+      new HierarchicalMap<>()
+    );
+
+    StopTimesMapperResult result = stopTimesMapper.mapToStopTimes(
+      sample.getJourneyPattern(),
+      TRIP,
+      sample.getTimetabledPassingTimes(),
+      null
+    );
+
+    List<StopTime> stopTimes = result.stopTimes;
+    assertEquals(4, stopTimes.size());
+    for (int i = 0; i < stopTimes.size(); i++) {
+      assertEquals(stopPointRefs.get(i), stopTimes.get(i).getStop().getId().getId());
+    }
+  }
+
   @Test
   public void testWaitPointMapping() {
     var netexSample = new NetexTestDataSample();

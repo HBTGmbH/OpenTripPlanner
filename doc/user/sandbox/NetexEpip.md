@@ -46,6 +46,8 @@ The feature is under development. The following table lists what is supported so
 | Robustness: invalid or incomplete data is reported instead of aborting the build | In core OTP, independent of this feature |
 | Notices: notice assignments embedded in the noticed element (stop point in journey pattern, journey pattern, line, service journey), notices referenced by `NoticeRef` from an earlier embedded assignment | Supported |
 | Operator of a line given only as additional operator (`additionalOperators`) | Supported |
+| Stop points assigned to a stop place only (no `QuayRef`): the quay with the lowest id is used; for a stop place without quays a stop is derived from the scheduled stop point (its location, otherwise the stop place centroid), with the id of the scheduled stop point | Supported |
+| Stop place without centroid and quays: located at the mean position of its scheduled stop points | Supported |
 
 ### Known limitations
 

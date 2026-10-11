@@ -42,13 +42,20 @@ class StationMapper {
 
   private final SiteRepositoryBuilder siteRepositoryBuilder;
 
+  /**
+   * Used if neither the stop place nor its quays have a coordinate, for example the mean position
+   * of the scheduled stop points assigned to the stop place.
+   */
+  private final Map<String, WgsCoordinate> fallbackCoordinateByStopPlaceId;
+
   StationMapper(
     DataImportIssueStore issueStore,
     FeedScopedIdFactory idFactory,
     ZoneId defaultTimeZone,
     boolean noTransfersOnIsolatedStops,
     Set<FeedScopedId> routeToCentroidStopPlaceIds,
-    SiteRepositoryBuilder siteRepositoryBuilder
+    SiteRepositoryBuilder siteRepositoryBuilder,
+    Map<String, WgsCoordinate> fallbackCoordinateByStopPlaceId
   ) {
     this.issueStore = issueStore;
     this.idFactory = idFactory;
@@ -56,6 +63,7 @@ class StationMapper {
     this.noTransfersOnIsolatedStops = noTransfersOnIsolatedStops;
     this.routeToCentroidStopPlaceIds = routeToCentroidStopPlaceIds;
     this.siteRepositoryBuilder = siteRepositoryBuilder;
+    this.fallbackCoordinateByStopPlaceId = fallbackCoordinateByStopPlaceId;
   }
 
   /**
@@ -143,7 +151,7 @@ class StationMapper {
 
   /**
    * Map the centroid to coordinate, if not present the mean coordinate for the child quays is
-   * returned. If neither the stop place nor its quays have coordinates, {@code null} is returned.
+   * returned, then the fallback coordinate. If none of them exist, {@code null} is returned.
    */
   @Nullable
   private WgsCoordinate findCoordinate(StopPlace stopPlace) {
@@ -157,7 +165,7 @@ class StationMapper {
       stopPlace.getId() + " " + stopPlace.getName()
     );
     if (stopPlace.getQuays() == null) {
-      return null;
+      return fallbackCoordinateByStopPlaceId.get(stopPlace.getId());
     }
     List<WgsCoordinate> coordinates = JAXBUtils.streamJAXBElementValue(
       Quay.class,
@@ -167,6 +175,8 @@ class StationMapper {
       .filter(Objects::nonNull)
       .map(WgsCoordinateMapper::mapToDomain)
       .toList();
-    return coordinates.isEmpty() ? null : WgsCoordinate.mean(coordinates);
+    return coordinates.isEmpty()
+      ? fallbackCoordinateByStopPlaceId.get(stopPlace.getId())
+      : WgsCoordinate.mean(coordinates);
   }
 }

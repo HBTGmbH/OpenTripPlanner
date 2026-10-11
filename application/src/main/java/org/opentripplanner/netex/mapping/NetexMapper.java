@@ -202,6 +202,7 @@ public class NetexMapper {
     // This is a workaround until versioned entities are supported by OTP
     var tariffZoneMapper = mapTariffZones();
     mapStopPlaceAndQuays(tariffZoneMapper);
+    mapStopsForScheduledStopPointsWithoutQuay();
     mapMultiModalStopPlaces();
     mapGroupsOfStopPlaces();
     mapFlexibleStopPlaces();
@@ -327,7 +328,13 @@ public class NetexMapper {
       zoneId,
       issueStore,
       noTransfersOnIsolatedStops,
-      routeToCentroidStopPlaceIds
+      routeToCentroidStopPlaceIds,
+      profileSupport.extendedNetex()
+        ? ScheduledStopPointStopMapper.meanPositionByStopPlaceId(
+            currentNetexIndex.getStopPlaceIdByStopPointRef(),
+            currentNetexIndex.getScheduledStopPointById()
+          )
+        : Map.of()
     );
     for (String stopPlaceId : currentNetexIndex.getStopPlaceById().localKeys()) {
       Collection<StopPlace> stopPlaceAllVersions = currentNetexIndex
@@ -339,6 +346,30 @@ public class NetexMapper {
     transitBuilder.siteRepository().withStations(stopMapper.resultStations);
     currentMapperIndexes.addStationByMultiModalStationRfs(
       stopMapper.resultStationByMultiModalStationRfs
+    );
+  }
+
+  /**
+   * Create stops for scheduled stop points assigned to a stop place without quays, see
+   * {@link ScheduledStopPointStopMapper}. Only done with extended NeTEx support.
+   */
+  private void mapStopsForScheduledStopPointsWithoutQuay() {
+    if (!profileSupport.extendedNetex()) {
+      return;
+    }
+    var mapper = new ScheduledStopPointStopMapper(
+      idFactory,
+      issueStore,
+      transitBuilder.siteRepository()
+    );
+    var stops = mapper.mapStops(
+      currentNetexIndex.getStopPlaceIdByStopPointRef(),
+      currentNetexIndex.getScheduledStopPointById(),
+      currentNetexIndex.getStopPlaceById()
+    );
+    transitBuilder.siteRepository().withRegularStops(stops.values());
+    stops.forEach((stopPointRef, stop) ->
+      transitBuilder.addStopByScheduledStopPoint(idFactory.createId(stopPointRef), stop)
     );
   }
 

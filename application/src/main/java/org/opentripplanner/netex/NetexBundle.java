@@ -183,7 +183,7 @@ public class NetexBundle implements Closeable {
     }
 
     // Validate input data, and remove invalid data
-    Validator.validate(index, issueStore);
+    Validator.validate(index, issueStore, profileSupport);
 
     // map current NeTEx objects into the OTP Transit Model
     mapper.mapNetexToOtp(index.readOnlyView());

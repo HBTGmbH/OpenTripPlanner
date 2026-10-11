@@ -396,20 +396,27 @@ class StopTimesMapper {
     if (quayId != null) {
       stopLocation = stopsById.get(idFactory.createId(quayId));
     } else if (stopPlaceId != null) {
-      // the validation takes care of checking that the stop place exists and that it has at
-      // least one quay
       var station = stationsById.get(idFactory.createId(stopPlaceId));
-      stopLocation =
-        station
-          .getChildStops()
-          .stream()
-          .min(TransitEntity.idComparator())
-          // if you see this exception then the validation didn't filter out the passenger stop assignment
-          .orElseThrow(() ->
-            new RuntimeException(
-              "Stop place %s has no quays. This indicates a bug.".formatted(stopPlaceId)
-            )
-          );
+      // A stop derived from the scheduled stop point, see ScheduledStopPointStopMapper. These
+      // exist only with extended NeTEx support, for stop places without quays.
+      var derivedStop = stopsById.get(idFactory.createId(stopPointRef));
+      if (
+        derivedStop != null && station != null && station.equals(derivedStop.getParentStation())
+      ) {
+        return derivedStop;
+      }
+      if (station == null) {
+        // The station was not mapped, for example because it has no coordinate
+        return null;
+      }
+      // Without extended NeTEx support the validation makes sure that the stop place has at least
+      // one quay. With it, a stop place without quays gets stops derived from the scheduled stop
+      // points; if none could be derived, the stop is reported as missing by the caller.
+      stopLocation = station
+        .getChildStops()
+        .stream()
+        .min(TransitEntity.idComparator())
+        .orElse(null);
     } else if (flexibleStopPlaceId != null) {
       AreaStop areaStop = flexibleStopLocationsById.get(idFactory.createId(flexibleStopPlaceId));
       GroupStop groupStop = groupStopById.get(idFactory.createId(flexibleStopPlaceId));

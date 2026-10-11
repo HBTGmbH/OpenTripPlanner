@@ -13,6 +13,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -163,7 +164,8 @@ class StopAndStationMapperTest {
       DEFAULT_TIME_ZONE,
       DataImportIssueStore.NOOP,
       false,
-      Set.of()
+      Set.of(),
+      Map.of()
     );
 
     stopMapper.mapParentAndChildStops(stopPlaces);
@@ -233,7 +235,8 @@ class StopAndStationMapperTest {
       DEFAULT_TIME_ZONE,
       DataImportIssueStore.NOOP,
       isolated,
-      Set.of()
+      Set.of(),
+      Map.of()
     );
 
     stopMapper.mapParentAndChildStops(stopPlaces);
@@ -308,7 +311,8 @@ class StopAndStationMapperTest {
       DEFAULT_TIME_ZONE,
       DataImportIssueStore.NOOP,
       false,
-      routeToCentroidStopPlaceIds
+      routeToCentroidStopPlaceIds,
+      Map.of()
     );
 
     stopMapper.mapParentAndChildStops(
@@ -335,7 +339,8 @@ class StopAndStationMapperTest {
       DEFAULT_TIME_ZONE,
       DataImportIssueStore.NOOP,
       false,
-      Set.of()
+      Set.of(),
+      Map.of()
     );
   }
 

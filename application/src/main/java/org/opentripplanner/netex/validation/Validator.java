@@ -2,6 +2,7 @@ package org.opentripplanner.netex.validation;
 
 import java.util.function.Supplier;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.netex.index.hierarchy.AbstractHierarchicalMap;
 
@@ -19,20 +20,36 @@ public class Validator {
 
   private final NetexEntityIndex index;
   private final DataImportIssueStore issueStore;
+  private final NetexProfileSupport profileSupport;
 
-  private Validator(NetexEntityIndex index, DataImportIssueStore issueStore) {
+  private Validator(
+    NetexEntityIndex index,
+    DataImportIssueStore issueStore,
+    NetexProfileSupport profileSupport
+  ) {
     this.index = index;
     this.issueStore = issueStore;
+    this.profileSupport = profileSupport;
   }
 
-  public static void validate(NetexEntityIndex index, DataImportIssueStore issueStore) {
-    new Validator(index, issueStore).run();
+  public static void validate(
+    NetexEntityIndex index,
+    DataImportIssueStore issueStore,
+    NetexProfileSupport profileSupport
+  ) {
+    new Validator(index, issueStore, profileSupport).run();
   }
 
   private void run() {
     validate(index.quayIdByStopPointRef, new PassengerStopAssignmentQuayNotFound());
     validate(index.stopPlaceIdByStopPointRef, new PassengerStopAssignmentStopPlaceNotFound());
-    validate(index.stopPlaceIdByStopPointRef, new PassengerStopAssignmentToStopPlaceWithoutQuays());
+    // With extended NeTEx support a stop is derived from the scheduled stop point instead
+    if (!profileSupport.extendedNetex()) {
+      validate(
+        index.stopPlaceIdByStopPointRef,
+        new PassengerStopAssignmentToStopPlaceWithoutQuays()
+      );
+    }
     validate(index.serviceJourneyById, new JourneyPatternNotFoundInSJ());
     validate(index.serviceJourneyById, new ServiceJourneyWithoutPassingTimes());
     validate(index.serviceJourneyById, new JourneyPatternSJMismatch());
