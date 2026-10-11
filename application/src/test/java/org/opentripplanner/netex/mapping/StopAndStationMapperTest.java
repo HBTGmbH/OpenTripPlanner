@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.opentripplanner._support.time.ZoneIds;
 import org.opentripplanner.core.model.accessibility.Accessibility;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalVersionMapById;
 import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.Station;
@@ -165,7 +166,8 @@ class StopAndStationMapperTest {
       DataImportIssueStore.NOOP,
       false,
       Set.of(),
-      Map.of()
+      Map.of(),
+      NetexProfileSupport.NORDIC
     );
 
     stopMapper.mapParentAndChildStops(stopPlaces);
@@ -236,7 +238,8 @@ class StopAndStationMapperTest {
       DataImportIssueStore.NOOP,
       isolated,
       Set.of(),
-      Map.of()
+      Map.of(),
+      NetexProfileSupport.NORDIC
     );
 
     stopMapper.mapParentAndChildStops(stopPlaces);
@@ -312,7 +315,8 @@ class StopAndStationMapperTest {
       DataImportIssueStore.NOOP,
       false,
       routeToCentroidStopPlaceIds,
-      Map.of()
+      Map.of(),
+      NetexProfileSupport.NORDIC
     );
 
     stopMapper.mapParentAndChildStops(
@@ -340,7 +344,8 @@ class StopAndStationMapperTest {
       DataImportIssueStore.NOOP,
       false,
       Set.of(),
-      Map.of()
+      Map.of(),
+      NetexProfileSupport.NORDIC
     );
   }
 

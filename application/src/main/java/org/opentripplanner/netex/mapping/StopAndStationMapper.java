@@ -20,6 +20,7 @@ import org.opentripplanner.core.model.accessibility.Accessibility;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issue.api.Issue;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalVersionMapById;
 import org.opentripplanner.netex.issues.StopPlaceWithoutQuays;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
@@ -57,6 +58,7 @@ class StopAndStationMapper {
   private final TariffZoneMapper tariffZoneMapper;
   private final StopPlaceTypeMapper stopPlaceTypeMapper = new StopPlaceTypeMapper();
   private final DataImportIssueStore issueStore;
+  private final NetexProfileSupport profileSupport;
 
   /**
    * Quay ids for all processed stop places
@@ -76,7 +78,8 @@ class StopAndStationMapper {
     DataImportIssueStore issueStore,
     boolean noTransfersOnIsolatedStops,
     Set<FeedScopedId> routeToCentroidStopPlaceIds,
-    Map<String, WgsCoordinate> fallbackCoordinateByStopPlaceId
+    Map<String, WgsCoordinate> fallbackCoordinateByStopPlaceId,
+    NetexProfileSupport profileSupport
   ) {
     this.stationMapper = new StationMapper(
       issueStore,
@@ -91,6 +94,7 @@ class StopAndStationMapper {
     this.tariffZoneMapper = tariffZoneMapper;
     this.quayIndex = quayIndex;
     this.issueStore = issueStore;
+    this.profileSupport = profileSupport;
   }
 
   /**
@@ -256,13 +260,15 @@ class StopAndStationMapper {
     if (stopPlace != null) {
       defaultWheelChairBoarding = WheelChairMapper.wheelchairAccessibility(
         stopPlace.getAccessibilityAssessment(),
-        Accessibility.NO_INFORMATION
+        Accessibility.NO_INFORMATION,
+        profileSupport.extendedNetex()
       );
     }
 
     return WheelChairMapper.wheelchairAccessibility(
       quay.getAccessibilityAssessment(),
-      defaultWheelChairBoarding
+      defaultWheelChairBoarding,
+      profileSupport.extendedNetex()
     );
   }
 }

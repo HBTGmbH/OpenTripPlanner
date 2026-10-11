@@ -22,15 +22,42 @@ public class WheelChairMapper {
     AccessibilityAssessment accessibilityAssessment,
     Accessibility defaultValue
   ) {
+    return wheelchairAccessibility(accessibilityAssessment, defaultValue, false);
+  }
+
+  /**
+   * Same as {@link #wheelchairAccessibility(AccessibilityAssessment, Accessibility)}, but if
+   * {@code useMobilityImpairedAccess} is set and the assessment has no wheelchair limitation, the
+   * overall {@code MobilityImpairedAccess} assessment is used. The overall assessment is mandatory
+   * in the European Passenger Information Profile (EPIP), while the limitations are optional. In
+   * NeTEx the overall assessment is {@code true} only if all limitations are {@code true} and
+   * {@code false} only if all are {@code false}, so only these two values are used; {@code partial}
+   * and {@code unknown} fall back to the default value.
+   */
+  public static Accessibility wheelchairAccessibility(
+    AccessibilityAssessment accessibilityAssessment,
+    Accessibility defaultValue,
+    boolean useMobilityImpairedAccess
+  ) {
     if (defaultValue == null) {
       defaultValue = Accessibility.NO_INFORMATION;
     }
 
-    return Optional.ofNullable(accessibilityAssessment)
+    var wheelchairAccess = Optional.ofNullable(accessibilityAssessment)
       .map(AccessibilityAssessment::getLimitations)
       .map(AccessibilityLimitations_RelStructure::getAccessibilityLimitation)
-      .map(AccessibilityLimitation::getWheelchairAccess)
+      .map(AccessibilityLimitation::getWheelchairAccess);
+
+    if (wheelchairAccess.isPresent() || !useMobilityImpairedAccess) {
+      return wheelchairAccess
+        .map(WheelChairMapper::fromLimitationStatusEnumeration)
+        .orElse(defaultValue);
+    }
+
+    return Optional.ofNullable(accessibilityAssessment)
+      .map(AccessibilityAssessment::getMobilityImpairedAccess)
       .map(WheelChairMapper::fromLimitationStatusEnumeration)
+      .filter(it -> it != Accessibility.NO_INFORMATION)
       .orElse(defaultValue);
   }
 

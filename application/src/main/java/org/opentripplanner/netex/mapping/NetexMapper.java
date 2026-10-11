@@ -335,7 +335,8 @@ public class NetexMapper {
             currentNetexIndex.getStopPlaceIdByStopPointRef(),
             currentNetexIndex.getScheduledStopPointById()
           )
-        : Map.of()
+        : Map.of(),
+      profileSupport
     );
     for (String stopPlaceId : currentNetexIndex.getStopPlaceById().localKeys()) {
       Collection<StopPlace> stopPlaceAllVersions = currentNetexIndex

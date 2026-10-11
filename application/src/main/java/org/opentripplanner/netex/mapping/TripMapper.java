@@ -105,7 +105,8 @@ class TripMapper {
 
     var wheelChairBoarding = WheelChairMapper.wheelchairAccessibility(
       serviceJourney.getAccessibilityAssessment(),
-      Accessibility.NO_INFORMATION
+      Accessibility.NO_INFORMATION,
+      profileSupport.extendedNetex()
     );
 
     var builder = Trip.of(id);

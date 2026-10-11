@@ -128,7 +128,8 @@ class ScheduledStopPointStopMapper {
         .withWheelchairAccessibility(
           WheelChairMapper.wheelchairAccessibility(
             stopPlace.getAccessibilityAssessment(),
-            Accessibility.NO_INFORMATION
+            Accessibility.NO_INFORMATION,
+            true
           )
         )
         .withVehicleType(transitMode.mainMode())
