@@ -6,6 +6,7 @@ import jakarta.xml.bind.JAXBElement;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.netex.support.JAXBUtils;
 import org.rutebanken.netex.model.DayType;
@@ -16,6 +17,7 @@ import org.rutebanken.netex.model.DayTypesInFrame_RelStructure;
 import org.rutebanken.netex.model.DayTypes_RelStructure;
 import org.rutebanken.netex.model.OperatingDay;
 import org.rutebanken.netex.model.OperatingDaysInFrame_RelStructure;
+import org.rutebanken.netex.model.OperatingDays_RelStructure;
 import org.rutebanken.netex.model.OperatingPeriod_VersionStructure;
 import org.rutebanken.netex.model.OperatingPeriodsInFrame_RelStructure;
 import org.rutebanken.netex.model.OperatingPeriods_RelStructure;
@@ -33,6 +35,11 @@ class ServiceCalendarFrameParser extends NetexParser<ServiceCalendarFrame_Versio
   private final Collection<OperatingDay> operatingDays = new ArrayList<>();
   private final Multimap<String, DayTypeAssignment> dayTypeAssignmentByDayTypeId =
     ArrayListMultimap.create();
+  private final NetexProfileSupport profileSupport;
+
+  ServiceCalendarFrameParser(NetexProfileSupport profileSupport) {
+    this.profileSupport = profileSupport;
+  }
 
   @Override
   void parse(ServiceCalendarFrame_VersionFrameStructure frame) {
@@ -66,6 +73,11 @@ class ServiceCalendarFrameParser extends NetexParser<ServiceCalendarFrame_Versio
     parseDayTypes(serviceCalendar.getDayTypes());
     parseOperatingPeriods(serviceCalendar.getOperatingPeriods());
     parseDayTypeAssignments(serviceCalendar.getDayTypeAssignments());
+    // EPIP and VDV 462 place operating days in the service calendar; the Nordic profile places
+    // them in the frame.
+    if (profileSupport.extendedNetex()) {
+      parseOperatingDays(serviceCalendar.getOperatingDays());
+    }
   }
 
   //List<JAXBElement<? extends DataManagedObjectStructure>>
@@ -119,6 +131,17 @@ class ServiceCalendarFrameParser extends NetexParser<ServiceCalendarFrame_Versio
       operatingPeriods.add(op);
     } else {
       NetexParser.warnOnMissingMapping(LOG, operatingPeriod);
+    }
+  }
+
+  private void parseOperatingDays(OperatingDays_RelStructure element) {
+    if (element == null) {
+      return;
+    }
+    for (Object it : element.getOperatingDayRefOrOperatingDay()) {
+      if (it instanceof OperatingDay operatingDay) {
+        operatingDays.add(operatingDay);
+      }
     }
   }
 

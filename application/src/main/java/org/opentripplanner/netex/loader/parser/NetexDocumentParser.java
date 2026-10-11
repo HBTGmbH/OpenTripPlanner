@@ -85,7 +85,7 @@ public class NetexDocumentParser {
     if (value instanceof ResourceFrame frame) {
       parse(frame, new ResourceFrameParser());
     } else if (value instanceof ServiceCalendarFrame frame) {
-      parse(frame, new ServiceCalendarFrameParser());
+      parse(frame, new ServiceCalendarFrameParser(profileSupport));
     } else if (value instanceof TimetableFrame frame) {
       parse(frame, new TimeTableFrameParser());
     } else if (value instanceof ServiceFrame frame) {

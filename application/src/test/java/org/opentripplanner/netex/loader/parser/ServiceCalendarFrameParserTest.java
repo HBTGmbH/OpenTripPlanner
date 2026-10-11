@@ -1,15 +1,20 @@
 package org.opentripplanner.netex.loader.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import jakarta.xml.bind.JAXBElement;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.rutebanken.netex.model.ObjectFactory;
+import org.rutebanken.netex.model.OperatingDay;
+import org.rutebanken.netex.model.OperatingDays_RelStructure;
 import org.rutebanken.netex.model.OperatingPeriod;
 import org.rutebanken.netex.model.OperatingPeriod_VersionStructure;
+import org.rutebanken.netex.model.ServiceCalendar;
 import org.rutebanken.netex.model.ServiceCalendarFrame_VersionFrameStructure;
 
 class ServiceCalendarFrameParserTest {
@@ -17,13 +22,14 @@ class ServiceCalendarFrameParserTest {
   private static final LocalDateTime FROM_DATE = LocalDateTime.of(2023, 1, 1, 0, 0);
   private static final LocalDateTime TO_DATE = LocalDateTime.of(2023, 2, 1, 0, 0);
   private static final ObjectFactory OBJECT_FACTORY = new ObjectFactory();
+  private static final String OPERATING_DAY_ID = "OD_1";
   private ServiceCalendarFrameParser serviceCalendarFrameParser;
   private ServiceCalendarFrame_VersionFrameStructure serviceCalendarFrame;
   private NetexEntityIndex netexEntityIndex;
 
   @BeforeEach
   void setUp() {
-    serviceCalendarFrameParser = new ServiceCalendarFrameParser();
+    serviceCalendarFrameParser = new ServiceCalendarFrameParser(NetexProfileSupport.NORDIC);
     serviceCalendarFrame = OBJECT_FACTORY.createServiceCalendarFrame_VersionFrameStructure();
     netexEntityIndex = new NetexEntityIndex();
   }
@@ -68,5 +74,39 @@ class ServiceCalendarFrameParserTest {
     serviceCalendarFrameParser.parse(serviceCalendarFrame);
     serviceCalendarFrameParser.setResultOnIndex(netexEntityIndex);
     assertEquals(1, netexEntityIndex.operatingPeriodById.size());
+  }
+
+  @Test
+  void parseOperatingDayInServiceCalendarWithExtendedNetex() {
+    serviceCalendarFrameParser = new ServiceCalendarFrameParser(
+      NetexProfileSupport.of(false, true)
+    );
+    serviceCalendarFrame.setServiceCalendar(serviceCalendarWithOperatingDay());
+
+    serviceCalendarFrameParser.parse(serviceCalendarFrame);
+    serviceCalendarFrameParser.setResultOnIndex(netexEntityIndex);
+
+    assertEquals(
+      OPERATING_DAY_ID,
+      netexEntityIndex.operatingDayById.lookup(OPERATING_DAY_ID).getId()
+    );
+  }
+
+  @Test
+  void ignoreOperatingDayInServiceCalendarForNordicProfile() {
+    serviceCalendarFrame.setServiceCalendar(serviceCalendarWithOperatingDay());
+
+    serviceCalendarFrameParser.parse(serviceCalendarFrame);
+    serviceCalendarFrameParser.setResultOnIndex(netexEntityIndex);
+
+    assertNull(netexEntityIndex.operatingDayById.lookup(OPERATING_DAY_ID));
+  }
+
+  private static ServiceCalendar serviceCalendarWithOperatingDay() {
+    return OBJECT_FACTORY.createServiceCalendar().withOperatingDays(
+      new OperatingDays_RelStructure().withOperatingDayRefOrOperatingDay(
+        new OperatingDay().withId(OPERATING_DAY_ID).withCalendarDate(FROM_DATE)
+      )
+    );
   }
 }
