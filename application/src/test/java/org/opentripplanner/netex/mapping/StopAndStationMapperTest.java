@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.opentripplanner._support.time.ZoneIds;
 import org.opentripplanner.core.model.accessibility.Accessibility;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalVersionMapById;
 import org.opentripplanner.transit.model.site.RegularStop;
@@ -301,6 +302,35 @@ class StopAndStationMapperTest {
 
     assertThat(stopAndStationMapper.resultStations).isEmpty();
     assertThat(stopAndStationMapper.resultStops).isEmpty();
+  }
+
+  @ParameterizedTest
+  @CsvSource({ "false, 1", "true, 0" })
+  void reportStopPlaceWithoutQuaysOnlyWithoutExtendedNetex(boolean extended, int expectedIssues) {
+    var issueStore = new DefaultDataImportIssueStore();
+    var mapper = new StopAndStationMapper(
+      MappingSupport.ID_FACTORY,
+      new HierarchicalVersionMapById<>(),
+      null,
+      SiteRepository.of(),
+      DEFAULT_TIME_ZONE,
+      issueStore,
+      false,
+      Set.of(),
+      Map.of(),
+      NetexProfileSupport.of(extended, false)
+    );
+
+    mapper.mapParentAndChildStops(
+      List.of(createStopPlace("ST:StopPlace:1", "No quays", "1", 59.0, 10.0, null))
+    );
+
+    assertThat(
+      issueStore
+        .listIssues()
+        .stream()
+        .filter(it -> it.getType().equals("StopPlaceWithoutQuays"))
+    ).hasSize(expectedIssues);
   }
 
   @Test

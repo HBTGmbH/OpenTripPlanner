@@ -224,7 +224,11 @@ class StopAndStationMapper {
     Quays_RelStructure quays = stopPlace.getQuays();
 
     if (quays == null) {
-      issueStore.add(new StopPlaceWithoutQuays(stopPlace.getId()));
+      // Stop places without quays are valid in EPIP and VDV 462; stops are derived from the
+      // scheduled stop points assigned to them (StopDerivedFromScheduledStopPoint).
+      if (!profileSupport.extendedNetex()) {
+        issueStore.add(new StopPlaceWithoutQuays(stopPlace.getId()));
+      }
       return Collections.emptyList();
     }
 
