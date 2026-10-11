@@ -44,6 +44,8 @@ The feature is under development. The following table lists what is supported so
 | Area | Status |
 | ---- | ------ |
 | Robustness: invalid or incomplete data is reported instead of aborting the build | In core OTP, independent of this feature |
+| EPIP file names (CEN/TS 16614-4, 8.14): if the feed uses the default file patterns, `NX-PI-…_STOP…` files are loaded as shared files and `NX-PI-…_LINE…`/`…_NETWORK…` files as group files, grouped by country and provider | Supported |
+| Files matching none of the file patterns are loaded as a group of their own instead of being ignored (`NetexFileNotMatchingPatterns`) | Supported |
 | Notices: notice assignments embedded in the noticed element (stop point in journey pattern, journey pattern, line, service journey), notices referenced by `NoticeRef` from an earlier embedded assignment | Supported |
 | Operator of a line given only as additional operator (`additionalOperators`) | Supported |
 | Agency of a line without authority: `AuthorityRef`, an authority among the additional operators, otherwise the operator of the line is used as agency (`AgencyDerivedFromOperator`) | Supported |

@@ -34,6 +34,7 @@ public class NetexDataSourceHierarchy {
   private final CompositeDataSource source;
   private final List<DataSource> sharedEntries = new ArrayList<>();
   private final Map<String, GroupEntries> groupEntries = new TreeMap<>();
+  private final List<String> unmatchedEntryNames = new ArrayList<>();
 
   public NetexDataSourceHierarchy(CompositeDataSource source) {
     this.source = source;
@@ -45,11 +46,32 @@ public class NetexDataSourceHierarchy {
     Pattern sharedGroupFilePattern,
     Pattern groupFilePattern
   ) {
+    return prepare(
+      ignoreFilePattern,
+      sharedFilePattern,
+      sharedGroupFilePattern,
+      groupFilePattern,
+      false
+    );
+  }
+
+  /**
+   * @param loadUnmatchedFilesAsGroups if true, a file which matches none of the patterns is loaded
+   *                                   as the only file of its own group, instead of being ignored.
+   */
+  public NetexDataSourceHierarchy prepare(
+    Pattern ignoreFilePattern,
+    Pattern sharedFilePattern,
+    Pattern sharedGroupFilePattern,
+    Pattern groupFilePattern,
+    boolean loadUnmatchedFilesAsGroups
+  ) {
     new DistributeEntries(
       ignoreFilePattern,
       sharedFilePattern,
       sharedGroupFilePattern,
-      groupFilePattern
+      groupFilePattern,
+      loadUnmatchedFilesAsGroups
     ).execute();
     return this;
   }
@@ -66,6 +88,11 @@ public class NetexDataSourceHierarchy {
     return groupEntries.values();
   }
 
+  /** The names of the files which match none of the patterns. */
+  public List<String> unmatchedEntryNames() {
+    return unmatchedEntryNames;
+  }
+
   /**
    * Process the data source and distribute entries to {@code sharedEntries} and {@code
    * groupEntries}.
@@ -76,6 +103,7 @@ public class NetexDataSourceHierarchy {
     private final Pattern sharedFilePattern;
     private final Pattern sharedGroupFilePattern;
     private final Pattern groupFilePattern;
+    private final boolean loadUnmatchedFilesAsGroups;
 
     private String currentGroup = null;
 
@@ -83,12 +111,14 @@ public class NetexDataSourceHierarchy {
       Pattern ignoreFilePattern,
       Pattern sharedFilePattern,
       Pattern sharedGroupFilePattern,
-      Pattern groupFilePattern
+      Pattern groupFilePattern,
+      boolean loadUnmatchedFilesAsGroups
     ) {
       this.ignoreFilePattern = ignoreFilePattern;
       this.sharedFilePattern = sharedFilePattern;
       this.sharedGroupFilePattern = sharedGroupFilePattern;
       this.groupFilePattern = groupFilePattern;
+      this.loadUnmatchedFilesAsGroups = loadUnmatchedFilesAsGroups;
     }
 
     private void execute() {
@@ -103,7 +133,11 @@ public class NetexDataSourceHierarchy {
           groupEntries.get(currentGroup).addSharedEntry(entry);
         } else if (isGroupEntry(name, groupFilePattern)) {
           groupEntries.get(currentGroup).addIndependentEntries(entry);
+        } else if (loadUnmatchedFilesAsGroups) {
+          unmatchedEntryNames.add(name);
+          groupEntries.computeIfAbsent(name, GroupEntries::new).addIndependentEntries(entry);
         } else {
+          unmatchedEntryNames.add(name);
           LOG.warn(
             "Netex file ignored: {}. The file do not " + "match any file patterns in the config.",
             name

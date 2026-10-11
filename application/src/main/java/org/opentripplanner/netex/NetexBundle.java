@@ -109,6 +109,15 @@ public class NetexBundle implements Closeable {
     LOG.info("Reading {}", hierarchy.description());
 
     this.issueStore = issueStore;
+    if (profileSupport.extendedNetex()) {
+      for (String name : hierarchy.unmatchedEntryNames()) {
+        issueStore.add(
+          "NetexFileNotMatchingPatterns",
+          "The NeTEx file %s matches none of the file patterns. It is loaded as a group of its own.",
+          name
+        );
+      }
+    }
     if (profileSupport.extendedNetex() && transitModelTimeZone != null) {
       this.defaultTimeZone = NetexDocumentParser.DefaultTimeZone.of(
         transitModelTimeZone,

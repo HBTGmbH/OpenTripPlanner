@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
 import org.opentripplanner.datastore.api.CompositeDataSource;
+import org.opentripplanner.ext.netexprofile.epip.EpipFilePatterns;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.model.ConfiguredCompositeDataSource;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
@@ -75,12 +76,15 @@ public class NetexConfigure {
     ConfiguredCompositeDataSource<NetexFeedParameters> configuredDataSource
   ) {
     var source = configuredDataSource.dataSource();
-    var config = configuredDataSource.config();
+    var profileSupport = NetexProfileSupport.ofFeatures();
+    var config = profileSupport.epip()
+      ? EpipFilePatterns.apply(configuredDataSource.config())
+      : configuredDataSource.config();
 
     return new NetexBundle(
       config.feedId(),
       source,
-      hierarchy(source, config),
+      hierarchy(source, config, profileSupport),
       transitServiceBuilder,
       config.ferryIdsNotAllowedForBicycle(),
       buildParams.transitRouteToStationCentroid(),
@@ -88,20 +92,22 @@ public class NetexConfigure {
       config.noTransfersOnIsolatedStops(),
       config.allowStopPlaceAsPassengerStopAssignment(),
       config.ignoredFeatures(),
-      NetexProfileSupport.ofFeatures(),
+      profileSupport,
       buildParams.transitModelTimeZone
     );
   }
 
   private NetexDataSourceHierarchy hierarchy(
     CompositeDataSource source,
-    NetexFeedParameters params
+    NetexFeedParameters params,
+    NetexProfileSupport profileSupport
   ) {
     return new NetexDataSourceHierarchy(source).prepare(
       params.ignoreFilePattern(),
       params.sharedFilePattern(),
       params.sharedGroupFilePattern(),
-      params.groupFilePattern()
+      params.groupFilePattern(),
+      profileSupport.extendedNetex()
     );
   }
 }
