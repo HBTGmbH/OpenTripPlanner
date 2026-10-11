@@ -37,6 +37,30 @@ class ServiceJourneyNonIncreasingPassingTimeTest {
   }
 
   @Test
+  void testValidateServiceJourneyWithoutOrderInJourneyPattern() {
+    NetexTestDataSample sample = new NetexTestDataSample();
+    ServiceJourney serviceJourney = sample.getServiceJourney();
+    JourneyPattern journeyPattern = sample.getJourneyPattern();
+    journeyPattern
+      .getPointsInSequence()
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
+      .forEach(point -> point.setOrder(null));
+
+    NetexEntityIndex netexEntityIndex = new NetexEntityIndex();
+    netexEntityIndex.journeyPatternsById.add(journeyPattern);
+    netexEntityIndex.serviceJourneyById.add(serviceJourney);
+
+    ServiceJourneyNonIncreasingPassingTime serviceJourneyNonIncreasingPassingTime =
+      new ServiceJourneyNonIncreasingPassingTime();
+    serviceJourneyNonIncreasingPassingTime.setup(netexEntityIndex.readOnlyView());
+
+    assertEquals(
+      HMapValidationRule.Status.OK,
+      serviceJourneyNonIncreasingPassingTime.validate(serviceJourney)
+    );
+  }
+
+  @Test
   void testValidateServiceJourneyWithRegularStopMissingTime() {
     NetexTestDataSample sample = new NetexTestDataSample();
     ServiceJourney serviceJourney = sample.getServiceJourney();

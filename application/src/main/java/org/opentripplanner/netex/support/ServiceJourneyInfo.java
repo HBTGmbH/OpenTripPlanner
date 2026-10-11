@@ -1,6 +1,7 @@
 package org.opentripplanner.netex.support;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,16 +33,24 @@ public class ServiceJourneyInfo {
   }
 
   /**
-   * Sort the timetabled passing times according to their order in the journey pattern.
+   * Sort the timetabled passing times according to their order in the journey pattern. The
+   * {@code order} attribute is mandatory in NeTEx, but some exports omit it; then the position of
+   * the point in the sequence is used, which is also the order used when mapping the stop times.
    */
   public List<StopTimeAdaptor> orderedTimetabledPassingTimeInfos() {
     Map<TimetabledPassingTime, Boolean> stopFlexibility = stopFlexibility();
 
-    Map<String, Integer> stopPointIdToOrder = journeyPattern
+    var points = journeyPattern
       .getPointsInSequence()
-      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
-      .stream()
-      .collect(Collectors.toMap(EntityStructure::getId, point -> point.getOrder().intValueExact()));
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern();
+    Map<String, Integer> stopPointIdToOrder = new HashMap<>();
+    for (int i = 0; i < points.size(); i++) {
+      var point = points.get(i);
+      stopPointIdToOrder.put(
+        point.getId(),
+        point.getOrder() == null ? i : point.getOrder().intValueExact()
+      );
+    }
     return serviceJourney
       .getPassingTimes()
       .getTimetabledPassingTime()
