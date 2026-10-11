@@ -12,6 +12,7 @@ import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.datastore.api.CompositeDataSource;
 import org.opentripplanner.datastore.api.DataSource;
+import org.opentripplanner.ext.netexprofile.vdv462.TimingModelPassingTimes;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
 import org.opentripplanner.netex.config.IgnorableFeature;
@@ -209,6 +210,11 @@ public class NetexBundle implements Closeable {
     for (DataSource entry : entries) {
       // Load entry and store it in the index
       loadSingeFileEntry(fileDescription, entry);
+    }
+
+    if (profileSupport.vdv462()) {
+      // VDV 462 exchanges run times and wait times instead of passing times
+      TimingModelPassingTimes.derive(index.readOnlyView(), issueStore);
     }
 
     // Validate input data, and remove invalid data

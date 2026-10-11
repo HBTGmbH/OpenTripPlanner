@@ -62,10 +62,12 @@ The feature is under development. The following table lists what is supported so
 | Scheduled stop points used for boarding or alighting without any passenger stop assignment: a stop without parent station is created at the scheduled stop point (`StopDerivedFromUnassignedScheduledStopPoint`) | Supported |
 | Quays without coordinates are placed at their stop place instead of being skipped (`QuayLocatedAtStopPlace`) | Supported |
 | Data without time zone (`FrameDefaults/DefaultLocale/TimeZone`): the `transitModelTimeZone` of the build configuration is used instead of GMT (`NetexTimeZoneFallback`) | Supported |
+| Timing model: journeys without passing times get them from their `DepartureTime`, the run times of the journey pattern links and the wait times at its stop points for the `TimeDemandTypeRef` of the journey, including journey-specific run and wait times (`PassingTimesDerivedFromTimingModel`, `PassingTimesNotDerived`) | Supported for run times on the journey pattern links; run times given only on the time demand type are not supported |
 
 ### Known limitations
 
 - Fares, demand responsive transport, train formation and AVLC specific data are out of scope.
+- Interchange rules (`InterchangeRule`), journeys modelled as `VehicleJourney` with a `ServicePattern` (VDV 452 mapping) and the frame validity (`ValidBetween`) are not supported yet.
 
 ## Changelog
 

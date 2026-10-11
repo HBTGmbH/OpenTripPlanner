@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hand-built VDV 462 test data: bus line 1 from A via B to C. As in VDV 462, the journeys have no
+  passing times; they have a departure time and a time demand type (peak or off-peak), and the
+  journey pattern has the run times of its links and the wait time at B per time demand type.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.0">
+  <PublicationTimestamp>2025-01-01T00:00:00</PublicationTimestamp>
+  <ParticipantRef>VDV</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="VDV:CompositeFrame:1" version="1">
+      <FrameDefaults>
+        <DefaultLocale>
+          <TimeZone>Europe/Berlin</TimeZone>
+        </DefaultLocale>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="VDV:ResourceFrame:1" version="1">
+          <organisations>
+            <Authority id="VDV:Authority:1" version="1">
+              <Name>Testverbund</Name>
+              <OrganisationType>authority</OrganisationType>
+            </Authority>
+          </organisations>
+        </ResourceFrame>
+        <SiteFrame id="VDV:SiteFrame:1" version="1">
+          <stopPlaces>
+            <StopPlace id="VDV:StopPlace:A" version="1">
+              <Name>A</Name>
+              <Centroid><Location><Longitude>10.000</Longitude><Latitude>53.550</Latitude></Location></Centroid>
+              <StopPlaceType>onstreetBus</StopPlaceType>
+              <quays>
+                <Quay id="VDV:Quay:A" version="1">
+                  <Centroid><Location><Longitude>10.000</Longitude><Latitude>53.550</Latitude></Location></Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="VDV:StopPlace:B" version="1">
+              <Name>B</Name>
+              <Centroid><Location><Longitude>10.010</Longitude><Latitude>53.550</Latitude></Location></Centroid>
+              <StopPlaceType>onstreetBus</StopPlaceType>
+              <quays>
+                <Quay id="VDV:Quay:B" version="1">
+                  <Centroid><Location><Longitude>10.010</Longitude><Latitude>53.550</Latitude></Location></Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+            <StopPlace id="VDV:StopPlace:C" version="1">
+              <Name>C</Name>
+              <Centroid><Location><Longitude>10.020</Longitude><Latitude>53.550</Latitude></Location></Centroid>
+              <StopPlaceType>onstreetBus</StopPlaceType>
+              <quays>
+                <Quay id="VDV:Quay:C" version="1">
+                  <Centroid><Location><Longitude>10.020</Longitude><Latitude>53.550</Latitude></Location></Centroid>
+                </Quay>
+              </quays>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+        <ServiceCalendarFrame id="VDV:ServiceCalendarFrame:1" version="1">
+          <ServiceCalendar id="VDV:ServiceCalendar:1" version="1">
+            <FromDate>2025-01-01</FromDate>
+            <ToDate>2025-12-31</ToDate>
+            <dayTypes>
+              <DayType id="VDV:DayType:Monday" version="1"/>
+            </dayTypes>
+            <dayTypeAssignments>
+              <DayTypeAssignment id="VDV:DayTypeAssignment:1" order="1" version="1">
+                <Date>2025-06-02</Date>
+                <DayTypeRef ref="VDV:DayType:Monday" version="1"/>
+              </DayTypeAssignment>
+            </dayTypeAssignments>
+          </ServiceCalendar>
+        </ServiceCalendarFrame>
+        <ServiceFrame id="VDV:ServiceFrame:1" version="1">
+          <lines>
+            <Line id="VDV:Line:1" version="1">
+              <Name>Bus 1</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>1</PublicCode>
+              <AuthorityRef ref="VDV:Authority:1" version="1"/>
+            </Line>
+          </lines>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="VDV:ScheduledStopPoint:A" version="1"><Name>A</Name></ScheduledStopPoint>
+            <ScheduledStopPoint id="VDV:ScheduledStopPoint:B" version="1"><Name>B</Name></ScheduledStopPoint>
+            <ScheduledStopPoint id="VDV:ScheduledStopPoint:C" version="1"><Name>C</Name></ScheduledStopPoint>
+          </scheduledStopPoints>
+          <stopAssignments>
+            <PassengerStopAssignment id="VDV:PassengerStopAssignment:A" order="1" version="1">
+              <ScheduledStopPointRef ref="VDV:ScheduledStopPoint:A" version="1"/>
+              <StopPlaceRef ref="VDV:StopPlace:A" version="1"/>
+              <QuayRef ref="VDV:Quay:A" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="VDV:PassengerStopAssignment:B" order="2" version="1">
+              <ScheduledStopPointRef ref="VDV:ScheduledStopPoint:B" version="1"/>
+              <StopPlaceRef ref="VDV:StopPlace:B" version="1"/>
+              <QuayRef ref="VDV:Quay:B" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="VDV:PassengerStopAssignment:C" order="3" version="1">
+              <ScheduledStopPointRef ref="VDV:ScheduledStopPoint:C" version="1"/>
+              <StopPlaceRef ref="VDV:StopPlace:C" version="1"/>
+              <QuayRef ref="VDV:Quay:C" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="VDV:ServiceJourneyPattern:1" version="1">
+              <RouteView>
+                <LineRef ref="VDV:Line:1" version="1"/>
+              </RouteView>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="VDV:StopPointInJourneyPattern:1-A" order="1" version="1">
+                  <ScheduledStopPointRef ref="VDV:ScheduledStopPoint:A" version="1"/>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="VDV:StopPointInJourneyPattern:1-B" order="2" version="1">
+                  <ScheduledStopPointRef ref="VDV:ScheduledStopPoint:B" version="1"/>
+                  <waitTimes>
+                    <JourneyPatternWaitTime id="VDV:JourneyPatternWaitTime:1-B-HVZ" version="1">
+                      <TimeDemandTypeRef ref="VDV:TimeDemandType:HVZ" version="1"/>
+                      <WaitTime>PT1M</WaitTime>
+                    </JourneyPatternWaitTime>
+                  </waitTimes>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="VDV:StopPointInJourneyPattern:1-C" order="3" version="1">
+                  <ScheduledStopPointRef ref="VDV:ScheduledStopPoint:C" version="1"/>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+              <linksInSequence>
+                <ServiceLinkInJourneyPattern id="VDV:ServiceLinkInJourneyPattern:1-AB" order="1" version="1">
+                  <TimingLinkRef ref="VDV:TimingLink:AB" version="1"/>
+                  <runTimes>
+                    <JourneyRunTime id="VDV:JourneyRunTime:AB-HVZ" version="1">
+                      <TimeDemandTypeRef ref="VDV:TimeDemandType:HVZ" version="1"/>
+                      <RunTime>PT5M</RunTime>
+                    </JourneyRunTime>
+                    <JourneyRunTime id="VDV:JourneyRunTime:AB-NVZ" version="1">
+                      <TimeDemandTypeRef ref="VDV:TimeDemandType:NVZ" version="1"/>
+                      <RunTime>PT3M</RunTime>
+                    </JourneyRunTime>
+                  </runTimes>
+                  <ServiceLinkRef ref="VDV:ServiceLink:AB" version="1"/>
+                </ServiceLinkInJourneyPattern>
+                <ServiceLinkInJourneyPattern id="VDV:ServiceLinkInJourneyPattern:1-BC" order="2" version="1">
+                  <TimingLinkRef ref="VDV:TimingLink:BC" version="1"/>
+                  <runTimes>
+                    <JourneyRunTime id="VDV:JourneyRunTime:BC-HVZ" version="1">
+                      <TimeDemandTypeRef ref="VDV:TimeDemandType:HVZ" version="1"/>
+                      <RunTime>PT6M</RunTime>
+                    </JourneyRunTime>
+                    <JourneyRunTime id="VDV:JourneyRunTime:BC-NVZ" version="1">
+                      <TimeDemandTypeRef ref="VDV:TimeDemandType:NVZ" version="1"/>
+                      <RunTime>PT4M</RunTime>
+                    </JourneyRunTime>
+                  </runTimes>
+                  <ServiceLinkRef ref="VDV:ServiceLink:BC" version="1"/>
+                </ServiceLinkInJourneyPattern>
+              </linksInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <TimetableFrame id="VDV:TimetableFrame:1" version="1">
+          <vehicleJourneys>
+            <ServiceJourney id="VDV:ServiceJourney:1-0800" version="1">
+              <DepartureTime>08:00:00</DepartureTime>
+              <dayTypes>
+                <DayTypeRef ref="VDV:DayType:Monday" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="VDV:ServiceJourneyPattern:1" version="1"/>
+              <TimeDemandTypeRef ref="VDV:TimeDemandType:HVZ" version="1"/>
+              <LineRef ref="VDV:Line:1" version="1"/>
+            </ServiceJourney>
+            <ServiceJourney id="VDV:ServiceJourney:1-2000" version="1">
+              <DepartureTime>20:00:00</DepartureTime>
+              <dayTypes>
+                <DayTypeRef ref="VDV:DayType:Monday" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="VDV:ServiceJourneyPattern:1" version="1"/>
+              <TimeDemandTypeRef ref="VDV:TimeDemandType:NVZ" version="1"/>
+              <LineRef ref="VDV:Line:1" version="1"/>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>
