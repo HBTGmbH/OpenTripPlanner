@@ -33,11 +33,8 @@ class TransportModeMapper {
     AllVehicleModesOfTransportEnumeration netexMode,
     TransportSubmodeStructure submode
   ) throws UnsupportedModeException {
-    if (submode == null) {
-      return new NetexMainAndSubMode(mapAllVehicleModesOfTransport(netexMode));
-    } else {
-      return getSubmodeAsString(submode);
-    }
+    var mode = submode == null ? null : getSubmodeAsString(submode);
+    return mode != null ? mode : new NetexMainAndSubMode(mapAllVehicleModesOfTransport(netexMode));
   }
 
   public TransitMode mapAllVehicleModesOfTransport(AllVehicleModesOfTransportEnumeration mode)
@@ -81,6 +78,11 @@ class TransportModeMapper {
     return mapCarsAllowed(otpSubmode == null ? null : otpSubmode.name());
   }
 
+  /**
+   * Return the main and sub mode for the given submode, or {@code null} if the submode structure
+   * is empty.
+   */
+  @Nullable
   private NetexMainAndSubMode getSubmodeAsString(TransportSubmodeStructure submode) {
     if (submode.getAirSubmode() != null) {
       return new NetexMainAndSubMode(TransitMode.AIRPLANE, submode.getAirSubmode().value());
@@ -108,7 +110,7 @@ class TransportModeMapper {
         submode.getSnowAndIceSubmode().value()
       );
     }
-    throw new IllegalArgumentException();
+    return null;
   }
 
   static class UnsupportedModeException extends Exception {

@@ -143,6 +143,23 @@ class TransportModeMapperTest {
   }
 
   @Test
+  void emptySubModeFallsBackToMainMode() throws UnsupportedModeException {
+    var transitMode = transportModeMapper.map(
+      AllVehicleModesOfTransportEnumeration.BUS,
+      new TransportSubmodeStructure()
+    );
+    assertEquals(TransitMode.BUS, transitMode.mainMode());
+    assertNull(transitMode.subMode());
+  }
+
+  @Test
+  void emptySubModeWithoutMainModeIsUnsupported() {
+    assertThrows(UnsupportedModeException.class, () ->
+      transportModeMapper.map(null, new TransportSubmodeStructure())
+    );
+  }
+
+  @Test
   void supportedMode() {
     SUPPORTED_MODES.forEach(mode -> {
       try {

@@ -141,7 +141,7 @@ class RouteMapper {
     // but currently it doesn't look it is being parsed.
     // until there is better information from the operators we assume that all ferries allow
     // bicycles on board.
-    if (line.getTransportMode().equals(AllVehicleModesOfTransportEnumeration.WATER)) {
+    if (AllVehicleModesOfTransportEnumeration.WATER == line.getTransportMode()) {
       if (ferryIdsNotAllowedForBicycle.contains(line.getId())) {
         builder.withBikesAllowed(BikeAccess.NOT_ALLOWED);
       } else {

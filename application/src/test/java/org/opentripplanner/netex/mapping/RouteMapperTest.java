@@ -19,6 +19,7 @@ import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueSto
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
+import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.framework.DefaultEntityById;
 import org.opentripplanner.transit.model.network.BikeAccess;
 import org.opentripplanner.transit.model.network.GroupOfRoutes;
@@ -35,6 +36,8 @@ import org.rutebanken.netex.model.MultilingualString;
 import org.rutebanken.netex.model.Network;
 import org.rutebanken.netex.model.PresentationStructure;
 import org.rutebanken.netex.model.TransportOrganisationRefStructure;
+import org.rutebanken.netex.model.TransportSubmodeStructure;
+import org.rutebanken.netex.model.WaterSubmodeEnumeration;
 
 class RouteMapperTest {
 
@@ -149,6 +152,22 @@ class RouteMapperTest {
 
     assertNull(createRouteMapper(new NetexEntityIndex(), issueStore).mapRoute(line));
     assertThat(listIssueTypes(issueStore)).containsExactly("LineWithoutName");
+  }
+
+  @Test
+  void mapRouteWithSubModeOnly() {
+    var line = createExampleLine();
+    line.setTransportMode(null);
+    line.setTransportSubmode(
+      new TransportSubmodeStructure().withWaterSubmode(WaterSubmodeEnumeration.LOCAL_CAR_FERRY)
+    );
+
+    Route route = createRouteMapper(new NetexEntityIndex(), DataImportIssueStore.NOOP).mapRoute(
+      line
+    );
+
+    assertEquals(TransitMode.FERRY, route.getMode());
+    assertEquals(BikeAccess.UNKNOWN, route.getBikesAllowed());
   }
 
   @Test
