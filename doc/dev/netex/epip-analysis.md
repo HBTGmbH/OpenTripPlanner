@@ -1,0 +1,361 @@
+# NeTEx EPIP and VDV 462 import – analysis and design
+
+Status: Phase 0 analysis, **design approved** (see §6). Implementation on branch
+`netex-epip-vdv462`, which also contains upstream PR #8054.
+
+This document lists every place where the OTP NeTEx importer makes assumptions that hold for the
+Nordic NeTEx profile but not for the European Passenger Information Profile (EPIP,
+CEN/TS 16614-4) and the German data that is commonly called "EPIP" or "German NeTEx". For each
+finding it states whether the constraint is a genuine requirement of the OTP transit model or
+merely an importer assumption, and proposes a fix. A design proposal follows at the end.
+
+## 1. Sources and evidence
+
+| Source | What it is | How it was used |
+|---|---|---|
+| OTP `dev-2.x` = `upstream/dev-2.x` @ `4d3613ff17` (2026-10-02), package `org.opentripplanner.netex` (110 classes) | The importer | Read in full: loader, parsers, index, validators, mappers |
+| `netex-java-model` 2.0.16.1 (`org.entur`, root `pom.xml:75`) | JAXB model used by OTP. **Generated from `entur/NeTEx` tag `v1.0.16.1`, i.e. a NeTEx 1.x schema** (CEN 1.2.x plus Nordic additions). The "2.0" is the library version, not the schema version. An unreleased branch `upgrade-netex-2.0` moves to CEN NeTEx 2.0. | `javap`; parse probes (§1.1) |
+| `TransmodelEcosystem/NeTEx-Profile-EPIP` (`master`) | EPIP XSD subset (`NeTEx_publication_EPIP.xsd`, `_content_NeTEx_EPIP.xsd`), based on NeTEx **1.3.1**, created 2021 (Data4PT), "no longer maintained by the NeTEx subgroup"; non-normative | Content model of the relevant elements; validation of the examples |
+| `TransmodelEcosystem/NeTEx` (branches `v1.3`, `v2.0`) | Official schema; `examples/standards/epip/epip_common_profile.xml` (profile metadata only), `examples/standards/vdv452/**` | Background; no EPIP instance data in the repo |
+| Data4PT `XML_Example_EPIP.zip` → `NX-PI-01_LU_NAP_LINE_AVL-AVL-91_20210113.xml` | The only official EPIP instance example (Luxembourg) | Parse probe, structure |
+| `application/src/test/resources/netex/epip/netex_epip_minimal/` | Two German NAP (DELFI) exports for HVV lines, `TypeOfFrameRef epip:EU_PI_LINE_OFFER`, `version="ntx:1.1"` | Used by `NetexEpipBundleSmokeTest`; inspected element by element |
+| Czech NAP (`NX-PI-01_CZ_CISJR-JDF_LINE-*.xml`), Italian profile examples (`5Tsrl/netex-italian-profile`), DELFI 2025 excerpts (`motis-project/nigiri` tests) | Further EPIP(-like) instance data | Parse probes, structure (IT is the Italian profile, not pure EPIP) |
+| `NeTEx-Export Example.xml` (user supplied, 2012, VAG Freiburg, NeTEx 1.0) | Export from a German scheduling system | Parse probe, element statistics. **Not EPIP**; follows the VDV 452 → NeTEx mapping below |
+| prCEN/TS 16614-4 PI Profile, Final Draft 2019 (188 pages) | Normative EPIP text: data dictionary, cardinalities, stop hierarchy, identifier and file-name rules, quality rules | Chapters 5–9 read for every finding |
+| VDV Recommendation 462, v00.22 (01/2017, English) | German "NeTEx VDV application handbook", passenger-information (PI) profiles L1–L3 | Chapters 2–6, 9, 12–15, 18, annex 19.4 (profile tables rendered from the PDF) |
+| `bhn01-326956-v22-vdv452-netex-datenzuordnung.xlsx` (2018) | Element mapping VDV 452 (scheduling interface) → NeTEx | Identifies the origin of the Freiburg export |
+| FOPS/BMVI report 70.0946 (2020) | Study on public transport data for the German NAP | DELFI publishes in the **EU-PI (EPIP) profile**; VDV 462 and EU-PI model departure times differently and are not compatible |
+| OTP issues/PRs #3640, #8048, #8054, #4863/#4921/#4925, #4872, #4933, #4964, #5609, #8036 | History of EPIP support | §1.3 |
+
+Normative statements refer to **prCEN/TS 16614-4 PI Profile, Final Draft 2019** ("TS §x.y"). The
+published editions (2020, 2026) are paywalled and were not consulted; where the TS and the XSD subset
+differ (e.g. cardinality of `ServiceJourney/JourneyPatternRef`), both are stated.
+
+### 1.1 Parse probes
+
+A stand-alone program unmarshalled the files with exactly the JAXB set-up used by
+`NetexXmlParser` and, in a second run, with a `ValidationEventHandler` counting events.
+
+| File | Unmarshal events | Notes |
+|---|---|---|
+| DE NAP `…VHH-VHH-688…`, `…HHA-B-X86…` | 0 | |
+| LU Data4PT example | 0 | |
+| CZ NAP (2 files) | 0 | StopPlaces without centroid and quays; `ServiceJourney` without `DepartureTime` |
+| IT profile (3 files) | 3 × `Text cannot be parsed to a Duration` | `gml:pos` in **lon, lat** order with `srsName="ITA"`; `DepartureTime 06:00:00+02:00` is read as `06:00` (offset dropped silently) |
+| Freiburg export (NeTEx 1.0) | 4 731 × `Text cannot be parsed to a Duration` (`-P0Y0M0DT0H0M0S`), 10 × unexpected element (`SiriLineRef`, `SiriStopPointRef`, `SiriDirectionRef`) | |
+
+Conclusions:
+
+- All EPIP instance files are compatible with OTP's JAXB model; the `version` attribute on
+  `PublicationDelivery` (`ntx:1.1`, `1`, `1.0`) is irrelevant for the unmarshaller.
+- With OTP's current set-up, unparseable values and unknown elements are **silently dropped** – no
+  log line, no issue.
+
+### 1.2 What already works
+
+- `CompositeFrame` with nested frames; `FrameDefaults/DefaultLocale/TimeZone`.
+- IDs are treated as opaque strings (`FeedScopedIdFactory`). **No `CODESPACE:Type:Value` parsing
+  exists anywhere in the importer.** `DE::Quay:800091_MastM::`, `CZ:cisjr_jdf:StopPlace:3`,
+  `IT:ITC1:StopPlace:busATS:001` and `SP_11` all load.
+- `JourneyPattern/RouteView/LineRef` as alternative to `RouteRef` (`JourneyPatternHelper`).
+- `gml:LineString` directly on `ServiceLink` (#8036).
+- `UicOperatingPeriod/ValidDayBits`; `Line/AuthorityRef` without `RepresentedByGroupRef`; name
+  fallback for `GroupOfStopPlaces`; null-safe `RouteView`/`RouteRef` (#4863, #4925, #4872).
+- Quays repeated in many line files (#4964).
+- Very large numeric versions (#7955) and `version="any"`.
+- `NetexEpipBundleSmokeTest` loads the HVV data with `groupFilePattern = "(.*)_.*\\.xml"`.
+
+### 1.3 Related issues and pull requests
+
+| # | State | Relevance |
+|---|---|---|
+| #3640 "EPIP (EU) Netex profile support" | open | DELFI import: PSA with `StopPlaceRef` only, missing `RepresentedByGroupRef`, `GroupOfStopPlaces` without name/centroid, ISO-8859-1 zip. Maintainers: NPEs are bugs, `AuthorityRef` is fine, a **build-config parameter selecting the profile** was suggested; profile recognisable by `TypeOfFrameRef epip:EU_PI_*` / codespace `epip_data`. 2025: CEN/NAPCORE work on a "Recommended NeTEx Profile" based on EPIP + EPIAP. |
+| #8048 "PassengerStopAssignments with StopPlace only" | open (2026-09-25) | Options: arbitrary quay of the StopPlace, or a special "unknown quay" stop. Developer meeting wants the guess to be visible as an estimate. Stop places without any quay exist. |
+| **PR #8054** "Allow PassengerStopAssignment with StopPlace only" | **open** | Build-config flag `allowStopPlaceAsPassengerStopAssignment` (default `false`): picks the child stop with the lowest id; new index `stopPlaceIdByStopPointRef`; validators drop assignments to unknown stop places or stop places without quays. **Overlaps finding S1.** |
+| #4933 | closed, not planned | DELFI StopPlaces without coordinates whose parent (`ParentSiteRef`) has one → import stops |
+| #5609 | closed, not planned | Slovenian `NETEX_PI_01_SI_NAP_*` files ignored because of file patterns |
+| #4903 | closed, unmerged | IFOPT (DHID) from DELFI `GlobalID` key |
+
+## 2. Data families and profiles
+
+### 2.1 Three families of "German / EPIP NeTEx"
+
+| Family | Typical source | Journeys | Stop points | Status in OTP today |
+|---|---|---|---|---|
+| **A – EPIP** (DE NAP/DELFI, LU, CZ, SI, …) | national access point exports, `TypeOfFrameRef epip:EU_PI_*` | `ServiceJourney` + `ServiceJourneyPattern` + **`TimetabledPassingTime` (mandatory)** | `PassengerStopAssignment` with **`StopPlaceRef` (mandatory)** and optional `QuayRef` | DE loads with a custom `groupFilePattern`; CZ and parts of LU fail (no quay ref); several attributes lost |
+| **B – VDV 462 PI profile (2017)** | scheduling/PI systems following VDV 462 | `ServiceJourney` + `ServiceJourneyPattern`, **no passing times**: times from the timing model (`DepartureTime` + `TimeDemandTypeRef` + run/wait times) | `StopPlaceRef` only; position on `ScheduledStopPoint` | build aborts / no trips |
+| **C – VDV 452 → NeTEx mapping (2018)** | direct conversion of VDV 452 data (e.g. Freiburg export) | **`VehicleJourney` + `ServicePattern`**, timing model (`JourneyPatternRunTime`/`WaitTime` on the pattern, keyed by `TimeDemandTypeRef` + `TimingLinkRef`/`TimingPointRef`) | as B | build aborts / no trips |
+
+B and C share the derivation of passing times from the timing model; C additionally needs
+`ServicePattern` and `VehicleJourney`. In `netex-java-model`, `ServicePattern` is **not** a subtype
+of `JourneyPattern_VersionStructure` (it extends `LinkSequence_VersionStructure`) but offers the same
+`pointsInSequence`, `linksInSequence`, `runTimes`, `waitTimes`, `RouteRef`/`RouteView` accessors.
+
+### 2.2 Profiles compared
+
+| Aspect | Nordic (Entur) | EPIP (XSD subset + instances) | VDV 462 PI (2017) |
+|---|---|---|---|
+| Files | many files, `_stops.xml`, `_XXX_shared_data.xml`, `XXX_*.xml` | one self-contained file per line `NX-PI-01_<CC>_<NAP>_LINE_<id>_<date>.xml`; stops, operators, calendars repeated per file. SI splits `STOP`/`NETWORK`/`OPERATOR`/`FARES` files | 1..n files, `GE16614_<ver>_<sys>_<cust>_<type>_<pkg>_<ts>.xml` (§4.3) |
+| Frames | Composite + content frames | Composite `EU_PI_LINE_OFFER` with Resource (`EU_PI_COMMON`), ServiceCalendar (`EU_PI_CALENDAR`), Service (`EU_PI_NETWORK`), Site (`EU_PI_STOP`), Timetable (`EU_PI_TIMETABLE`) | Composite as collector; several frames of the same type with **disjoint validity** allowed (§5.2) |
+| Time zone | `FrameDefaults` | `FrameDefaults/DefaultLocale/TimeZone` in every instance (XSD: optional) | not specified |
+| Location system | WGS84 | `DefaultLocationSystem urn:ogc:def:crs:EPSG::4326` (DE, LU); IT `gml:pos srsName="ITA"` in lon, lat order | WGS84 `Longitude`/`Latitude` |
+| IDs | `CODESPACE:Type:Value` | `DE::Type:value::`, `CZ:cisjr_jdf:Type:value`, `IT:ITC1:Type:op:value` | free; IFOPT DHID for stops (§9.1.3) |
+| Versions | positive integer | numeric (epoch timestamp, `1`) | `any` if not versioned (§6.1) |
+| Stop assignment | `QuayRef` | `ScheduledStopPointRef` 1..1, **`StopPlaceRef` 1..1**, `QuayRef` 0..1. CZ: StopPlace only (no quays, no centroid); LU: 1 of 2 without quay; DE, IT: always with quay | `StopPlaceRef` mandatory, `QuayRef` not in the profile |
+| Position | Quay centroid | `ScheduledStopPoint/Location` mandatory (CZ sends it empty); StopPlace/Quay centroid optional | `ScheduledStopPoint/Location` mandatory (L1); StopPlace centroid and quays from L2 |
+| Stop hierarchy | `keyList IS_PARENT_STOP_PLACE` | `ParentSiteRef` (IT, DELFI 2025: parent with centroid, children without) | not used in PI profile |
+| Line → organisation | `RepresentedByGroupRef` → GroupOfLines/Network → Authority | **choice `OperatorRef` \| `AuthorityRef`**, plus `additionalOperators`; **no `RepresentedByGroupRef`**. DE/LU: `AuthorityRef` + `additionalOperators`; CZ/IT: `OperatorRef` only | `OperatorRef` mandatory, no authority |
+| Journey | `ServiceJourney` + passing times | `ServiceJourney`, `ServiceJourneyPatternRef` and `passingTimes` mandatory, no direct `LineRef`; `TemplateServiceJourney` allowed | `ServiceJourney` without passing times (timing model) |
+| Pattern | `JourneyPattern`/`ServiceJourneyPattern` with `RouteRef` | `ServiceJourneyPattern` with `RouteRef` \| `RouteView`, `DirectionRef`, `DestinationDisplayRef` | `ServiceJourneyPattern` with `RouteView/LineRef`, `DirectionType`, run/wait times |
+| Direction | `Route/DirectionType` | `DirectionRef` → `Direction` (DE: empty; CZ: with `DirectionType`); IT: `DirectionType` on SJP and SJ | `ServiceJourneyPattern/DirectionType` mandatory |
+| Headsign | `DestinationDisplay` on stop point | DE, LU, CZ: **no `DestinationDisplay` at all**; IT: `DestinationDisplayView` (not in EPIP XSD) | `DestinationDisplayRef` on stop point (L3) |
+| Calendar | DayType + DTA (Date / OperatingPeriod / OperatingDay) | everything inside **one `ServiceCalendar`**; DTA: `OperatingPeriodRef` \| `Date`; all instances use `UicOperatingPeriod/ValidDayBits`; no `OperatingDay` | `ServiceCalendar`, `DayTypeAssignment/Date` |
+| Notices | frame-level `noticeAssignments` | **inline only** (no `noticeAssignments` collection in any EPIP frame): on `StopPointInJourneyPattern` (DE, LU), on `Line` (CZ) | inline on stop points and journeys |
+| Interchanges | `ServiceJourneyInterchange` | `SiteConnection` with `WalkTransferDuration` (DE, LU; often StopPlace → same StopPlace); `ServiceJourneyInterchange` (IT) | `InterchangeRule` (stop + line + direction) |
+| Accessibility | `AccessibilityAssessment/limitations` | only IT: `MobilityImpairedAccess` + `limitations` on StopPlace; DE as notice "Behindertengerecht" | – |
+| Modes | Nordic set incl. submodes | bus, rail, metro, **ferry**, water, air, other; no submodes in instances | `TransportMode` + `TransportSubmode` mandatory |
+
+## 3. Findings
+
+Classification:
+
+- **MODEL** – a genuine requirement of the OTP transit model (a stop needs a coordinate, a trip
+  needs a time at every stop). The data must provide it or it must be derivable.
+- **IMPORTER** – an importer assumption (typically Nordic), not required by the model. To be relaxed.
+- **ROBUSTNESS** – profile independent: unexpected input aborts the build or is dropped without an
+  issue.
+- **NONE** – checked, no change needed.
+
+Severity: **ABORT** = graph build fails; **LOSS** = data dropped; **DEGRADED** = imported but
+wrong or with less information. Family: which of A/B/C (§2.1) is affected.
+
+All locations are relative to `application/src/main/java/org/opentripplanner/netex/` at `4d3613ff17`.
+
+### 3.1 Loading, files and frames
+
+| # | Location | Current assumption | Observed behaviour | Class | Sev. | Fam. | Proposal |
+|---|---|---|---|---|---|---|---|
+| L1 | `config/NetexFeedParameters.java:30-32`, `loader/NetexDataSourceHierarchy.java:106-111` | Nordic file names; unmatched files are skipped with a log WARN only | TS §8.14 recommends `NX-PI-<ver>_<CC>_<provider>_<LINE\|NETWORK\|STOP>[-_]<topic>_<date>.xml`; three offer types `EU_PI_STOP_OFFER`, `EU_PI_LINE_OFFER`, `EU_PI_NETWORK_OFFER` (§8.9). None of them matches the defaults → empty graph without an issue (#5609) | IMPORTER | LOSS | A B C | Feature on: EPIP default patterns derived from §8.14 – `STOP` offers = shared files, `LINE`/`NETWORK` offers = group files grouped by country + provider (so interchanges between lines of one provider resolve, cf. I3). Unmatched files: load as independent group files with an issue. Nordic defaults unchanged. |
+| L2 | `mapping/NetexMapper.java:213-231, 500, 523-529` | `GroupNetexMapper` exists only on group level; timetables never in shared files | A single file configured as *shared* file → NPE in `applyTripPatternMapperResult` → **abort**; interchanges in shared files ignored | IMPORTER | ABORT | A B C | Create the group mapper for the shared level too (or make post-processing level independent). |
+| L3 | `loader/NetexXmlParser.java:33-35` | No `ValidationEventHandler` | Unparseable values and unknown elements vanish without trace (Freiburg: 4 731, IT: 3) | ROBUSTNESS | LOSS | A B C | Counting handler; one aggregated issue per file and event type. |
+| L4 | `loader/parser/NetexDocumentParser.java:119-132`, `mapping/NetexMapper.java:572-587` | `FrameDefaults/DefaultLocale/TimeZone` present; otherwise **GMT** silently; `TimeZoneOffset` ignored; the `NetexImportTimeZone` issue can never fire | TS §5.4.13: `TimeZone` 0:1 **or** `TimeZoneOffset`/`SummerTimeZoneOffset`. EPIP instances all set `TimeZone`; Freiburg export has none → times shifted by 1–2 h | IMPORTER | DEGRADED | A B C | Fall back to `transitModelTimeZone` from `build-config.json`, then GMT; issue on every fallback. Offsets alone cannot be mapped to a zone id → issue + fallback. |
+| L5 | `loader/parser/NetexDocumentParser.java:97-108` | Frame `ValidBetween`/`validityConditions` ignored | TS §8.2: the frame's validity condition is *dominant*. VDV 462 allows several frames of the same type with disjoint validity → versions merged | IMPORTER | DEGRADED | A B C | Phase 1: detect and report overlapping frames of the same type. Restricting service dates to the frame validity later. |
+| L6 | `mapping/WgsCoordinateMapper.java:15-31` | WGS84; `gml:pos` read as **lat, lon**; `srsName`/`DefaultLocationSystem` ignored; invalid location throws (**abort**) | TS §5.4.5: `Longitude`/`Latitude` **mandatory**, `gml:pos` optional, WGS84 recommended. Only the Italian profile sends `gml:pos` alone (`srsName="ITA"`, **lon, lat**) → stop at 7.66° N / 45.07° E instead of Turin (verified; the code comment refers to exactly this data) | ROBUSTNESS | DEGRADED / ABORT | (IT profile) | Respect the axis order of the declared CRS; unknown CRS → issue and plausibility check; never throw. Not EPIP-specific → core fix (Q3). |
+| L7 | – (data) | – | Lat/lon **swapped** in `Longitude`/`Latitude` (Freiburg export and even VDV 462 XML example 14) | data error | DEGRADED | B C | Not an importer assumption. Plausibility check against the graph envelope → issue. Automatic swap only via explicit opt-in (Q5). |
+| L8 | `netex-java-model` time adapter | – | `DepartureTime 06:00:00+02:00` (IT) is read as `06:00`, offset dropped | NONE | – | A | Interpreted as local time, which is what OTP expects. Document. |
+| L9 | `mapping/StopTimesMapper.java` (class comment, #5109) | Daylight-saving transitions are not handled | TS §7.6.3: all passing times of a journey use the same reference time across a DST change (1:45, 1:55, 2:05 …); journeys starting in the skipped hour are to be ignored | to verify | DEGRADED | A | Verify OTP's "noon minus 12 h" service-day semantics against this rule with a DST test fixture; report only. |
+
+### 3.2 Stops
+
+| # | Location | Current assumption | Observed behaviour | Class | Sev. | Fam. | Proposal |
+|---|---|---|---|---|---|---|---|
+| S1 | `loader/parser/ServiceFrameParser.java:146-156`, `mapping/StopTimesMapper.java:369-386` | A `PassengerStopAssignment` has a `QuayRef`; otherwise it is dropped (capped INFO log), and every trip using that stop point is dropped (`PassengerStopAssignmentNotFound`) | TS §7.4.2: `StopPlaceRef` **1:1**, `QuayRef` 0:1. TS §6: a scheduled stop point may correspond to a whole StopPlace, its position is *conventionally the StopPlace centroid*. Instances: CZ never, LU 1 of 2 with quay. VDV 462: `StopPlaceRef` only | IMPORTER | LOSS | A B C | **Build on PR #8054** (lowest-id quay, behind `allowStopPlaceAsPassengerStopAssignment`). The sandbox adds: prefer the only quay; for StopPlaces **without quays** derive a stop at the StopPlace centroid (normative convention), else at the `ScheduledStopPoint/Location`, as child of the StopPlace's station; issue per fallback. |
+| S2 | `loader/parser/ServiceFrameParser.java:105` | `ScheduledStopPoint`s not needed (WARN) | EPIP and VDV 462: `ScheduledStopPoint/Location` mandatory and the only position in VDV 462 L1 | IMPORTER | LOSS | A B C | Parse into the index (feature on only). |
+| S3 | `mapping/StationMapper.java:135-159` | A StopPlace has a centroid or quays with centroids; otherwise `getQuays()` → **NPE** or `IllegalArgumentException("Station w/quays without coordinates")` → **abort** | TS: `Centroid` 0:1 (§5.4.9). CZ: StopPlaces without centroid and quays; VDV 462 L1; Freiburg; DELFI 2025 children without centroid (#4933) | MODEL (station needs a coordinate) + ROBUSTNESS | ABORT | A B C | Derive: centroid → mean of quays → mean of assigned scheduled stop points (S1/S2) → parent StopPlace (`ParentSiteRef`). If none: skip the station with an issue, never throw. |
+| S4 | `mapping/StopAndStationMapper.java:205-229` | Quays inline in their StopPlace; `QuayRef` in `quays` unsupported; StopPlace without quays → no stop | TS §6.1: a *monomodal* StopPlace shall have at least one quay; only a *general* StopPlace may have none (it contains monomodal ones). CZ violates this; VDV 462 L1 has no quays | IMPORTER | LOSS | A B C | Covered by S1. `QuayRef` in `quays`: resolve against the quay index. |
+| S5 | `mapping/QuayMapper.java:68-77` | Every quay has a centroid; otherwise dropped | Not seen in EPIP instances | MODEL (stop needs a coordinate) | LOSS | – | Fall back to the StopPlace centroid with an issue (low priority). |
+| S6 | `loader/parser/SiteFrameParser.java:140-153` | Parent StopPlace marked by `keyList IS_PARENT_STOP_PLACE=true` (Entur convention) | TS §6.1: max. two levels, nesting via `ParentSiteRef`; TS §9.5: every StopPlace must be typed `epip:general` or `epip:monomodal` (`TypeOfPlace`). A general StopPlace is mapped as ordinary station without quays (→ S3); no `MultiModalStation` | IMPORTER | LOSS / ABORT | A | Feature on: a StopPlace typed `epip:general` or referenced as `ParentSiteRef` is multimodal. TS §6.1 also defines an implicit site connection between all quays of a hierarchy – OTP already generates walking transfers. |
+| S7 | `mapping/GroupOfStationsMapper.java:47-60` | A `GroupOfStopPlaces` without name has `members`, and the first member station is already mapped; otherwise NPE | LU: `GroupOfStopPlaces` with members only (#3640) | ROBUSTNESS | ABORT | A | Null-safe fallback name ("N/A") with issue. |
+| S8 | `mapping/QuayMapper.java:97` | Stop name = StopPlace name; `Quay/Name` ignored | DE quays have (identical) names | — | — | A | No change. |
+| S9 | `mapping/StopAndStationMapper.java:178-184` | Quay version resolution within the current group | DE repeats StopPlaces in every line file | NONE | — | A | Works (`compute…IfAbsent`, #4964). |
+
+### 3.3 Network, organisations and modes
+
+| # | Location | Current assumption | Observed behaviour | Class | Sev. | Fam. | Proposal |
+|---|---|---|---|---|---|---|---|
+| O1 | `mapping/RouteMapper.java:162-181` | Agency via `RepresentedByGroupRef` → GroupOfLines/Network → `TransportOrganisationRef`, else `AuthorityRef`; if `RepresentedByGroupRef` is set but unresolvable, `AuthorityRef` is not tried | TS §7.1.1: choice `OperatorRef` \| `AuthorityRef` with cardinality **0:1**, `additionalOperators` may contain operators *or* authorities; no `RepresentedByGroupRef`; a line belongs to a Network only through Network/GroupOfLines `members` (§7.1.3). CZ/IT/VDV 462: operator only → dummy agency `N/A` | IMPORTER | DEGRADED | A B C | Chain: `RepresentedByGroupRef` → `AuthorityRef` → authority in `additionalOperators` → Network listing the line in `members` → **operator as agency** (synthetic agency with operator id/name/contact) → dummy. Issue per fallback; `LineWithoutAuthority` stays. |
+| O2 | `mapping/RouteMapper.java:172` | Network has a `TransportOrganisationRef` (NPE otherwise) | optional in NeTEx; IT Network has `OperatorRef` | ROBUSTNESS | ABORT | A | Null check; continue with O1 chain. |
+| O3 | `mapping/RouteMapper.java:195-203`, `mapping/TripMapper.java:212-219` | Operator only via `OperatorRef`; `additionalOperators` ignored | DE/LU: operator only in `additionalOperators` → route without operator | IMPORTER | DEGRADED | A | Missing `OperatorRef` + exactly one additional operator → use it; several → first one + issue. |
+| O4 | `mapping/RouteMapper.java:82` | `Line/Name` always present (NPE) | always present in samples | ROBUSTNESS | ABORT | – | Fallback `ShortName` → `PublicCode`; issue. |
+| M1 | `mapping/TransportModeMapper.java:43-61`, `mapping/StopPlaceTypeMapper.java:31,38` | Line/journey modes limited to the Nordic set; `trolleyBus`, `ferry`, `lift`, `other`, `urbanRail`, `intercityRail` → `UnsupportedModeInLine`, **line dropped**. `StopPlaceTypeMapper` already maps `TROLLEY_BUS` and `FERRY` | TS §6.3.1 mode list: air, bus, **trolleyBus**, coach, funicular, metro, tram, cableway, rail, water, **ferry**, **lift**, **other**; instances use `ferry` and `other` | IMPORTER | LOSS | A B | Feature on: `ferry→FERRY`, `trolleyBus→TROLLEYBUS`, `urbanRail`/`intercityRail→RAIL`. `lift`, `other` → Q6. |
+| M2 | `mapping/RouteMapper.java:127`, `mapping/TransportModeMapper.java:111` | `TransportMode` set whenever a submode is set; submode never empty | not seen | ROBUSTNESS | ABORT | – | Null checks → `UnsupportedModeInLine`. |
+| M3 | `mapping/RouteMapper.java:86-97` | Line has a `TransportMode` | TS §7.1.1: `Line/TransportMode` is **0:1** in EPIP. Freiburg: only `OperationalContextRef` | MODEL (route needs a mode) – **derivable** | LOSS | A C | Feature on: derive from the journeys (`ServiceJourney/TransportMode`), then from the stop places; issue. Drop only if nothing is available (Q6). |
+
+### 3.4 Journey patterns and journeys
+
+| # | Location | Current assumption | Observed behaviour | Class | Sev. | Fam. | Proposal |
+|---|---|---|---|---|---|---|---|
+| J1 | `validation/JourneyPatternSJMismatch.java:32`, `support/ServiceJourneyInfo.java:46,67`, `mapping/TripPatternMapper.java:192` | Every journey has `passingTimes`; no null check (**NPE → abort**) | TS §7.3.1: *"In the EPIP only the calculated results are exchanged – as PASSING TIMEs"*, so the timing model is **not EPIP**. VDV 462 / VDV 452: no passing times; times from `DepartureTime` + run times + wait times per `TimeDemandType`, journey-specific overrides | MODEL – **derivable** | ABORT | B C | EPIP: discard journeys without passing times with an issue (never NPE). Families B/C (Q2): derive `TimetabledPassingTime`s before validation. |
+| J2 | `validation/JourneyPatternNotFoundInSJ.java:22`, `mapping/TripPatternMapper.java:154` | Every journey has a `JourneyPatternRef` (NPE) | TS §7.6.2: `JourneyPatternRef` 0:1 (XSD subset: mandatory) | ROBUSTNESS | ABORT | A | Discard with issue. |
+| J3 | `loader/parser/TimeTableFrameParser.java:76-84`, `loader/parser/ServiceFrameParser.java:107` | Journeys are `ServiceJourney`, patterns `JourneyPattern`/`ServiceJourneyPattern` | EPIP allows `TemplateServiceJourney` (not seen in instances). Family C: `VehicleJourney` + `ServicePattern` → 0 trips (WARN only) | IMPORTER | LOSS | C (A) | Phase 1: one aggregated issue. Family C support = adapter presenting `ServicePattern`/`VehicleJourney` to the existing mapping + J1 (Q2). `TemplateServiceJourney` (frequency based) out of scope. |
+| J4 | `mapping/TripPatternMapper.java:361-373` | `RouteRef` resolves to a `Route` with `LineRef`, or `RouteView/LineRef` exists (NPE otherwise) | TS §7.3.1: `RouteRef` \| `RouteView` 0:1; without it *"the JOURNEY PATTERN is not connected to any line"* | ROBUSTNESS | ABORT | A | Fall back to the journey's line; otherwise skip the pattern with an issue. |
+| J5 | `mapping/TripMapper.java:157-177`, `loader/parser/ServiceFrameParser.java:92` | Direction only from `Route/DirectionType`; `DirectionRef`, pattern/journey `DirectionType` and the `directions` collection ignored | DE: `DirectionRef` to empty `Direction`; CZ: `Direction` with `DirectionType`; IT: `DirectionType` on SJP and SJ; VDV 462: on SJP | IMPORTER | DEGRADED | A B | Order: `ServiceJourney/DirectionType` → pattern `DirectionType` → `DirectionRef` → `Direction/DirectionType` → `Route/DirectionType`. |
+| J6 | `mapping/StopTimesMapper.java:185-211, 316-347` | Headsign only from `StopPointInJourneyPattern/DestinationDisplayRef` | TS §7.3.1/7.3.4: `DestinationDisplayRef` on the pattern and on stop points, also as `DestinationDisplayView`; DE/LU/CZ have no destination displays at all | IMPORTER | DEGRADED | A | Use the pattern-level destination display as initial headsign; support `DestinationDisplayView`. No synthetic headsign (Q9). |
+| J7 | `loader/parser/NoticeParser.java:34-61` | Notice assignments are frame-level with explicit `NoticedObjectRef` | TS §7.11.2/§8.7: assignments *should be embedded in line* in the annotated element; `NoticedObjectRef` *if given by context can be omitted*; later uses may reference the first `Notice`; optional `Start`/`EndPointInPatternRef` → today **all EPIP notices are lost** (DE: 208 per file) | IMPORTER | LOSS | A B | Parse inline assignments on `StopPointInJourneyPattern`, `ServiceJourneyPattern`, `Line`, `ServiceJourney` with the parent as implicit noticed object; inline `Notice` and `NoticeRef`; start/end point ranges map to stop times. |
+| J8 | `support/ServiceJourneyInfo.java:44` | `StopPointInJourneyPattern/@order` present (`getOrder().intValueExact()` → NPE) | Freiburg: no `order` on 1 854 stop points | ROBUSTNESS | ABORT | C | Fall back to document order; issue. |
+| J9 | `mapping/StopTimesMapper.java` (`result.addStopTime(currentPassingTime.getId(), …)`) | `TimetabledPassingTime/@id` present (used to attach notices to stop times) | TS §7.6.5: `id` is **0:1** | ROBUSTNESS | DEGRADED | A | Key by journey + order when the id is missing. |
+
+### 3.5 Calendar
+
+| # | Location | Current assumption | Observed behaviour | Class | Sev. | Fam. | Proposal |
+|---|---|---|---|---|---|---|---|
+| C1 | `loader/parser/ServiceCalendarFrameParser.java:61-69` | `OperatingDay`s are frame-level; `ServiceCalendar/operatingDays` not parsed | TS §7.12.4/7.12.5: `OperatingDay` is a subcomponent of `ServiceCalendar` (EPIP prefers operating periods, §7.12.6). VDV 452 mapping does the same | IMPORTER | ABORT / LOSS | A B C | Parse `ServiceCalendar/operatingDays`. |
+| C2 | `mapping/calendar/DayTypeAssignmentMapper.java:146-149, 192-218` | Referenced `OperatingDay` exists; `OperatingPeriod` has dates (NPE / `IllegalArgumentException`) | not seen | ROBUSTNESS | ABORT | – | Skip assignment with issue. |
+| C3 | `mapping/calendar/DayTypeAssignmentMapper.java:77-101` | DayType and its assignments are on the same file level (only local day types mapped) | single-file EPIP: fine; split deliveries (SI) may differ | IMPORTER | LOSS | A | Feature on: also map day types referenced by local assignments. |
+| C4 | `mapping/calendar/DayTypeAssignmentMapper.java:233-248` | `ValidDayBits` only `0`/`1` (else **abort**); bits shorter than the period → remaining days active | TS §7.12.8: *"If bit is missing, assume available"* – current behaviour is **conformant**; `UicOperatingPeriod/DaysOfWeek` (0:1) ignored | ROBUSTNESS | ABORT | A | Invalid character → issue instead of exception. Keep the "missing bit = available" rule. |
+| C5 | `mapping/calendar/DayTypeAssignmentMapper.java:121-136` | `PropertyOfDay/DaysOfWeek` restricts `OperatingPeriod`s, not `UicOperatingPeriod`s | IT combines both consistently | NONE | — | A | — |
+
+### 3.6 Interchanges and transfers
+
+| # | Location | Current assumption | Observed behaviour | Class | Sev. | Fam. | Proposal |
+|---|---|---|---|---|---|---|---|
+| I1 | `mapping/TransferMapper.java:131-144` | `Priority` ∈ {-1, 0, 1, 2} (Nordic); otherwise `IllegalArgumentException` → **abort** | EPIP interchanges have no `Priority` (TS §7.8.1); other profiles may use any integer | ROBUSTNESS | ABORT | – | Clamp and report (core fix). |
+| I2 | `mapping/TransferMapper.java:120-121` | `Guaranteed` set whenever `MaximumWaitTime` is set (unboxing NPE) | not part of EPIP | ROBUSTNESS | ABORT | – | Null-safe check (core fix). |
+| I3 | `mapping/GroupNetexMapper.java`, `NetexMapper.java:523-529` | Interchanges reference journeys of the same file group | one file per line → cross-line interchanges are never resolvable | IMPORTER | LOSS | A | Document; report unresolved interchanges per group. Feed-level resolution later. |
+| I4 | `loader/parser/ServiceFrameParser.java:91` | `connections` ignored | TS §7.5: `SiteConnection`/`Connection`/`DefaultConnection` with `WalkTransferDuration/DefaultDuration` (1:1); a `SiteConnectionEnd` without quay is the default for any quay of the stated mode (§7.5.6). DE/LU: `SiteConnection` mostly StopPlace → same StopPlace | IMPORTER | LOSS | A | Map to `ConstrainedTransfer` with `StationTransferPoint`/`StopTransferPoint` and `minTransferTime` (no model change). Semantics differ slightly (walking time vs. minimum transfer time) – Q7. |
+| I5 | `loader/parser/TimeTableFrameParser.java:47` | Interchanges are `ServiceJourneyInterchange`s | VDV 462 §18 / VDV 452: `InterchangeRule` (stop + line + direction, validity by day type and time band) | IMPORTER | LOSS | B C | Later phase; direction and time band need expansion to trips. |
+| I6 | `mapping/TransferMapper.java:158-161` | Interchange position resolved by `indexOf`/`lastIndexOf` of the scheduled stop point | TS §7.8.2: `FromVisitNumber`/`ToVisitNumber` select the visit if a stop is served several times | IMPORTER | DEGRADED | A | Use the visit numbers when present. |
+
+### 3.7 Accessibility
+
+| # | Location | Current assumption | Observed behaviour | Class | Sev. | Fam. | Proposal |
+|---|---|---|---|---|---|---|---|
+| A1 | `mapping/WheelChairMapper.java:21-35` | Only `limitations/AccessibilityLimitation/WheelchairAccess`; `MobilityImpairedAccess` ignored | IT: both present (works). DE: only as notice | IMPORTER | DEGRADED | A | Fall back to `MobilityImpairedAccess` if no limitation is given. Notices are not interpreted. |
+
+### 3.8 IDs, versions and schema
+
+| # | Location | Current assumption | Observed behaviour | Class | Sev. | Fam. | Proposal |
+|---|---|---|---|---|---|---|---|
+| V1 | `mapping/support/FeedScopedIdFactory.java` | IDs opaque, unique per feed; **no codespace parsing** | all ID schemes load. Freiburg reuses `SP_<n>` for StopPlace and ServicePattern – harmless (per-type indices) | NONE | — | — | No change. |
+| V2 | `support/NetexVersionHelper.java`, `index/hierarchy/HierarchicalMapById.java` | Version comparison only for StopPlace/Quay/TariffZone; other duplicates: last wins | numeric versions, `any` | NONE | — | — | No change. |
+| V3 | root `pom.xml:75` | JAXB model from NeTEx 1.x (`entur/NeTEx v1.0.16.1`) | all EPIP instances parse; 2.0-only elements (e.g. `privateCodes`) would be dropped silently (→ L3) | NONE | — | — | Watch the upcoming `netex-java-model` upgrade to NeTEx 2.0 (stricter `NameOfClass`). |
+| V4 | `mapping/support/FeedScopedIdFactory.java` | Ids and refs are compared literally | TS §8.4.2: the codespace prefix `epd:` *can be omitted if declared as the default on the containing frame*; files from different producers may mix both forms (IT frames use `epd:IT:…`) | IMPORTER | LOSS | A | Feature on: normalise the `epd:` prefix when the frame's default codespace is `epip_data`; report unresolved references. |
+
+### 3.9 Cross-check against the Nordic rule set
+
+`entur/netex-validator-java` (EUPL-1.2, uses `netex-java-model` 2.0.16.2) encodes the Nordic
+profile as validation rules. Every Nordic rule that EPIP data violates is a candidate for a hidden
+importer assumption. The relevant rules were checked against the findings above:
+
+| Nordic rule | EPIP reality | OTP importer | Finding |
+|---|---|---|---|
+| `PASSENGER_STOP_ASSIGNMENT_2` missing `QuayRef` | `QuayRef` optional | relies on it | S1 |
+| `LINE_7` Line missing Network or GroupOfLines | no `RepresentedByGroupRef` | falls back to `AuthorityRef`, then dummy | O1 |
+| `NETWORK_1` Network missing `AuthorityRef` | IT Network with `OperatorRef` | NPE | O2 |
+| `LINE_4`/`LINE_5` TransportMode/Submode | mode present, no submode | submode optional | M1 (modes only) |
+| `TRANSPORT_MODE_ON_LINE` illegal mode | `ferry`, `other` | line dropped | M1 |
+| `SERVICE_JOURNEY_12` missing `OperatorRef` | `additionalOperators` / Line `OperatorRef` | ignored | O3 |
+| `SERVICE_JOURNEY_3` missing `PassingTimes` | mandatory in EPIP; absent in VDV 462/452 | NPE | J1 |
+| `JOURNEY_PATTERN_1` illegal `ServiceJourneyPattern` | only `ServiceJourneyPattern` allowed | both handled | NONE |
+| `JOURNEY_PATTERN_3` missing `RouteRef` | `RouteRef` \| `RouteView` | both handled (#4872) | J4 (robustness only) |
+| `JOURNEY_PATTERN_4` DestinationDisplay on first stop point | no destination displays (DE, LU, CZ) | empty headsign | J6 |
+| `ROUTE_1` Route missing | LU/CZ have no `Route` | `RouteView` handled | NONE |
+| `NOTICE_6` assignment missing noticed-object reference | inline assignments only | inline ignored | J7 |
+| `SITE_FRAME_IN_LINE_FILE`, `RESOURCE_FRAME_IN_LINE_FILE` | every line file carries Site- and ResourceFrame | handled (#4964) | S9 |
+| `COMPOSITE_FRAME_1`/`3`, `VALIDITY_CONDITIONS_*` | validity optional | ignored anyway | L5 |
+| `SERVICE_FRAME_2` unexpected `timingPoints` | used by VDV 462/452 | ignored | J1 |
+| `NETEX_ID_7` invalid id value (`CODESPACE:Type:Value`) | other id schemes | ids are opaque | V1 |
+| `VERSION_NON_NUMERIC` | numeric, `any` | tolerated | V2 |
+
+No additional importer assumption was found. The library is **not** proposed as a dependency
+(Nordic-specific rules, EUPL-1.2 licence, pulls in Saxon-HE and GeoTools coverage modules; new
+dependencies need approval according to the sandbox contract).
+
+## 4. Design proposal
+
+### 4.1 Activation
+
+Two independent sandbox features (decision D1):
+
+| Feature | Scope | Activation within a build |
+|---|---|---|
+| `OTPFeature.NetexEpip` | family A – CEN EPIP (DE NAP/DELFI, LU, CZ, SI, …) | applied per document that declares EPIP (`TypeOfFrameRef ref="epip:EU_PI_*"`, codespace `epip_data`, cf. #3640) |
+| `OTPFeature.NetexVdv462` | family B – German VDV 462 profile; family C (VDV 452 mapping) as an optional later extension | VDV 462 documents carry no profile marker; the fallbacks only apply where the core import would otherwise drop data (e.g. journeys without passing times). A per-feed `profile` parameter is decided later (Q10). |
+
+Both are `sandbox = true`, `enabledByDefault = false`. With both flags off, every code path is
+identical to today (enforced by tests, §5). Nordic data in the same build stays untouched with the
+flags on as well.
+
+### 4.2 Code layout
+
+```
+application/src/main/java/org/opentripplanner/netex/          (core, minimal changes)
+  spi/NetexImportExtension.java        extension point; default implementation = today's behaviour
+  spi/NetexExtensionContext.java       read-only access (index view, id factory, issue store)
+
+application/src/ext/java/org/opentripplanner/ext/netexprofile/   (sandbox)
+  common/    profile-neutral support used by both features: StopPlace-only stop resolution and
+             derived stops (S1–S4), ScheduledStopPoint parsing (S2), inline notice assignments (J7),
+             agency/operator resolution (O1, O3), directions (J5), modes (M1, M3)
+  epip/      NetexEpip: detection, EPIP file grouping (L1), StopPlace hierarchy (S6),
+             SiteConnections (I4), visit numbers (I6), codespace prefix (V4)
+  vdv462/    NetexVdv462: timing-model derivation of passing times (J1), InterchangeRule (I5),
+             frame validity (L5); later ServicePattern/VehicleJourney adapter (J3, family C)
+
+application/src/ext-test/java/org/opentripplanner/ext/netexprofile/   tests and fixtures
+doc/user/sandbox/NetexEpip.md, doc/user/sandbox/NetexVdv462.md (+ mkdocs.yml)
+```
+
+### 4.3 Extension seams in core
+
+Each seam is a single call whose default implementation reproduces today's behaviour.
+
+| Seam | Called from | Findings |
+|---|---|---|
+| `onUnmatchedFile(DataSource)` | `NetexDataSourceHierarchy` | L1 |
+| `parseFrame(frame, extensionIndex)` | `NetexDocumentParser.parseCommonFrame` | S1, S2, J5, J7, I4, C1, J1 – extra elements go into the extension's own hierarchical index, pushed/popped with `NetexEntityIndex` |
+| `defaultTimeZone()` | `NetexDocumentParser.resolveTimeZone` | L4 |
+| `beforeValidation(context)` | `NetexBundle.loadFilesThenMapToTransitRepository` | J1 |
+| `resolveStop(scheduledStopPointRef, context)` | `StopTimesMapper.lookUpStopLocation`, only when the core lookup (incl. #8054) fails | S1 |
+| `resolveAgency/resolveOperator(line, context)` | `RouteMapper`, only when the core lookup fails | O1, O3 |
+| `mapMode(mode, submode)` | `TransportModeMapper`, only for unsupported modes | M1 |
+| `afterMapping(context)` | `NetexMapper.mapNetexToOtp` | S1–S6 derived stops/stations, I4, J7, J5 |
+
+Coordinate handling (L6) and the robustness fixes (abort → issue: L2, S3, S7, O2, O4, M2, J2, J4,
+J8, C2, C4, I1, I2) are **small separate core changes without a flag** (decision D2), because they
+only change the behaviour for input that crashes today. S1 builds on PR #8054 (decision D3).
+
+### 4.4 Defaults and issues
+
+Every fallback adds a `DataImportIssue` with its own type (e.g. `EpipStopDerivedFromScheduledStopPoint`,
+`EpipAgencyDerivedFromOperator`, `EpipTimeZoneFallback`, `EpipPassingTimesDerived`), so the build
+report shows how much of the data relies on fallbacks. Derived stops should eventually be marked as
+estimates in the API (#8048); this needs a model change and is out of scope.
+
+### 4.5 Increments
+
+1. Core robustness fixes and coordinate axis order (no flag; one commit per fix, each with a test).
+2. Extension point in core + sandbox skeleton for both features (flags, wiring, doc pages).
+3. `NetexEpip`: L1, L4, S1–S4 (on top of #8054), S6, O1, O3, M1, M3, J5, J6, J7, J9, C1, C3, I4, I6,
+   A1, V4.
+4. Hand-built EPIP data set + integration test (graph build + routing with one transfer).
+5. `NetexVdv462`: J1 timing model, L5, I5; then optionally J3 (family C).
+
+## 5. Quality assurance plan
+
+- Existing tests unchanged and green, in particular `NetexNordicBundleSmokeTest`,
+  `NetexEpipBundleSmokeTest` and the mapper tests.
+- Regression baseline: build the Nordic test data set before and after, with the flag off and on;
+  compare counts of stops, stations, routes, trips, trip patterns, service ids, transfers and issues
+  by type.
+- One unit test with a minimal EPIP fixture per finding.
+- Fixtures are schema-checked in a unit test with `javax.xml.validation` against the NeTEx XSD
+  shipped inside `netex-java-model` (4 609 XSD files in the jar); validating them additionally
+  against the EPIP XSD subset requires copying it into the test resources – its licence still has to
+  be checked.
+- Hand-built EPIP data set (two lines, one transfer stop, StopPlace-only assignments, inline
+  notices, `SiteConnection`) for an integration test: graph build plus one routing request with one
+  transfer.
+- Optional: integration test against a real DELFI export (path to be provided).
+- Build including Spotless/Prettier and Checkstyle as configured in the root `pom.xml`, run through
+  the Maven Wrapper (`./mvnw`, Maven 3.9.16) added on the branch.
+
+## 6. Decisions and open questions
+
+| # | Decision (2026-10-11) |
+|---|---|
+| D1 | Scope: EPIP **and** the German VDV 462 profile, as two separate sandbox features (`NetexEpip`, `NetexVdv462`). |
+| D2 | Crash fixes (abort → issue) and the coordinate axis-order fix go into core without a flag, as separate changes. |
+| D3 | Build on upstream PR #8054; it is merged into the working branch. |
+| D4 | Working branch `netex-epip-vdv462`; Maven Wrapper (`./mvnw`) introduced. |
+| D5 | This document lives in `doc/dev/netex/`. |
+
+| # | Open question |
+|---|---|
+| Q4 | ID of derived stops (S1): `<ScheduledStopPoint id>` or `<StopPlace id>` + suffix? |
+| Q5 | Swapped coordinates (L7): issue only, or an opt-in automatic swap? |
+| Q6 | Lines with mode `other`/`lift` (M1): drop (current) or map to a default mode (e.g. `BUS`)? Lines without mode (M3): derive from journeys/stops as proposed? |
+| Q7 | `SiteConnection` → `minTransferTime` constrained transfers (I4): acceptable approximation? |
+| Q9 | Headsign when no `DestinationDisplay` exists (DE, LU, CZ): leave empty (current) or derive from the last stop name? |
+| Q10 | VDV 462 activation: fallbacks only where the core would drop data (current proposal), or a per-feed `profile` build-config parameter? |
+| Q11 | Family C (VDV 452 mapping, `ServicePattern`/`VehicleJourney`): part of `NetexVdv462` later, or out of scope? |
