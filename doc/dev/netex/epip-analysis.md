@@ -273,6 +273,13 @@ flags on as well.
 
 ### 4.2 Code layout
 
+> **Superseded by decision D6.** The layout and the extension seams below (§4.2, §4.3) were the
+> initial proposal. Following the `FlexRouting` precedent, profile-neutral NeTEx gaps are
+> implemented in the core `netex` package behind `NetexProfileSupport.extendedNetex()` (true if
+> `NetexEpip` or `NetexVdv462` is on), and only profile-specific parts live in `ext/netexprofile`
+> (currently the EPIP file grouping, L1). The issue types do not carry an `Epip` prefix, because
+> most fallbacks apply to both features. See §7 for what is implemented where.
+
 ```
 application/src/main/java/org/opentripplanner/netex/          (core, minimal changes)
   spi/NetexImportExtension.java        extension point; default implementation = today's behaviour
@@ -348,23 +355,26 @@ and is out of scope.
 
 ## 6. Decisions and open questions
 
-| #   | Decision (2026-10-11)                                                                                           |
-| --- | --------------------------------------------------------------------------------------------------------------- |
-| D1  | Scope: EPIP **and** the German VDV 462 profile, as two separate sandbox features (`NetexEpip`, `NetexVdv462`).  |
-| D2  | Crash fixes (abort → issue) and the coordinate axis-order fix go into core without a flag, as separate changes. |
-| D3  | Build on upstream PR #8054; it is merged into the working branch.                                               |
-| D4  | Working branch `netex-epip-vdv462`; Maven Wrapper (`./mvnw`) introduced.                                        |
-| D5  | This document lives in `doc/dev/netex/`.                                                                        |
+| #   | Decision (2026-10-11)                                                                                                                                                                            |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| D1  | Scope: EPIP **and** the German VDV 462 profile, as two separate sandbox features (`NetexEpip`, `NetexVdv462`).                                                                                   |
+| D2  | Crash fixes (abort → issue) and the coordinate axis-order fix go into core without a flag, as separate changes.                                                                                  |
+| D3  | Build on upstream PR #8054; it is merged into the working branch.                                                                                                                                |
+| D4  | Working branch `netex-epip-vdv462`; Maven Wrapper (`./mvnw`) introduced.                                                                                                                         |
+| D5  | This document lives in `doc/dev/netex/`.                                                                                                                                                         |
+| D6  | Profile-neutral gaps go into core behind `NetexProfileSupport.extendedNetex()`; profile-specific parts into `ext/netexprofile`.                                                                  |
+| D7  | V4 (`epd:` codespace prefix) is deferred: in all reference data sets the prefix only occurs on frame ids, which are never referenced.                                                            |
+| D8  | J9 (passing times without id) is fixed in core without a flag, like the increment 1 fixes: it only changes the result for data without ids, where notices were attached to arbitrary stop times. |
 
-| #   | Open question                                                                                                                                               |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Q4  | ID of derived stops (S1): `<ScheduledStopPoint id>` or `<StopPlace id>` + suffix?                                                                           |
-| Q5  | Swapped coordinates (L7): issue only, or an opt-in automatic swap?                                                                                          |
-| Q6  | Lines with mode `other`/`lift` (M1): drop (current) or map to a default mode (e.g. `BUS`)? Lines without mode (M3): derive from journeys/stops as proposed? |
-| Q7  | `SiteConnection` → `minTransferTime` constrained transfers (I4): acceptable approximation?                                                                  |
-| Q9  | Headsign when no `DestinationDisplay` exists (DE, LU, CZ): leave empty (current) or derive from the last stop name?                                         |
-| Q10 | VDV 462 activation: fallbacks only where the core would drop data (current proposal), or a per-feed `profile` build-config parameter?                       |
-| Q11 | Family C (VDV 452 mapping, `ServicePattern`/`VehicleJourney`): part of `NetexVdv462` later, or out of scope?                                                |
+| #   | Open question                                                                                                                                  |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q4  | ID of derived stops (S1): `<ScheduledStopPoint id>` or `<StopPlace id>` + suffix? _Implemented: the scheduled stop point id; to be confirmed._ |
+| Q5  | Swapped coordinates (L7): issue only, or an opt-in automatic swap?                                                                             |
+| Q6  | Lines with mode `other`/`lift` (M1): drop (current) or map to a default mode (e.g. `BUS`)? Lines without mode (M3): _implemented as proposed._ |
+| Q7  | `SiteConnection` → `minTransferTime` constrained transfers (I4): acceptable approximation? _Implemented this way; to be confirmed._            |
+| Q9  | Headsign when no `DestinationDisplay` exists (DE, LU, CZ): leave empty (current) or derive from the last stop name?                            |
+| Q10 | VDV 462 activation: fallbacks only where the core would drop data (current proposal), or a per-feed `profile` build-config parameter?          |
+| Q11 | Family C (VDV 452 mapping, `ServicePattern`/`VehicleJourney`): part of `NetexVdv462` later, or out of scope?                                   |
 
 ## 7. Implementation status
 
@@ -399,3 +409,43 @@ counts, issues reduced from 101 to 0. The Freiburg export (VDV 452 mapping), whi
 before, now imports without failure: 0 trips, 92 × `StopPlaceWithoutCoordinates`, 192 ×
 `DayTypeAssignmentIgnored` (C1), 4 × `UnsupportedModeInLine` (M3), 4 × `LineWithoutAuthority` (O1) –
 the remaining gaps are covered by the sandbox features.
+
+### Increment 2 – sandbox features and plumbing (done)
+
+| Change                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OTPFeature.NetexEpip` and `OTPFeature.NetexVdv462` (sandbox, off by default), documentation pages `doc/user/sandbox/NetexEpip.md` and `NetexVdv462.md`.       |
+| `NetexProfileSupport` (`netex/config`) carries the enabled features from `NetexConfigure` through `NetexBundle` to the parsers, the validator and the mappers. |
+| `NetexImportRegressionTest` compares entity and issue counts of the Nordic and the EPIP test data with recorded baselines, with the features off and on.       |
+
+### Increment 3 – extended NeTEx import (done)
+
+All changes apply only with `NetexEpip` or `NetexVdv462` enabled (except J9, D8); each is a separate
+commit with a unit test and a row in the "supported scope" tables of the sandbox pages. The Nordic
+regression baseline is unchanged with both features on.
+
+| Finding | Change                                                                                                                                                                         |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| J7      | Notice assignments embedded in lines, journeys, journey patterns and stop points are imported (`InlineNoticeAssignments`).                                                     |
+| O3      | A line without operator uses its only additional operator (`LineWithSeveralAdditionalOperators` otherwise).                                                                    |
+| O1      | A line without resolvable authority uses `AuthorityRef`, an authority among the additional operators, or its operator as agency (`AgencyDerivedFromOperator`).                 |
+| S1–S4   | Stop place assignments are accepted (#8054); stop places without quays get a stop per scheduled stop point at its location (`StopDerivedFromScheduledStopPoint`, id = SSP id). |
+| C1      | Operating days inside `ServiceCalendar` are parsed.                                                                                                                            |
+| M1      | `ferry`, `trolleyBus`, `urbanRail` and `intercityRail` are mapped.                                                                                                             |
+| L4      | Data without time zone uses `transitModelTimeZone` (`NetexTimeZoneFallback`) instead of GMT.                                                                                   |
+| L1      | EPIP files load with the default file patterns (`ext/netexprofile/epip/EpipFilePatterns`); unmatched files are reported (`NetexFileNotMatchingPatterns`).                      |
+| I4      | `SiteConnection` with `WalkTransferDuration` becomes a constrained transfer with `minTransferTime` (Q7).                                                                       |
+| S6      | Stop places without quays that are parents of other stop places, or typed `epip:general`, become multimodal stations.                                                          |
+| J5      | Trip direction from the journey, the journey pattern or a referenced `Direction`.                                                                                              |
+| J6      | The destination display of the journey pattern is used as headsign.                                                                                                            |
+| A1      | `MobilityImpairedAccess` is used when no `WheelchairAccess` limitation is given.                                                                                               |
+| I6      | `FromVisitNumber`/`ToVisitNumber` select the visit of an interchange stop point.                                                                                               |
+| C3      | Day types defined on a parent file level and assigned on the current level are mapped.                                                                                         |
+| J9      | Stop times of passing times without id are keyed by journey and stop point, so notices are attached correctly (core, D8).                                                      |
+| M3      | Lines without mode derive it from their journeys, else from the stop places they serve (`LineTransportModeDerived`).                                                           |
+| V4      | Deferred (D7).                                                                                                                                                                 |
+
+Effect on the test data sets: Nordic unchanged with both features on. EPIP (HVV) with `NetexEpip`: 2
+032 notice assignments (before 0), 2 routes with operator (before 0), 4 transfers from site
+connections, no issues. Freiburg export with `NetexVdv462`: 92 stations and 204 derived stops; trips
+still need J3 (`VehicleJourney`) from increment 5.
