@@ -1,5 +1,6 @@
 package org.opentripplanner.netex.mapping;
 
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
@@ -22,6 +23,9 @@ import org.rutebanken.netex.model.ServiceJourneyInterchange;
 import org.rutebanken.netex.model.VehicleJourneyRefStructure;
 
 public class TransferMapper {
+
+  private static final BigInteger MIN_PRIORITY = BigInteger.valueOf(-1);
+  private static final BigInteger MAX_PRIORITY = BigInteger.valueOf(2);
 
   private final FeedScopedIdFactory idFactory;
   private final DataImportIssueStore issueStore;
@@ -115,7 +119,7 @@ public class TransferMapper {
       cBuilder.guaranteed(it.isGuaranteed());
     }
     if (it.getPriority() != null) {
-      cBuilder.priority(mapPriority(it.getPriority()));
+      cBuilder.priority(mapPriority(it.getId(), it.getPriority()));
     }
     if (it.getMaximumWaitTime() != null) {
       if (it.isGuaranteed()) {
@@ -128,19 +132,28 @@ public class TransferMapper {
     return cBuilder.build();
   }
 
-  private TransferPriority mapPriority(Number pri) {
-    switch (pri.intValue()) {
-      case -1:
-        return TransferPriority.NOT_ALLOWED;
-      case 0:
-        return TransferPriority.ALLOWED;
-      case 1:
-        return TransferPriority.RECOMMENDED;
-      case 2:
-        return TransferPriority.PREFERRED;
-      default:
-        throw new IllegalArgumentException("Interchange priority unknown: " + pri);
+  /**
+   * The Nordic profile defines the priority values -1 (not allowed) to 2 (preferred). NeTEx itself
+   * does not restrict the value, so other profiles may use a wider range. Values outside the
+   * Nordic range are clamped to the nearest defined value and reported.
+   */
+  private TransferPriority mapPriority(String interchangeId, BigInteger priority) {
+    var clamped = priority.max(MIN_PRIORITY).min(MAX_PRIORITY);
+    if (!clamped.equals(priority)) {
+      issueStore.add(
+        "InterchangePriorityOutOfRange",
+        "Interchange %s has priority %s outside the supported range [-1, 2]. Using %s.",
+        interchangeId,
+        priority,
+        clamped
+      );
     }
+    return switch (clamped.intValueExact()) {
+      case -1 -> TransferPriority.NOT_ALLOWED;
+      case 0 -> TransferPriority.ALLOWED;
+      case 1 -> TransferPriority.RECOMMENDED;
+      default -> TransferPriority.PREFERRED;
+    };
   }
 
   private int findStopPosition(

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
+import org.opentripplanner.transfer.constrained.model.TransferPriority;
 import org.opentripplanner.transfer.constrained.model.TripTransferPoint;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.framework.DefaultEntityById;
@@ -176,6 +177,38 @@ class TransferMapperTest {
     var transfer = mapper.mapToTransfer(interchange);
 
     assertNotNull(transfer);
+  }
+
+  @Test
+  void clampPriorityAboveSupportedRange() {
+    var issueStore = new DefaultDataImportIssueStore();
+    var mapper = new TransferMapper(
+      ID_FACTORY,
+      issueStore,
+      createStopPointsIndex(),
+      createTripsIndex()
+    );
+
+    var transfer = mapper.mapToTransfer(createInterchange().withPriority(BigInteger.valueOf(5)));
+
+    assertEquals(TransferPriority.PREFERRED, transfer.getTransferConstraint().getPriority());
+    assertThat(listTypes(issueStore)).containsExactly("InterchangePriorityOutOfRange");
+  }
+
+  @Test
+  void clampPriorityBelowSupportedRange() {
+    var issueStore = new DefaultDataImportIssueStore();
+    var mapper = new TransferMapper(
+      ID_FACTORY,
+      issueStore,
+      createStopPointsIndex(),
+      createTripsIndex()
+    );
+
+    var transfer = mapper.mapToTransfer(createInterchange().withPriority(BigInteger.valueOf(-3)));
+
+    assertEquals(TransferPriority.NOT_ALLOWED, transfer.getTransferConstraint().getPriority());
+    assertThat(listTypes(issueStore)).containsExactly("InterchangePriorityOutOfRange");
   }
 
   @Test
@@ -371,6 +404,15 @@ class TransferMapperTest {
     var transfer = mapper.mapToTransfer(interchange);
 
     assertEquals(0, ((TripTransferPoint) transfer.getTo()).getStopPositionInPattern());
+  }
+
+  private ServiceJourneyInterchange createInterchange() {
+    return new ServiceJourneyInterchange()
+      .withId(INTERCHANGE_ID)
+      .withFromJourneyRef(createJourneyRef(FROM_JOURNEY_ID))
+      .withToJourneyRef(createJourneyRef(TO_JOURNEY_ID))
+      .withFromPointRef(createStopRef(FROM_STOP_ID))
+      .withToPointRef(createStopRef(TO_STOP_ID));
   }
 
   private DefaultEntityById<Trip> createTripsIndex() {
