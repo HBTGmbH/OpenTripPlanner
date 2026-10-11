@@ -60,6 +60,7 @@ The feature is under development. The following table lists what is supported so
 | Wheelchair accessibility from the overall `MobilityImpairedAccess` assessment (`true`/`false`) when no `WheelchairAccess` limitation is given (stop places, quays, service journeys) | Supported |
 | Interchanges at a stop point served several times: `FromVisitNumber`/`ToVisitNumber` select the visit | Supported |
 | Day types defined in a shared file and assigned (`DayTypeAssignment`) in a group file | Supported (a date can not be excluded on another file level than it is assigned) |
+| Lines without `TransportMode`: the mode is derived from the service journeys of the line, else from the stop places they serve (`LineTransportModeDerived`) | Supported for journeys in the same file level as the line |
 | Data without time zone (`FrameDefaults/DefaultLocale/TimeZone`): the `transitModelTimeZone` of the build configuration is used instead of GMT (`NetexTimeZoneFallback`) | Supported |
 
 ### Known limitations

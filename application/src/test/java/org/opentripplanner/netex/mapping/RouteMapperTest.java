@@ -34,11 +34,20 @@ import org.rutebanken.netex.model.Authority;
 import org.rutebanken.netex.model.AuthorityRef;
 import org.rutebanken.netex.model.BrandingRefStructure;
 import org.rutebanken.netex.model.GroupOfLinesRefStructure;
+import org.rutebanken.netex.model.JourneyPattern;
+import org.rutebanken.netex.model.JourneyPatternRefStructure;
 import org.rutebanken.netex.model.Line;
+import org.rutebanken.netex.model.LineRefStructure;
 import org.rutebanken.netex.model.MultilingualString;
 import org.rutebanken.netex.model.Network;
 import org.rutebanken.netex.model.OperatorRefStructure;
+import org.rutebanken.netex.model.PointsInJourneyPattern_RelStructure;
 import org.rutebanken.netex.model.PresentationStructure;
+import org.rutebanken.netex.model.RouteView;
+import org.rutebanken.netex.model.ScheduledStopPointRefStructure;
+import org.rutebanken.netex.model.ServiceJourney;
+import org.rutebanken.netex.model.StopPlace;
+import org.rutebanken.netex.model.StopPointInJourneyPattern;
 import org.rutebanken.netex.model.TransportOrganisationRefStructure;
 import org.rutebanken.netex.model.TransportOrganisationRefs_RelStructure;
 import org.rutebanken.netex.model.TransportSubmodeStructure;
@@ -239,6 +248,87 @@ class RouteMapperTest {
 
     assertEquals(TransitMode.FERRY, route.getMode());
     assertEquals(BikeAccess.ALLOWED, route.getBikesAllowed());
+  }
+
+  @Test
+  void deriveLineModeFromServiceJourneysWithExtendedNetex() {
+    var line = createExampleLine();
+    line.setTransportMode(null);
+    var index = new NetexEntityIndex();
+    index.serviceJourneyById.add(
+      serviceJourneyOfLine("SJ-1", AllVehicleModesOfTransportEnumeration.TRAM)
+    );
+    index.serviceJourneyById.add(
+      serviceJourneyOfLine("SJ-2", AllVehicleModesOfTransportEnumeration.BUS)
+    );
+    index.serviceJourneyById.add(
+      serviceJourneyOfLine("SJ-3", AllVehicleModesOfTransportEnumeration.BUS)
+    );
+    var issueStore = new DefaultDataImportIssueStore();
+
+    Route route = createRouteMapper(
+      index,
+      new TransitDataImportBuilder(new SiteRepository(), issueStore),
+      issueStore,
+      NetexProfileSupport.of(true, false)
+    ).mapRoute(line);
+
+    assertEquals(TransitMode.BUS, route.getMode());
+    assertThat(issueStore.listIssues().stream().map(DataImportIssue::getType)).contains(
+      "LineTransportModeDerived"
+    );
+    assertNull(createRouteMapper(index, DataImportIssueStore.NOOP).mapRoute(line));
+  }
+
+  @Test
+  void deriveLineModeFromStopPlacesWithExtendedNetex() {
+    var line = createExampleLine();
+    line.setTransportMode(null);
+    var index = new NetexEntityIndex();
+    index.journeyPatternsById.add(
+      new JourneyPattern()
+        .withId("JP-1")
+        .withRouteView(
+          new RouteView().withLineRef(createJaxbElement(new LineRefStructure().withRef(LINE_ID)))
+        )
+        .withPointsInSequence(
+          new PointsInJourneyPattern_RelStructure().withPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern(
+            new StopPointInJourneyPattern()
+              .withId("SPIJP-1")
+              .withScheduledStopPointRef(
+                createJaxbElement(new ScheduledStopPointRefStructure().withRef("SSP-1"))
+              )
+          )
+        )
+    );
+    index.serviceJourneyById.add(
+      new ServiceJourney()
+        .withId("SJ-1")
+        .withJourneyPatternRef(createJaxbElement(new JourneyPatternRefStructure().withRef("JP-1")))
+    );
+    index.stopPlaceIdByStopPointRef.add("SSP-1", "SP-1");
+    index.stopPlaceById.add(
+      new StopPlace().withId("SP-1").withTransportMode(AllVehicleModesOfTransportEnumeration.RAIL)
+    );
+
+    Route route = createRouteMapper(
+      index,
+      new TransitDataImportBuilder(new SiteRepository(), DataImportIssueStore.NOOP),
+      DataImportIssueStore.NOOP,
+      NetexProfileSupport.of(true, false)
+    ).mapRoute(line);
+
+    assertEquals(TransitMode.RAIL, route.getMode());
+  }
+
+  private static ServiceJourney serviceJourneyOfLine(
+    String id,
+    AllVehicleModesOfTransportEnumeration mode
+  ) {
+    return new ServiceJourney()
+      .withId(id)
+      .withLineRef(createJaxbElement(new LineRefStructure().withRef(LINE_ID)))
+      .withTransportMode(mode);
   }
 
   @Test

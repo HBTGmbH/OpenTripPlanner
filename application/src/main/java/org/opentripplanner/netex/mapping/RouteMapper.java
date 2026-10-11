@@ -52,6 +52,7 @@ class RouteMapper {
   private final AuthorityToAgencyMapper authorityMapper;
   private final Set<String> ferryIdsNotAllowedForBicycle;
   private final NetexProfileSupport profileSupport;
+  private final LineTransportModeResolver lineTransportModeResolver;
 
   RouteMapper(
     DataImportIssueStore issueStore,
@@ -78,6 +79,7 @@ class RouteMapper {
     this.ferryIdsNotAllowedForBicycle = ferryIdsNotAllowedForBicycle;
     this.profileSupport = profileSupport;
     this.transportModeMapper = new TransportModeMapper(profileSupport);
+    this.lineTransportModeResolver = new LineTransportModeResolver(netexIndex);
   }
 
   Route mapRoute(Line_VersionStructure line) {
@@ -107,9 +109,26 @@ class RouteMapper {
     builder.withLongName(NonLocalizedString.ofNullable(name, MultilingualString::getValue));
     builder.withShortName(line.getPublicCode());
 
+    var transportMode = line.getTransportMode();
+    var transportSubmode = line.getTransportSubmode();
+    if (transportMode == null && profileSupport.extendedNetex()) {
+      var derived = lineTransportModeResolver.resolve(line.getId());
+      if (derived != null) {
+        issueStore.add(
+          "LineTransportModeDerived",
+          "Line %s has no TransportMode, using %s derived from its %s.",
+          line.getId(),
+          derived.mode().value(),
+          derived.source()
+        );
+        transportMode = derived.mode();
+        transportSubmode = derived.submode();
+      }
+    }
+
     NetexMainAndSubMode mode;
     try {
-      mode = transportModeMapper.map(line.getTransportMode(), line.getTransportSubmode());
+      mode = transportModeMapper.map(transportMode, transportSubmode);
     } catch (TransportModeMapper.UnsupportedModeException e) {
       issueStore.add(
         "UnsupportedModeInLine",
@@ -148,7 +167,7 @@ class RouteMapper {
     // but currently it doesn't look it is being parsed.
     // until there is better information from the operators we assume that all ferries allow
     // bicycles on board.
-    if (isFerry(line.getTransportMode())) {
+    if (isFerry(transportMode)) {
       if (ferryIdsNotAllowedForBicycle.contains(line.getId())) {
         builder.withBikesAllowed(BikeAccess.NOT_ALLOWED);
       } else {
