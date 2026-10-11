@@ -2,6 +2,7 @@ package org.opentripplanner.netex.loader;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -56,8 +57,10 @@ public class NetexDataSourceHierarchy {
   }
 
   /**
-   * @param loadUnmatchedFilesAsGroups if true, a file which matches none of the patterns is loaded
-   *                                   as the only file of its own group, instead of being ignored.
+   * @param loadUnmatchedFilesAsGroups if true, an XML file which matches none of the patterns is
+   *                                   loaded as the only file of its own group, instead of being
+   *                                   ignored. Other files, like a description or an export log
+   *                                   delivered with the data, are still ignored.
    */
   public NetexDataSourceHierarchy prepare(
     Pattern ignoreFilePattern,
@@ -133,7 +136,7 @@ public class NetexDataSourceHierarchy {
           groupEntries.get(currentGroup).addSharedEntry(entry);
         } else if (isGroupEntry(name, groupFilePattern)) {
           groupEntries.get(currentGroup).addIndependentEntries(entry);
-        } else if (loadUnmatchedFilesAsGroups) {
+        } else if (loadUnmatchedFilesAsGroups && isXmlFile(name)) {
           unmatchedEntryNames.add(name);
           groupEntries.computeIfAbsent(name, GroupEntries::new).addIndependentEntries(entry);
         } else {
@@ -144,6 +147,10 @@ public class NetexDataSourceHierarchy {
           );
         }
       }
+    }
+
+    private static boolean isXmlFile(String name) {
+      return name.toLowerCase(Locale.ROOT).endsWith(".xml");
     }
 
     private boolean ignoredFile(String name) {

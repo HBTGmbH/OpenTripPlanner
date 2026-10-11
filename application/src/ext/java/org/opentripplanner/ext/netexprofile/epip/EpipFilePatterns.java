@@ -16,15 +16,25 @@ import org.opentripplanner.netex.config.NetexFeedParameters;
  * Stop offers are loaded as shared files, because line and network offers reference their stops.
  * Line and network offers are grouped by country and provider, so interchanges between the lines
  * of a provider can be resolved.
+ * <p>
+ * A national access point may deliver one directory per operating unit inside a zip file, like the
+ * German DELFI data set ({@code hvv_d_VHH/NX-PI-01_DE_NAP_LINE_VHH-VHH-688_20261003.xml}). The
+ * directory is then part of the group, so each operating unit is loaded as a group of its own. In
+ * the DELFI data set of October 2026, 99.6 % of the interchanges reference journeys of the same
+ * operating unit, while one group for the whole country would not fit into memory. Zip directory
+ * entries are ignored.
  */
 public final class EpipFilePatterns {
 
-  private static final String PREFIX = "NX-PI-\\d+_[A-Za-z]{2}_[^_]+";
+  private static final String DIRECTORY = "(?:[^/]+/)*";
+  private static final String PREFIX = "NX-PI-\\d+_[A-Za-z]{2}_[^_/]+";
+  private static final String SUFFIX = "[-_][^/]*\\.xml";
 
-  static final Pattern SHARED_FILE_PATTERN = Pattern.compile(PREFIX + "_STOP[-_].*\\.xml");
+  static final Pattern IGNORE_FILE_PATTERN = Pattern.compile(".*/");
+  static final Pattern SHARED_FILE_PATTERN = Pattern.compile(DIRECTORY + PREFIX + "_STOP" + SUFFIX);
   static final Pattern SHARED_GROUP_FILE_PATTERN = Pattern.compile("$^");
   static final Pattern GROUP_FILE_PATTERN = Pattern.compile(
-    "(" + PREFIX + ")_(?:LINE|NETWORK)[-_].*\\.xml"
+    "(" + DIRECTORY + PREFIX + ")_(?:LINE|NETWORK)" + SUFFIX
   );
 
   private EpipFilePatterns() {}
@@ -37,8 +47,11 @@ public final class EpipFilePatterns {
     if (!usesDefaultPatterns(parameters)) {
       return parameters;
     }
-    return parameters
-      .copyOf()
+    var builder = parameters.copyOf();
+    if (same(NetexFeedParameters.DEFAULT.ignoreFilePattern(), parameters.ignoreFilePattern())) {
+      builder.withIgnoreFilePattern(IGNORE_FILE_PATTERN);
+    }
+    return builder
       .withSharedFilePattern(SHARED_FILE_PATTERN)
       .withSharedGroupFilePattern(SHARED_GROUP_FILE_PATTERN)
       .withGroupFilePattern(GROUP_FILE_PATTERN)

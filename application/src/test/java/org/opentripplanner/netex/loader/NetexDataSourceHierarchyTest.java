@@ -35,10 +35,13 @@ class NetexDataSourceHierarchyTest {
 
   @Test
   void loadUnmatchedFilesAsGroups() throws IOException {
-    var hierarchy = hierarchy(true, "RUT-line-1.xml", "single-file.xml");
+    var hierarchy = hierarchy(true, "RUT-line-1.xml", "single-file.xml", "description.pdf");
 
     assertThat(groupNames(hierarchy)).containsExactly("RUT", "single-file.xml");
-    assertThat(hierarchy.unmatchedEntryNames()).containsExactly("single-file.xml");
+    assertThat(hierarchy.unmatchedEntryNames()).containsExactly(
+      "single-file.xml",
+      "description.pdf"
+    );
   }
 
   private NetexDataSourceHierarchy hierarchy(boolean loadUnmatchedFilesAsGroups, String... files)
