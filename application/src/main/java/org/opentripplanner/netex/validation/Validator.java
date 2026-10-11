@@ -34,6 +34,7 @@ public class Validator {
     validate(index.stopPlaceIdByStopPointRef, new PassengerStopAssignmentStopPlaceNotFound());
     validate(index.stopPlaceIdByStopPointRef, new PassengerStopAssignmentToStopPlaceWithoutQuays());
     validate(index.serviceJourneyById, new JourneyPatternNotFoundInSJ());
+    validate(index.serviceJourneyById, new ServiceJourneyWithoutPassingTimes());
     validate(index.serviceJourneyById, new JourneyPatternSJMismatch());
     validate(index.serviceJourneyById, new InvalidPointInJourneyPatternRef());
     validate(index.serviceJourneyById, new JourneyPatternDuplicateStopPoints());
