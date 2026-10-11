@@ -17,6 +17,7 @@ import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.basic.TransitMode;
@@ -26,6 +27,7 @@ import org.opentripplanner.transit.model.network.GroupOfRoutes;
 import org.opentripplanner.transit.model.network.Route;
 import org.opentripplanner.transit.model.organization.Agency;
 import org.opentripplanner.transit.model.organization.Branding;
+import org.opentripplanner.transit.model.organization.Operator;
 import org.opentripplanner.transit.service.SiteRepository;
 import org.rutebanken.netex.model.AllVehicleModesOfTransportEnumeration;
 import org.rutebanken.netex.model.Authority;
@@ -36,6 +38,7 @@ import org.rutebanken.netex.model.MultilingualString;
 import org.rutebanken.netex.model.Network;
 import org.rutebanken.netex.model.PresentationStructure;
 import org.rutebanken.netex.model.TransportOrganisationRefStructure;
+import org.rutebanken.netex.model.TransportOrganisationRefs_RelStructure;
 import org.rutebanken.netex.model.TransportSubmodeStructure;
 import org.rutebanken.netex.model.WaterSubmodeEnumeration;
 
@@ -47,6 +50,7 @@ class RouteMapperTest {
   private static final String GOL_NAME_1 = "G1";
   private static final String GOL_NAME_2 = "G2";
   private static final String AUTHORITY_ID = "RUT:Authority:1";
+  private static final String OPERATOR_ID = "RUT:Operator:1";
   private static final String BRANDING_ID = "RUT:Branding:1";
   private static final String LINE_ID = "RUT:Line:1";
   private static final String FERRY_WITHOUT_BICYCLES_ID = "RUT:Line:2:NoBicycles";
@@ -68,7 +72,8 @@ class RouteMapperTest {
       new DefaultEntityById<>(),
       netexEntityIndex.readOnlyView(),
       ZoneId.systemDefault().getId(),
-      EMPTY_FERRY_WITHOUT_BICYCLE_IDS
+      EMPTY_FERRY_WITHOUT_BICYCLE_IDS,
+      NetexProfileSupport.NORDIC
     );
 
     Route route = routeMapper.mapRoute(line);
@@ -109,7 +114,8 @@ class RouteMapperTest {
       transitBuilder.getGroupOfRouteById(),
       netexIndex.readOnlyView(),
       TransitRepositoryForTest.TIME_ZONE_ID,
-      EMPTY_FERRY_WITHOUT_BICYCLE_IDS
+      EMPTY_FERRY_WITHOUT_BICYCLE_IDS,
+      NetexProfileSupport.NORDIC
     );
 
     Route route = routeMapper.mapRoute(line);
@@ -171,6 +177,53 @@ class RouteMapperTest {
   }
 
   @Test
+  void useAdditionalOperatorWithExtendedNetexSupport() {
+    var transitBuilder = new TransitDataImportBuilder(
+      new SiteRepository(),
+      DataImportIssueStore.NOOP
+    );
+    transitBuilder.getOperatorsById().add(createOperator(OPERATOR_ID));
+    var line = createExampleLine().withAdditionalOperators(
+      new TransportOrganisationRefs_RelStructure().withTransportOrganisationRef(
+        createJaxbElement(new TransportOrganisationRefStructure().withRef(AUTHORITY_ID)),
+        createJaxbElement(new TransportOrganisationRefStructure().withRef(OPERATOR_ID))
+      )
+    );
+
+    Route route = createRouteMapper(
+      new NetexEntityIndex(),
+      transitBuilder,
+      DataImportIssueStore.NOOP,
+      NetexProfileSupport.of(true, false)
+    ).mapRoute(line);
+
+    assertEquals(OPERATOR_ID, route.getOperator().getId().getId());
+  }
+
+  @Test
+  void ignoreAdditionalOperatorWithoutExtendedNetexSupport() {
+    var transitBuilder = new TransitDataImportBuilder(
+      new SiteRepository(),
+      DataImportIssueStore.NOOP
+    );
+    transitBuilder.getOperatorsById().add(createOperator(OPERATOR_ID));
+    var line = createExampleLine().withAdditionalOperators(
+      new TransportOrganisationRefs_RelStructure().withTransportOrganisationRef(
+        createJaxbElement(new TransportOrganisationRefStructure().withRef(OPERATOR_ID))
+      )
+    );
+
+    Route route = createRouteMapper(
+      new NetexEntityIndex(),
+      transitBuilder,
+      DataImportIssueStore.NOOP,
+      NetexProfileSupport.NORDIC
+    ).mapRoute(line);
+
+    assertNull(route.getOperator());
+  }
+
+  @Test
   void mapRouteWithColor() {
     NetexEntityIndex netexEntityIndex = new NetexEntityIndex();
     Line line = createExampleLine();
@@ -188,7 +241,8 @@ class RouteMapperTest {
       new DefaultEntityById<>(),
       netexEntityIndex.readOnlyView(),
       ZoneId.systemDefault().getId(),
-      EMPTY_FERRY_WITHOUT_BICYCLE_IDS
+      EMPTY_FERRY_WITHOUT_BICYCLE_IDS,
+      NetexProfileSupport.NORDIC
     );
 
     Route route = routeMapper.mapRoute(line);
@@ -213,7 +267,8 @@ class RouteMapperTest {
       new DefaultEntityById<>(),
       netexEntityIndex.readOnlyView(),
       ZoneId.systemDefault().getId(),
-      Set.of(FERRY_WITHOUT_BICYCLES_ID)
+      Set.of(FERRY_WITHOUT_BICYCLES_ID),
+      NetexProfileSupport.NORDIC
     );
 
     Route ferryWithBicycles = routeMapper.mapRoute(lineWithBicycles);
@@ -238,7 +293,8 @@ class RouteMapperTest {
       new DefaultEntityById<>(),
       netexEntityIndex.readOnlyView(),
       ZoneId.systemDefault().getId(),
-      EMPTY_FERRY_WITHOUT_BICYCLE_IDS
+      EMPTY_FERRY_WITHOUT_BICYCLE_IDS,
+      NetexProfileSupport.NORDIC
     );
 
     Route route = routeMapper.mapRoute(line);
@@ -270,7 +326,8 @@ class RouteMapperTest {
       new DefaultEntityById<>(),
       netexIndex.readOnlyView(),
       TransitRepositoryForTest.TIME_ZONE_ID,
-      EMPTY_FERRY_WITHOUT_BICYCLE_IDS
+      EMPTY_FERRY_WITHOUT_BICYCLE_IDS,
+      NetexProfileSupport.NORDIC
     );
 
     Route route = routeMapper.mapRoute(line);
@@ -306,7 +363,8 @@ class RouteMapperTest {
       transitBuilder.getGroupOfRouteById(),
       netexIndex.readOnlyView(),
       TransitRepositoryForTest.TIME_ZONE_ID,
-      EMPTY_FERRY_WITHOUT_BICYCLE_IDS
+      EMPTY_FERRY_WITHOUT_BICYCLE_IDS,
+      NetexProfileSupport.NORDIC
     );
 
     Route route = routeMapper.mapRoute(line);
@@ -322,7 +380,20 @@ class RouteMapperTest {
     NetexEntityIndex netexIndex,
     DataImportIssueStore issueStore
   ) {
-    var transitBuilder = new TransitDataImportBuilder(new SiteRepository(), issueStore);
+    return createRouteMapper(
+      netexIndex,
+      new TransitDataImportBuilder(new SiteRepository(), issueStore),
+      issueStore,
+      NetexProfileSupport.NORDIC
+    );
+  }
+
+  private RouteMapper createRouteMapper(
+    NetexEntityIndex netexIndex,
+    TransitDataImportBuilder transitBuilder,
+    DataImportIssueStore issueStore,
+    NetexProfileSupport profileSupport
+  ) {
     return new RouteMapper(
       issueStore,
       MappingSupport.ID_FACTORY,
@@ -333,7 +404,8 @@ class RouteMapperTest {
       transitBuilder.getGroupOfRouteById(),
       netexIndex.readOnlyView(),
       TransitRepositoryForTest.TIME_ZONE_ID,
-      EMPTY_FERRY_WITHOUT_BICYCLE_IDS
+      EMPTY_FERRY_WITHOUT_BICYCLE_IDS,
+      profileSupport
     );
   }
 
@@ -357,6 +429,10 @@ class RouteMapperTest {
     ferry.setId(id);
     ferry.setTransportMode(AllVehicleModesOfTransportEnumeration.WATER);
     return ferry;
+  }
+
+  private Operator createOperator(String id) {
+    return Operator.of(MappingSupport.ID_FACTORY.createId(id)).withName("Operator").build();
   }
 
   private Agency createAgency() {

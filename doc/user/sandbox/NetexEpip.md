@@ -45,6 +45,7 @@ The feature is under development. The following table lists what is supported so
 | ---- | ------ |
 | Robustness: invalid or incomplete data is reported instead of aborting the build | In core OTP, independent of this feature |
 | Notices: notice assignments embedded in the noticed element (stop point in journey pattern, journey pattern, line, service journey), notices referenced by `NoticeRef` from an earlier embedded assignment | Supported |
+| Operator of a line given only as additional operator (`additionalOperators`) | Supported |
 
 ### Known limitations
 

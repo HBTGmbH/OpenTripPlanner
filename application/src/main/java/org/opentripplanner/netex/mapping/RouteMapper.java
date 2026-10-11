@@ -4,11 +4,14 @@ import com.google.common.collect.Multimap;
 import jakarta.xml.bind.annotation.adapters.HexBinaryAdapter;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Nullable;
 import org.opentripplanner.core.model.i18n.NonLocalizedString;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.api.NetexEntityIndexReadOnlyView;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.opentripplanner.netex.mapping.support.NetexMainAndSubMode;
@@ -48,6 +51,7 @@ class RouteMapper {
   private final NetexEntityIndexReadOnlyView netexIndex;
   private final AuthorityToAgencyMapper authorityMapper;
   private final Set<String> ferryIdsNotAllowedForBicycle;
+  private final NetexProfileSupport profileSupport;
 
   RouteMapper(
     DataImportIssueStore issueStore,
@@ -59,7 +63,8 @@ class RouteMapper {
     EntityById<GroupOfRoutes> groupOfRoutesById,
     NetexEntityIndexReadOnlyView netexIndex,
     String timeZone,
-    Set<String> ferryIdsNotAllowedForBicycle
+    Set<String> ferryIdsNotAllowedForBicycle,
+    NetexProfileSupport profileSupport
   ) {
     this.issueStore = issueStore;
     this.idFactory = idFactory;
@@ -71,6 +76,7 @@ class RouteMapper {
     this.netexIndex = netexIndex;
     this.authorityMapper = new AuthorityToAgencyMapper(idFactory, timeZone);
     this.ferryIdsNotAllowedForBicycle = ferryIdsNotAllowedForBicycle;
+    this.profileSupport = profileSupport;
   }
 
   Route mapRoute(Line_VersionStructure line) {
@@ -213,10 +219,41 @@ class RouteMapper {
   private Operator findOperator(Line_VersionStructure line) {
     OperatorRefStructure opeRef = line.getOperatorRef();
 
-    if (opeRef == null) {
+    if (opeRef != null) {
+      return operatorsById.get(idFactory.createId(opeRef.getRef()));
+    }
+    return profileSupport.extendedNetex() ? findAdditionalOperator(line) : null;
+  }
+
+  /**
+   * EPIP and VDV 462 data often state the operator of a line only as an additional operator (the
+   * line then references its authority). Use the first additional operator which is an operator.
+   */
+  @Nullable
+  private Operator findAdditionalOperator(Line_VersionStructure line) {
+    if (line.getAdditionalOperators() == null) {
       return null;
     }
-    return operatorsById.get(idFactory.createId(opeRef.getRef()));
+    List<Operator> operators = line
+      .getAdditionalOperators()
+      .getTransportOrganisationRef()
+      .stream()
+      .map(ref -> operatorsById.get(idFactory.createId(ref.getValue().getRef())))
+      .filter(Objects::nonNull)
+      .distinct()
+      .toList();
+    if (operators.isEmpty()) {
+      return null;
+    }
+    if (operators.size() > 1) {
+      issueStore.add(
+        "LineWithSeveralAdditionalOperators",
+        "Line %s has no OperatorRef but several additional operators, using %s.",
+        line.getId(),
+        operators.getFirst().getId()
+      );
+    }
+    return operators.getFirst();
   }
 
   @Nullable

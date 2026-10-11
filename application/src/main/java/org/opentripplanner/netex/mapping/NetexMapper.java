@@ -439,7 +439,8 @@ public class NetexMapper {
       transitBuilder.getGroupOfRouteById(),
       currentNetexIndex,
       currentNetexIndex.getTimeZone(),
-      ferryIdsNotAllowedForBicycle
+      ferryIdsNotAllowedForBicycle,
+      profileSupport
     );
     for (Line line : currentNetexIndex.getLineById().localValues()) {
       Route route = routeMapper.mapRoute(line);
