@@ -14,6 +14,7 @@ import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
 import org.opentripplanner.netex.config.IgnorableFeature;
 import org.opentripplanner.netex.config.NetexFeedParameters;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.netex.loader.GroupEntries;
 import org.opentripplanner.netex.loader.NetexDataSourceHierarchy;
@@ -51,6 +52,7 @@ public class NetexBundle implements Closeable {
   private final boolean noTransfersOnIsolatedStops;
   private final boolean allowStopPlaceAsPassengerStopAssignment;
   private final Set<IgnorableFeature> ignoredFeatures;
+  private final NetexProfileSupport profileSupport;
   /** The NeTEx entities loaded from the input files and passed on to the mapper. */
   private NetexEntityIndex index = new NetexEntityIndex();
   /** Report errors to issue store */
@@ -69,7 +71,8 @@ public class NetexBundle implements Closeable {
     double maxStopToShapeSnapDistance,
     boolean noTransfersOnIsolatedStops,
     boolean allowStopPlaceAsPassengerStopAssignment,
-    Set<IgnorableFeature> ignorableFeatures
+    Set<IgnorableFeature> ignorableFeatures,
+    NetexProfileSupport profileSupport
   ) {
     this.feedId = feedId;
     this.source = source;
@@ -81,6 +84,7 @@ public class NetexBundle implements Closeable {
     this.noTransfersOnIsolatedStops = noTransfersOnIsolatedStops;
     this.allowStopPlaceAsPassengerStopAssignment = allowStopPlaceAsPassengerStopAssignment;
     this.ignoredFeatures = Set.copyOf(ignorableFeatures);
+    this.profileSupport = profileSupport;
   }
 
   /** load the bundle, map it to the OTP transit model and return */
@@ -102,7 +106,8 @@ public class NetexBundle implements Closeable {
       ferryIdsNotAllowedForBicycle,
       routeToCentroidStopPlaceIds,
       maxStopToShapeSnapDistance,
-      noTransfersOnIsolatedStops
+      noTransfersOnIsolatedStops,
+      profileSupport
     );
 
     // Load data

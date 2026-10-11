@@ -10,6 +10,7 @@ import org.opentripplanner.model.impl.TransitDataImportBuilder;
 import org.opentripplanner.netex.NetexBundle;
 import org.opentripplanner.netex.NetexModule;
 import org.opentripplanner.netex.config.NetexFeedParameters;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.loader.NetexDataSourceHierarchy;
 import org.opentripplanner.service.streetdetails.StreetDetailsRepository;
 import org.opentripplanner.service.vehicleparking.VehicleParkingRepository;
@@ -86,7 +87,8 @@ public class NetexConfigure {
       buildParams.maxStopToShapeSnapDistance,
       config.noTransfersOnIsolatedStops(),
       config.allowStopPlaceAsPassengerStopAssignment(),
-      config.ignoredFeatures()
+      config.ignoredFeatures(),
+      NetexProfileSupport.ofFeatures()
     );
   }
 

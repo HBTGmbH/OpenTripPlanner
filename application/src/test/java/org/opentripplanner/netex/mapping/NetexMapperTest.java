@@ -13,6 +13,7 @@ import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.transit.model.framework.Deduplicator;
 import org.opentripplanner.transit.model.site.RegularStop;
@@ -61,7 +62,8 @@ class NetexMapperTest {
       Set.of(),
       Set.of(),
       10,
-      false
+      false,
+      NetexProfileSupport.NORDIC
     );
 
     var index = new NetexEntityIndex();
@@ -87,7 +89,8 @@ class NetexMapperTest {
       Set.of(),
       Set.of(),
       10,
-      false
+      false,
+      NetexProfileSupport.NORDIC
     );
 
     var index = new NetexEntityIndex();
@@ -120,7 +123,8 @@ class NetexMapperTest {
       Set.of(),
       Set.of(),
       10,
-      false
+      false,
+      NetexProfileSupport.NORDIC
     );
 
     // Level 0 ("shared data"): empty, but it is the common ancestor for both group files below.

@@ -17,6 +17,7 @@ import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.model.StopTime;
 import org.opentripplanner.model.calendar.ServiceCalendar;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.api.NetexEntityIndexReadOnlyView;
 import org.opentripplanner.netex.mapping.calendar.CalendarServiceBuilder;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
@@ -69,6 +70,7 @@ public class NetexMapper {
   private final Set<FeedScopedId> routeToCentroidStopPlaceIds;
   private final double maxStopToShapeSnapDistance;
   private final boolean noTransfersOnIsolatedStops;
+  private final NetexProfileSupport profileSupport;
 
   /**
    * Map entries that cross reference entities in the shared files, for example Interchanges. The
@@ -103,7 +105,8 @@ public class NetexMapper {
     Set<String> ferryIdsNotAllowedForBicycle,
     Collection<FeedScopedId> routeToCentroidStopPlaceIds,
     double maxStopToShapeSnapDistance,
-    boolean noTransfersOnIsolatedStops
+    boolean noTransfersOnIsolatedStops,
+    NetexProfileSupport profileSupport
   ) {
     this.transitBuilder = transitBuilder;
     this.deduplicator = deduplicator;
@@ -113,6 +116,7 @@ public class NetexMapper {
     this.routeToCentroidStopPlaceIds = Set.copyOf(routeToCentroidStopPlaceIds);
     this.noTransfersOnIsolatedStops = noTransfersOnIsolatedStops;
     this.maxStopToShapeSnapDistance = maxStopToShapeSnapDistance;
+    this.profileSupport = profileSupport;
     this.calendarServiceBuilder = new CalendarServiceBuilder(idFactory);
     this.tripCalendarBuilder = new TripCalendarBuilder(this.calendarServiceBuilder, issueStore);
     this.sharedGroupMapper = new GroupNetexMapper(idFactory, issueStore, transitBuilder);
