@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.transfer.constrained.model.TransferPriority;
 import org.opentripplanner.transfer.constrained.model.TripTransferPoint;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
@@ -423,6 +424,73 @@ class TransferMapperTest {
     var transfer = mapper.mapToTransfer(interchange);
 
     assertEquals(0, ((TripTransferPoint) transfer.getTo()).getStopPositionInPattern());
+  }
+
+  @Test
+  void usesVisitNumbersWithExtendedNetex() {
+    var stopPointsIndex = Map.of(
+      FROM_JOURNEY_ID,
+      List.of(FROM_STOP_ID, "OTHER_STOP", FROM_STOP_ID),
+      TO_JOURNEY_ID,
+      List.of(TO_STOP_ID, "OTHER_STOP", TO_STOP_ID)
+    );
+    var interchange = createInterchange()
+      .withGuaranteed(true)
+      .withFromVisitNumber(BigInteger.ONE)
+      .withToVisitNumber(BigInteger.TWO);
+
+    var transfer = visitNumberMapper(
+      stopPointsIndex,
+      NetexProfileSupport.of(true, false)
+    ).mapToTransfer(interchange);
+    assertEquals(0, ((TripTransferPoint) transfer.getFrom()).getStopPositionInPattern());
+    assertEquals(2, ((TripTransferPoint) transfer.getTo()).getStopPositionInPattern());
+
+    var nordic = visitNumberMapper(stopPointsIndex, NetexProfileSupport.NORDIC).mapToTransfer(
+      interchange
+    );
+    assertEquals(2, ((TripTransferPoint) nordic.getFrom()).getStopPositionInPattern());
+    assertEquals(0, ((TripTransferPoint) nordic.getTo()).getStopPositionInPattern());
+  }
+
+  @Test
+  void rejectInterchangeWithUnknownVisit() {
+    var issueStore = new DefaultDataImportIssueStore();
+    var stopPointsIndex = Map.of(
+      FROM_JOURNEY_ID,
+      List.of(FROM_STOP_ID),
+      TO_JOURNEY_ID,
+      List.of(TO_STOP_ID)
+    );
+    var mapper = new TransferMapper(
+      ID_FACTORY,
+      issueStore,
+      stopPointsIndex,
+      createTripsIndex(),
+      NetexProfileSupport.of(true, false)
+    );
+
+    var transfer = mapper.mapToTransfer(
+      createInterchange().withGuaranteed(true).withToVisitNumber(BigInteger.TWO)
+    );
+
+    assertNull(transfer);
+    assertThat(issueStore.listIssues().stream().map(DataImportIssue::getType)).contains(
+      "InterchangePointMappingFailed"
+    );
+  }
+
+  private TransferMapper visitNumberMapper(
+    Map<String, List<String>> stopPointsIndex,
+    NetexProfileSupport profileSupport
+  ) {
+    return new TransferMapper(
+      ID_FACTORY,
+      DataImportIssueStore.NOOP,
+      stopPointsIndex,
+      createTripsIndex(),
+      profileSupport
+    );
   }
 
   private ServiceJourneyInterchange createInterchange() {

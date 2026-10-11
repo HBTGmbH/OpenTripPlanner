@@ -119,7 +119,12 @@ public class NetexMapper {
     this.profileSupport = profileSupport;
     this.calendarServiceBuilder = new CalendarServiceBuilder(idFactory);
     this.tripCalendarBuilder = new TripCalendarBuilder(this.calendarServiceBuilder, issueStore);
-    this.sharedGroupMapper = new GroupNetexMapper(idFactory, issueStore, transitBuilder);
+    this.sharedGroupMapper = new GroupNetexMapper(
+      idFactory,
+      issueStore,
+      transitBuilder,
+      profileSupport
+    );
   }
 
   /**
@@ -230,7 +235,7 @@ public class NetexMapper {
     if (level != LEVEL_GROUP) {
       return;
     }
-    this.groupMapper = new GroupNetexMapper(idFactory, issueStore, transitBuilder);
+    this.groupMapper = new GroupNetexMapper(idFactory, issueStore, transitBuilder, profileSupport);
   }
 
   /**

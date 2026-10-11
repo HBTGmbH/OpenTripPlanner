@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.model.impl.TransitDataImportBuilder;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.opentripplanner.transfer.constrained.model.ConstrainedTransfer;
 import org.rutebanken.netex.model.ServiceJourneyInterchange;
@@ -21,6 +22,7 @@ class GroupNetexMapper {
   private final FeedScopedIdFactory idFactory;
   private final DataImportIssueStore issueStore;
   private final TransitDataImportBuilder transitBuilder;
+  private final NetexProfileSupport profileSupport;
   private final List<ServiceJourneyInterchange> interchanges = new ArrayList<>();
 
   /**
@@ -31,11 +33,13 @@ class GroupNetexMapper {
   GroupNetexMapper(
     FeedScopedIdFactory idFactory,
     DataImportIssueStore issueStore,
-    TransitDataImportBuilder transitBuilder
+    TransitDataImportBuilder transitBuilder,
+    NetexProfileSupport profileSupport
   ) {
     this.idFactory = idFactory;
     this.issueStore = issueStore;
     this.transitBuilder = transitBuilder;
+    this.profileSupport = profileSupport;
   }
 
   void addInterchange(Collection<ServiceJourneyInterchange> interchanges) {
@@ -51,7 +55,8 @@ class GroupNetexMapper {
       idFactory,
       issueStore,
       scheduledStopPointsIndex,
-      transitBuilder.getTripsById()
+      transitBuilder.getTripsById(),
+      profileSupport
     );
     for (ServiceJourneyInterchange it : interchanges) {
       ConstrainedTransfer result = mapper.mapToTransfer(it);

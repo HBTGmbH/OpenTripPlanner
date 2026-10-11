@@ -6,6 +6,7 @@ import java.util.Map;
 import javax.annotation.Nullable;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.config.SwissProfile;
 import org.opentripplanner.netex.issues.InterchangeMaxWaitTimeNotGuaranteed;
 import org.opentripplanner.netex.issues.InterchangePointMappingFailed;
@@ -31,6 +32,7 @@ public class TransferMapper {
   private final DataImportIssueStore issueStore;
   private final Map<String, List<String>> scheduledStopPointsIndex;
   private final EntityById<Trip> trips;
+  private final NetexProfileSupport profileSupport;
 
   public TransferMapper(
     FeedScopedIdFactory idFactory,
@@ -38,10 +40,21 @@ public class TransferMapper {
     Map<String, List<String>> scheduledStopPointsIndex,
     EntityById<Trip> trips
   ) {
+    this(idFactory, issueStore, scheduledStopPointsIndex, trips, NetexProfileSupport.NORDIC);
+  }
+
+  public TransferMapper(
+    FeedScopedIdFactory idFactory,
+    DataImportIssueStore issueStore,
+    Map<String, List<String>> scheduledStopPointsIndex,
+    EntityById<Trip> trips,
+    NetexProfileSupport profileSupport
+  ) {
     this.idFactory = idFactory;
     this.issueStore = issueStore;
     this.scheduledStopPointsIndex = scheduledStopPointsIndex;
     this.trips = trips;
+    this.profileSupport = profileSupport;
   }
 
   /**
@@ -62,8 +75,20 @@ public class TransferMapper {
   @Nullable
   public ConstrainedTransfer mapToTransfer(ServiceJourneyInterchange it) {
     var id = it.getId();
-    var from = mapPoint(Label.FROM, id, it.getFromJourneyRef(), it.getFromPointRef());
-    var to = mapPoint(Label.TO, id, it.getToJourneyRef(), it.getToPointRef());
+    var from = mapPoint(
+      Label.FROM,
+      id,
+      it.getFromJourneyRef(),
+      it.getFromPointRef(),
+      it.getFromVisitNumber()
+    );
+    var to = mapPoint(
+      Label.TO,
+      id,
+      it.getToJourneyRef(),
+      it.getToPointRef(),
+      it.getToVisitNumber()
+    );
 
     if (from == null || to == null) {
       issueStore.add(
@@ -91,14 +116,22 @@ public class TransferMapper {
     Label label,
     String interchangeId,
     VehicleJourneyRefStructure sjRef,
-    ScheduledStopPointRefStructure pointRef
+    ScheduledStopPointRefStructure pointRef,
+    @Nullable BigInteger visitNumber
   ) {
     if (isInvalid(sjRef)) {
       return null;
     }
     var sjId = sjRef.getRef();
     var trip = findTrip(label, "Journey", interchangeId, sjId);
-    int stopPos = findStopPosition(interchangeId, label, "Point", sjId, pointRef);
+    int stopPos = findStopPosition(
+      interchangeId,
+      label,
+      "Point",
+      sjId,
+      pointRef,
+      profileSupport.extendedNetex() ? visitNumber : null
+    );
     return trip == null || stopPos < 0 ? null : new TripTransferPoint(trip, stopPos);
   }
 
@@ -161,22 +194,29 @@ public class TransferMapper {
     Label label,
     String fieldName,
     String sjId,
-    ScheduledStopPointRefStructure scheduledStopPointRef
+    ScheduledStopPointRefStructure scheduledStopPointRef,
+    @Nullable BigInteger visitNumber
   ) {
     String sspId = scheduledStopPointRef.getRef();
     var scheduledStopPoints = scheduledStopPointsIndex.get(sjId);
     String errorMessage;
 
     if (scheduledStopPoints != null) {
-      var index = switch (label) {
-        case Label.TO -> scheduledStopPoints.indexOf(sspId);
-        case Label.FROM -> scheduledStopPoints.lastIndexOf(sspId);
-      };
+      var index =
+        visitNumber == null
+          ? switch (label) {
+              case Label.TO -> scheduledStopPoints.indexOf(sspId);
+              case Label.FROM -> scheduledStopPoints.lastIndexOf(sspId);
+            }
+          : indexOfVisit(scheduledStopPoints, sspId, visitNumber);
       if (index >= 0) {
         return index;
       }
 
-      errorMessage = "Scheduled-stop-point-ref not found";
+      errorMessage =
+        visitNumber == null
+          ? "Scheduled-stop-point-ref not found"
+          : "Visit " + visitNumber + " of scheduled-stop-point-ref not found";
     } else {
       errorMessage = "Service-journey not found";
     }
@@ -190,6 +230,24 @@ public class TransferMapper {
         sspId
       )
     );
+    return -1;
+  }
+
+  /**
+   * The visit number selects the visit if the journey serves the stop point several times, for
+   * example on a loop. The first visit has number 1.
+   */
+  private static int indexOfVisit(
+    List<String> scheduledStopPoints,
+    String sspId,
+    BigInteger visit
+  ) {
+    int remaining = visit.signum() > 0 ? visit.intValue() : 1;
+    for (int i = 0; i < scheduledStopPoints.size(); i++) {
+      if (scheduledStopPoints.get(i).equals(sspId) && --remaining == 0) {
+        return i;
+      }
+    }
     return -1;
   }
 
