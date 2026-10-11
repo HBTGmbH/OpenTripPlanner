@@ -8,11 +8,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nullable;
 import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.core.model.i18n.NonLocalizedString;
 import org.opentripplanner.core.model.i18n.TranslatedString;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.netex.issues.StopPlaceWithoutCoordinates;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.opentripplanner.netex.support.JAXBUtils;
 import org.opentripplanner.street.geometry.WgsCoordinate;
@@ -56,6 +58,11 @@ class StationMapper {
     this.siteRepositoryBuilder = siteRepositoryBuilder;
   }
 
+  /**
+   * Map the stop place to a station, or return {@code null} if no coordinate can be found for it.
+   * A station requires a coordinate in the OTP model.
+   */
+  @Nullable
   Station map(StopPlace stopPlace) {
     var id = idFactory.createId(stopPlace.getId());
     return siteRepositoryBuilder.computeStationIfAbsent(id, it ->
@@ -63,10 +70,16 @@ class StationMapper {
     );
   }
 
-  Station mapStopPlaceToStation(FeedScopedId id, StopPlace stopPlace) {
+  @Nullable
+  private Station mapStopPlaceToStation(FeedScopedId id, StopPlace stopPlace) {
+    var coordinate = findCoordinate(stopPlace);
+    if (coordinate == null) {
+      issueStore.add(new StopPlaceWithoutCoordinates(stopPlace.getId()));
+      return null;
+    }
     var builder = Station.of(id)
       .withName(resolveName(stopPlace))
-      .withCoordinate(mapCoordinate(stopPlace))
+      .withCoordinate(coordinate)
       .withShouldRouteToCentroid(shouldRouteToCentroid(id))
       .withDescription(
         NonLocalizedString.ofNullable(stopPlace.getDescription(), MultilingualString::getValue)
@@ -130,31 +143,30 @@ class StationMapper {
 
   /**
    * Map the centroid to coordinate, if not present the mean coordinate for the child quays is
-   * returned. If the station do not have any quays an exception is thrown.
+   * returned. If neither the stop place nor its quays have coordinates, {@code null} is returned.
    */
-  private WgsCoordinate mapCoordinate(StopPlace stopPlace) {
-    if (stopPlace.getCentroid() != null) {
-      return WgsCoordinateMapper.mapToDomain(stopPlace.getCentroid());
-    } else {
-      issueStore.add(
-        "StationWithoutCoordinates",
-        "Station %s does not contain any coordinates.",
-        stopPlace.getId() + " " + stopPlace.getName()
-      );
-      List<WgsCoordinate> coordinates = JAXBUtils.streamJAXBElementValue(
-        Quay.class,
-        stopPlace.getQuays().getQuayRefOrQuay()
-      )
-        .map(Zone_VersionStructure::getCentroid)
-        .filter(Objects::nonNull)
-        .map(WgsCoordinateMapper::mapToDomain)
-        .toList();
-      if (coordinates.isEmpty()) {
-        throw new IllegalArgumentException(
-          "Station w/quays without coordinates. Station id: " + stopPlace.getId()
-        );
-      }
-      return WgsCoordinate.mean(coordinates);
+  @Nullable
+  private WgsCoordinate findCoordinate(StopPlace stopPlace) {
+    var centroid = WgsCoordinateMapper.mapToDomain(stopPlace.getCentroid());
+    if (centroid != null) {
+      return centroid;
     }
+    issueStore.add(
+      "StationWithoutCoordinates",
+      "Station %s does not contain any coordinates.",
+      stopPlace.getId() + " " + stopPlace.getName()
+    );
+    if (stopPlace.getQuays() == null) {
+      return null;
+    }
+    List<WgsCoordinate> coordinates = JAXBUtils.streamJAXBElementValue(
+      Quay.class,
+      stopPlace.getQuays().getQuayRefOrQuay()
+    )
+      .map(Zone_VersionStructure::getCentroid)
+      .filter(Objects::nonNull)
+      .map(WgsCoordinateMapper::mapToDomain)
+      .toList();
+    return coordinates.isEmpty() ? null : WgsCoordinate.mean(coordinates);
   }
 }

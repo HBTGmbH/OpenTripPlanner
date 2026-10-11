@@ -284,6 +284,20 @@ class StopAndStationMapperTest {
   }
 
   @Test
+  void skipStopPlaceWithoutAnyCoordinate() {
+    var stopPlace = createStopPlace("ST:StopPlace:1", "No position", "1", 0.0, 0.0, null);
+    stopPlace.withCentroid(null);
+    var quay = createQuay("ST:Quay:1", "Quay1", "1", 0.0, 0.0, "a").withCentroid(null);
+    stopPlace.setQuays(new Quays_RelStructure().withQuayRefOrQuay(objectFactory.createQuay(quay)));
+
+    StopAndStationMapper stopAndStationMapper = createStopAndStationMapper(SiteRepository.of());
+    stopAndStationMapper.mapParentAndChildStops(List.of(stopPlace));
+
+    assertThat(stopAndStationMapper.resultStations).isEmpty();
+    assertThat(stopAndStationMapper.resultStops).isEmpty();
+  }
+
+  @Test
   void testRouteToCentroid() {
     var routeToCentroidStopPlaceIds = Set.of(MappingSupport.ID_FACTORY.createId("NSR:StopPlace:1"));
     StopAndStationMapper stopMapper = new StopAndStationMapper(
