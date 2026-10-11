@@ -3,9 +3,12 @@ package org.opentripplanner.netex.loader.parser;
 import static org.opentripplanner.netex.config.IgnorableFeature.FARE_FRAME;
 
 import jakarta.xml.bind.JAXBElement;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import javax.annotation.Nullable;
+import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.netex.config.IgnorableFeature;
 import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
@@ -38,17 +41,20 @@ public class NetexDocumentParser {
   private final Set<IgnorableFeature> ignoredFeatures;
   private final boolean allowStopPlaceAsPassengerStopAssignment;
   private final NetexProfileSupport profileSupport;
+  private final DefaultTimeZone defaultTimeZone;
 
   private NetexDocumentParser(
     NetexEntityIndex netexIndex,
     Set<IgnorableFeature> ignoredFeatures,
     boolean allowStopPlaceAsPassengerStopAssignment,
-    NetexProfileSupport profileSupport
+    NetexProfileSupport profileSupport,
+    DefaultTimeZone defaultTimeZone
   ) {
     this.netexIndex = netexIndex;
     this.ignoredFeatures = ignoredFeatures;
     this.allowStopPlaceAsPassengerStopAssignment = allowStopPlaceAsPassengerStopAssignment;
     this.profileSupport = profileSupport;
+    this.defaultTimeZone = defaultTimeZone;
   }
 
   /**
@@ -60,13 +66,15 @@ public class NetexDocumentParser {
     PublicationDeliveryStructure doc,
     Set<IgnorableFeature> ignoredFeatures,
     boolean allowStopPlaceAsPassengerStopAssignment,
-    NetexProfileSupport profileSupport
+    NetexProfileSupport profileSupport,
+    DefaultTimeZone defaultTimeZone
   ) {
     new NetexDocumentParser(
       index,
       ignoredFeatures,
       allowStopPlaceAsPassengerStopAssignment,
-      profileSupport
+      profileSupport,
+      defaultTimeZone
     ).parse(doc);
   }
 
@@ -151,7 +159,49 @@ public class NetexDocumentParser {
     if (netexIndex.timeZone.get() != null) {
       return netexIndex.timeZone.get();
     }
-    // Fallback to GMT if no time zone exists in hierarchy
-    return "GMT";
+    return defaultTimeZone.timeZoneForFrameWithoutTimeZone();
+  }
+
+  /**
+   * The time zone used when neither the frame nor any frame above it in the hierarchy state one.
+   * The Nordic profile requires the time zone, so this is GMT unless an explicit default is given.
+   */
+  public static final class DefaultTimeZone {
+
+    public static final DefaultTimeZone GMT = new DefaultTimeZone(null, null);
+
+    @Nullable
+    private final ZoneId timeZone;
+
+    @Nullable
+    private final DataImportIssueStore issueStore;
+
+    private boolean reported = false;
+
+    private DefaultTimeZone(@Nullable ZoneId timeZone, @Nullable DataImportIssueStore issueStore) {
+      this.timeZone = timeZone;
+      this.issueStore = issueStore;
+    }
+
+    /** Use the given time zone and report its use once per feed. */
+    public static DefaultTimeZone of(ZoneId timeZone, DataImportIssueStore issueStore) {
+      return new DefaultTimeZone(timeZone, issueStore);
+    }
+
+    private String timeZoneForFrameWithoutTimeZone() {
+      if (timeZone == null) {
+        return "GMT";
+      }
+      if (!reported && issueStore != null) {
+        issueStore.add(
+          "NetexTimeZoneFallback",
+          "The NeTEx data does not state a time zone (FrameDefaults/DefaultLocale/TimeZone). The " +
+            "transitModelTimeZone %s from the build configuration is used.",
+          timeZone
+        );
+        reported = true;
+      }
+      return timeZone.getId();
+    }
   }
 }

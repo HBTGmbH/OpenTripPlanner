@@ -88,7 +88,8 @@ public class NetexConfigure {
       config.noTransfersOnIsolatedStops(),
       config.allowStopPlaceAsPassengerStopAssignment(),
       config.ignoredFeatures(),
-      NetexProfileSupport.ofFeatures()
+      NetexProfileSupport.ofFeatures(),
+      buildParams.transitModelTimeZone
     );
   }
 

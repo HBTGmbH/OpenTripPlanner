@@ -50,6 +50,7 @@ The feature is under development. The following table lists what is supported so
 | Stop place without centroid and quays: located at the mean position of its scheduled stop points | Supported |
 | Operating days inside the `ServiceCalendar` | Supported |
 | Transport modes `ferry`, `trolleyBus`, `urbanRail` and `intercityRail` on lines and service journeys | Supported (`lift` and `other` are not supported) |
+| Data without time zone (`FrameDefaults/DefaultLocale/TimeZone`): the `transitModelTimeZone` of the build configuration is used instead of GMT (`NetexTimeZoneFallback`) | Supported |
 
 ### Known limitations
 

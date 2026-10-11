@@ -4,8 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
+import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.netex.loader.NetexXmlParser;
@@ -47,9 +51,55 @@ class NetexDocumentParserTest {
       document,
       Set.of(),
       false,
-      NetexProfileSupport.NORDIC
+      NetexProfileSupport.NORDIC,
+      NetexDocumentParser.DefaultTimeZone.GMT
     );
 
     assertEquals("Operator 1", index.operatorsById.lookup("OP_1").getName().getValue());
+  }
+
+  @Test
+  void useGmtIfTheDocumentHasNoTimeZone() throws Exception {
+    var index = new NetexEntityIndex();
+
+    parse(index, NetexDocumentParser.DefaultTimeZone.GMT);
+
+    assertEquals("GMT", index.timeZone.get());
+  }
+
+  @Test
+  void useTheDefaultTimeZoneIfTheDocumentHasNoTimeZone() throws Exception {
+    var index = new NetexEntityIndex();
+    var issueStore = new DefaultDataImportIssueStore();
+    var defaultTimeZone = NetexDocumentParser.DefaultTimeZone.of(
+      ZoneId.of("Europe/Berlin"),
+      issueStore
+    );
+
+    parse(index, defaultTimeZone);
+    parse(index, defaultTimeZone);
+
+    assertEquals("Europe/Berlin", index.timeZone.get());
+    assertEquals(
+      List.of("NetexTimeZoneFallback"),
+      issueStore.listIssues().stream().map(DataImportIssue::getType).toList()
+    );
+  }
+
+  private static void parse(
+    NetexEntityIndex index,
+    NetexDocumentParser.DefaultTimeZone defaultTimeZone
+  ) throws Exception {
+    var document = new NetexXmlParser().parseXmlDoc(
+      new ByteArrayInputStream(COMPOSITE_FRAME_WITHOUT_FRAMES.getBytes(StandardCharsets.UTF_8))
+    );
+    NetexDocumentParser.parseAndPopulateIndex(
+      index,
+      document,
+      Set.of(),
+      false,
+      NetexProfileSupport.of(true, false),
+      defaultTimeZone
+    );
   }
 }

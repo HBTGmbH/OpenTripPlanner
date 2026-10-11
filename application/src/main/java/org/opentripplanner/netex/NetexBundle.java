@@ -3,9 +3,11 @@ package org.opentripplanner.netex;
 import jakarta.xml.bind.JAXBException;
 import java.io.Closeable;
 import java.io.IOException;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import javax.annotation.Nullable;
 import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.datastore.api.CompositeDataSource;
@@ -53,6 +55,13 @@ public class NetexBundle implements Closeable {
   private final boolean allowStopPlaceAsPassengerStopAssignment;
   private final Set<IgnorableFeature> ignoredFeatures;
   private final NetexProfileSupport profileSupport;
+
+  /** Used as time zone for data without time zone, with extended NeTEx support only. */
+  @Nullable
+  private final ZoneId transitModelTimeZone;
+
+  private NetexDocumentParser.DefaultTimeZone defaultTimeZone =
+    NetexDocumentParser.DefaultTimeZone.GMT;
   /** The NeTEx entities loaded from the input files and passed on to the mapper. */
   private NetexEntityIndex index = new NetexEntityIndex();
   /** Report errors to issue store */
@@ -72,7 +81,8 @@ public class NetexBundle implements Closeable {
     boolean noTransfersOnIsolatedStops,
     boolean allowStopPlaceAsPassengerStopAssignment,
     Set<IgnorableFeature> ignorableFeatures,
-    NetexProfileSupport profileSupport
+    NetexProfileSupport profileSupport,
+    @Nullable ZoneId transitModelTimeZone
   ) {
     this.feedId = feedId;
     this.source = source;
@@ -88,6 +98,7 @@ public class NetexBundle implements Closeable {
       );
     this.ignoredFeatures = Set.copyOf(ignorableFeatures);
     this.profileSupport = profileSupport;
+    this.transitModelTimeZone = transitModelTimeZone;
   }
 
   /** load the bundle, map it to the OTP transit model and return */
@@ -98,6 +109,12 @@ public class NetexBundle implements Closeable {
     LOG.info("Reading {}", hierarchy.description());
 
     this.issueStore = issueStore;
+    if (profileSupport.extendedNetex() && transitModelTimeZone != null) {
+      this.defaultTimeZone = NetexDocumentParser.DefaultTimeZone.of(
+        transitModelTimeZone,
+        issueStore
+      );
+    }
 
     // init parser and mapper
     xmlParser = new NetexXmlParser();
@@ -199,7 +216,8 @@ public class NetexBundle implements Closeable {
         doc,
         ignoredFeatures,
         allowStopPlaceAsPassengerStopAssignment,
-        profileSupport
+        profileSupport,
+        defaultTimeZone
       );
     } catch (JAXBException e) {
       throw new RuntimeException(e.getMessage(), e);
