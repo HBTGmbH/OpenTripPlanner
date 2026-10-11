@@ -99,6 +99,25 @@ class TransferMapperTest {
   }
 
   @Test
+  void ignoreMaxWaitTimeWhenGuaranteedIsMissing() {
+    var issueStore = new DefaultDataImportIssueStore();
+    var mapper = new TransferMapper(
+      ID_FACTORY,
+      issueStore,
+      createStopPointsIndex(),
+      createTripsIndex()
+    );
+
+    var transfer = mapper.mapToTransfer(
+      createInterchange().withStaySeated(true).withMaximumWaitTime(Duration.ofMinutes(5))
+    );
+
+    assertTrue(transfer.getTransferConstraint().isStaySeated());
+    assertFalse(transfer.getTransferConstraint().isGuaranteed());
+    assertThat(listTypes(issueStore)).containsExactly("InterchangeMaxWaitTimeNotGuaranteed");
+  }
+
+  @Test
   void mapTransferWithPriorityNotAllowed() {
     var trips = createTripsIndex();
     var stopPointsIndex = createStopPointsIndex();

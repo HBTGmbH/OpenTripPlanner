@@ -122,7 +122,7 @@ public class TransferMapper {
       cBuilder.priority(mapPriority(it.getId(), it.getPriority()));
     }
     if (it.getMaximumWaitTime() != null) {
-      if (it.isGuaranteed()) {
+      if (Boolean.TRUE.equals(it.isGuaranteed())) {
         cBuilder.maxWaitTime((int) it.getMaximumWaitTime().toSeconds());
       } else {
         // Add a warning here and keep the interchange
