@@ -3,6 +3,7 @@ package org.opentripplanner.netex.mapping;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.math.BigInteger;
 import java.time.Duration;
@@ -13,7 +14,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.model.StopTime;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMap;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMapById;
@@ -160,6 +163,81 @@ public class StopTimesMapperTest {
    * undefined so it should also not set StopTime.timepoint = 1. Only the first StopTime has the
    * correct criteria to map StopTime.timepoint = 1.
    */
+  /**
+   * A stop point without boarding and alighting and without stop assignment is not needed by
+   * passengers. It is skipped without reporting an issue.
+   */
+  @Test
+  public void skipStopPointWithoutBoardingAndAlightingSilently() {
+    NetexTestDataSample sample = new NetexTestDataSample();
+    var stopPoint = (StopPointInJourneyPattern) sample
+      .getJourneyPattern()
+      .getPointsInSequence()
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
+      .get(1);
+    stopPoint.withForBoarding(false).withForAlighting(false);
+    var issueStore = new DefaultDataImportIssueStore();
+
+    StopTimesMapperResult result = createMapperWithoutAssignmentFor(
+      sample,
+      stopPoint.getId(),
+      issueStore
+    ).mapToStopTimes(sample.getJourneyPattern(), TRIP, sample.getTimetabledPassingTimes(), null);
+
+    assertEquals(3, result.stopTimes.size());
+    assertEquals(List.of(), issueStore.listIssues());
+  }
+
+  @Test
+  public void reportStopPointWithoutStopAssignment() {
+    NetexTestDataSample sample = new NetexTestDataSample();
+    var stopPoint = (StopPointInJourneyPattern) sample
+      .getJourneyPattern()
+      .getPointsInSequence()
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
+      .get(1);
+    var issueStore = new DefaultDataImportIssueStore();
+
+    StopTimesMapperResult result = createMapperWithoutAssignmentFor(
+      sample,
+      stopPoint.getId(),
+      issueStore
+    ).mapToStopTimes(sample.getJourneyPattern(), TRIP, sample.getTimetabledPassingTimes(), null);
+
+    assertNull(result);
+    assertEquals(
+      List.of("StopPointInJourneyPatternMissingStopLocation", "JourneyPatternStopNotFound"),
+      issueStore.listIssues().stream().map(DataImportIssue::getType).toList()
+    );
+  }
+
+  private static StopTimesMapper createMapperWithoutAssignmentFor(
+    NetexTestDataSample sample,
+    String stopPointRef,
+    DataImportIssueStore issueStore
+  ) {
+    var quayIdByStopPointRef = new HierarchicalMap<String, String>();
+    for (String key : sample.getQuayIdByStopPointRef().localKeys()) {
+      if (!key.equals(stopPointRef)) {
+        quayIdByStopPointRef.add(key, sample.getQuayIdByStopPointRef().lookup(key));
+      }
+    }
+    return new StopTimesMapper(
+      issueStore,
+      MappingSupport.ID_FACTORY,
+      sample.getStopsById(),
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      sample.getDestinationDisplayById(),
+      new HierarchicalMap<>(),
+      quayIdByStopPointRef,
+      new HierarchicalMap<>(),
+      new HierarchicalMapById<>(),
+      new HierarchicalMap<>()
+    );
+  }
+
   @Test
   public void testWaitPointMapping() {
     var netexSample = new NetexTestDataSample();

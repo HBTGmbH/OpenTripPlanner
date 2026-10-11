@@ -148,7 +148,15 @@ class StopTimesMapper {
           isFalse(stopPoint.isForAlighting()) &&
           isFalse(stopPoint.isForBoarding())
         ) {
+          // A stop point without boarding and alighting is not needed for passengers
           continue;
+        }
+        if (stopPoint != null) {
+          issueStore.add(
+            "StopPointInJourneyPatternMissingStopLocation",
+            "No Quay, StopPlace or FlexibleStopPlace mapping found for stop point ref %s",
+            stopPoint.getScheduledStopPointRef().getValue().getRef()
+          );
         }
         issueStore.add(
           "JourneyPatternStopNotFound",
@@ -411,14 +419,6 @@ class StopTimesMapper {
       } else {
         stopLocation = groupStop;
       }
-    }
-
-    if (stopLocation == null) {
-      issueStore.add(
-        "StopPointInJourneyPatternMissingStopLocation",
-        "No Quay, StopPlace or FlexibleStopPlace mapping found for stop point ref %s",
-        stopPointRef
-      );
     }
 
     return stopLocation;

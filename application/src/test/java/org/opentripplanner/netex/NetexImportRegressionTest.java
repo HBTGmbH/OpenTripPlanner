@@ -44,7 +44,7 @@ class NetexImportRegressionTest {
   private static final String EPIP_BASELINE = """
   agencies=3
   groupsOfStations=0
-  issues={NetexImportTimeZone=3, StopPointInJourneyPatternMissingStopLocation=98}
+  issues={NetexImportTimeZone=3}
   multiModalStations=0
   noticeAssignments=0
   operators=2
