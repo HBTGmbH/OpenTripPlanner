@@ -118,7 +118,11 @@ public class NetexMapper {
     this.maxStopToShapeSnapDistance = maxStopToShapeSnapDistance;
     this.profileSupport = profileSupport;
     this.calendarServiceBuilder = new CalendarServiceBuilder(idFactory);
-    this.tripCalendarBuilder = new TripCalendarBuilder(this.calendarServiceBuilder, issueStore);
+    this.tripCalendarBuilder = new TripCalendarBuilder(
+      this.calendarServiceBuilder,
+      issueStore,
+      profileSupport
+    );
     this.sharedGroupMapper = new GroupNetexMapper(
       idFactory,
       issueStore,

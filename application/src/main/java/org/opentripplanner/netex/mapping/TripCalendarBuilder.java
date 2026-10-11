@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMap;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMapById;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMap;
@@ -32,6 +33,7 @@ public class TripCalendarBuilder {
 
   private final CalendarServiceBuilder calendarServiceBuilder;
   private final DataImportIssueStore issueStore;
+  private final NetexProfileSupport profileSupport;
 
   /** ServiceDates by dayType id */
   private HierarchicalMap<String, Set<LocalDate>> dayTypeCalendars = new HierarchicalMap<>();
@@ -41,8 +43,17 @@ public class TripCalendarBuilder {
     CalendarServiceBuilder calendarServiceBuilder,
     DataImportIssueStore issueStore
   ) {
+    this(calendarServiceBuilder, issueStore, NetexProfileSupport.NORDIC);
+  }
+
+  public TripCalendarBuilder(
+    CalendarServiceBuilder calendarServiceBuilder,
+    DataImportIssueStore issueStore,
+    NetexProfileSupport profileSupport
+  ) {
     this.calendarServiceBuilder = calendarServiceBuilder;
     this.issueStore = issueStore;
+    this.profileSupport = profileSupport;
   }
 
   public void push() {
@@ -73,6 +84,40 @@ public class TripCalendarBuilder {
         issueStore
       )
     );
+    if (profileSupport.extendedNetex()) {
+      addDayTypesOfLocalAssignments(
+        dayTypeById,
+        dayTypeAssignmentByDayTypeId,
+        operatingDays,
+        operatingPeriodById
+      );
+    }
+  }
+
+  /**
+   * A day type may be defined on a parent level, for example in a shared file, and assigned on the
+   * current level. The dates are added to the dates assigned on the parent levels. A date that is
+   * available on a parent level can not be excluded on the current level.
+   */
+  private void addDayTypesOfLocalAssignments(
+    ReadOnlyHierarchicalMapById<DayType> dayTypeById,
+    ReadOnlyHierarchicalMap<String, Collection<DayTypeAssignment>> dayTypeAssignmentByDayTypeId,
+    ReadOnlyHierarchicalMapById<OperatingDay> operatingDays,
+    ReadOnlyHierarchicalMapById<OperatingPeriod_VersionStructure> operatingPeriodById
+  ) {
+    DayTypeAssignmentMapper.mapDayTypesOfLocalAssignments(
+      dayTypeById,
+      dayTypeAssignmentByDayTypeId,
+      operatingDays,
+      operatingPeriodById,
+      issueStore
+    ).forEach((dayTypeId, dates) -> {
+      var allDates = new HashSet<>(dates);
+      if (dayTypeCalendars.containsKey(dayTypeId)) {
+        allDates.addAll(dayTypeCalendars.lookup(dayTypeId));
+      }
+      dayTypeCalendars.add(dayTypeId, allDates);
+    });
   }
 
   void addDatedServiceJourneys(

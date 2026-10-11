@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.model.calendar.ServiceCalendarDate;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMapById;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMultimap;
 import org.opentripplanner.netex.mapping.calendar.CalendarServiceBuilder;
@@ -110,6 +111,47 @@ public class TripCalendarBuilderTest {
     assertEquals("[2020-11-01]", listDates(calendar, serviceId1));
     assertEquals("[2020-11-01, 2020-11-02]", listDates(calendar, serviceId2));
     assertEquals("[2020-11-02]", listDates(calendar, serviceId3));
+  }
+
+  @Test
+  public void mapDayTypeAssignedOnChildLevelWithExtendedNetex() {
+    assertEquals(
+      "[2020-11-01]",
+      datesOfDayTypeAssignedOnChildLevel(NetexProfileSupport.of(true, false))
+    );
+    assertEquals("[]", datesOfDayTypeAssignedOnChildLevel(NetexProfileSupport.NORDIC));
+  }
+
+  /**
+   * The day type is defined on the parent level (shared file) and assigned on the child level
+   * (group file).
+   */
+  private static String datesOfDayTypeAssignedOnChildLevel(NetexProfileSupport profileSupport) {
+    var calendarServiceBuilder = new CalendarServiceBuilder(new FeedScopedIdFactory(FEED_ID));
+    var builder = new TripCalendarBuilder(
+      calendarServiceBuilder,
+      DataImportIssueStore.NOOP,
+      profileSupport
+    );
+    var dayTypes = dayType1();
+    var parentAssignments = new HierarchicalMultimap<String, DayTypeAssignment>();
+    builder.addDayTypeAssignments(dayTypes, parentAssignments, EMPTY_OPERATING_DAYS, EMPTY_PERIODS);
+
+    builder.push();
+    var childAssignments = new HierarchicalMultimap<>(parentAssignments);
+    childAssignments.add(DAY_TYPE_1, createDayTypeAssignment(DAY_TYPE_1, D2020_11_01, AVAILABLE));
+    builder.addDayTypeAssignments(
+      new HierarchicalMapById<>(dayTypes),
+      childAssignments,
+      EMPTY_OPERATING_DAYS,
+      EMPTY_PERIODS
+    );
+    var result = builder.createTripCalendar(
+      List.of(new ServiceJourney().withId(SJ_1).withDayTypes(createDayTypeRefList(DAY_TYPE_1)))
+    );
+    builder.pop();
+
+    return listDates(calendarServiceBuilder.createServiceCalendar(), result.get(SJ_1));
   }
 
   /* private helper methods */

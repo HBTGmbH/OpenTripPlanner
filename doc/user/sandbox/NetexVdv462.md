@@ -56,6 +56,7 @@ The feature is under development. The following table lists what is supported so
 | Destination display on the journey pattern, used as headsign until a stop point states another one | Supported |
 | Wheelchair accessibility from the overall `MobilityImpairedAccess` assessment (`true`/`false`) when no `WheelchairAccess` limitation is given (stop places, quays, service journeys) | Supported |
 | Interchanges at a stop point served several times: `FromVisitNumber`/`ToVisitNumber` select the visit | Supported |
+| Day types defined in a shared file and assigned (`DayTypeAssignment`) in a group file | Supported (a date can not be excluded on another file level than it is assigned) |
 | Data without time zone (`FrameDefaults/DefaultLocale/TimeZone`): the `transitModelTimeZone` of the build configuration is used instead of GMT (`NetexTimeZoneFallback`) | Supported |
 
 ### Known limitations

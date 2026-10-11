@@ -88,17 +88,13 @@ public class DayTypeAssignmentMapper {
     Map<String, Set<LocalDate>> result = new HashMap<>();
 
     for (var dayType : dayTypes.localValues()) {
-      var mapper = new DayTypeAssignmentMapper(
+      Set<LocalDate> dates = mapDayType(
         dayType,
+        assignments.lookup(dayType.getId()),
         operatingDays,
         operatingPeriods,
         issueStore
       );
-
-      for (DayTypeAssignment it : assignments.lookup(dayType.getId())) {
-        mapper.map(it);
-      }
-      Set<LocalDate> dates = mapper.mergeAndMapDates();
 
       if (dates.isEmpty()) {
         issueStore.add(new DayTypeScheduleIsEmpty(dayType.getId()));
@@ -109,7 +105,56 @@ public class DayTypeAssignmentMapper {
     return result;
   }
 
+  /**
+   * Map the day types that are defined on a parent level, but assigned by the local
+   * {@code assignments}, for example a day type in a shared file with its assignments in a group
+   * file. {@link #mapDayTypes} only maps the day types of the local level. Assignments of an
+   * unknown day type are ignored.
+   */
+  public static Map<String, Set<LocalDate>> mapDayTypesOfLocalAssignments(
+    ReadOnlyHierarchicalMapById<DayType> dayTypes,
+    ReadOnlyHierarchicalMap<String, Collection<DayTypeAssignment>> assignments,
+    ReadOnlyHierarchicalMapById<OperatingDay> operatingDays,
+    ReadOnlyHierarchicalMapById<OperatingPeriod_VersionStructure> operatingPeriods,
+    DataImportIssueStore issueStore
+  ) {
+    Map<String, Set<LocalDate>> result = new HashMap<>();
+    var localDayTypeIds = dayTypes.localKeys();
+
+    for (String dayTypeId : assignments.localKeys()) {
+      var dayType = dayTypes.lookup(dayTypeId);
+      if (dayType == null || localDayTypeIds.contains(dayTypeId)) {
+        continue;
+      }
+      result.put(
+        dayTypeId,
+        mapDayType(
+          dayType,
+          assignments.lookup(dayTypeId),
+          operatingDays,
+          operatingPeriods,
+          issueStore
+        )
+      );
+    }
+    return result;
+  }
+
   /* private methods */
+
+  private static Set<LocalDate> mapDayType(
+    DayType dayType,
+    Collection<DayTypeAssignment> assignments,
+    ReadOnlyHierarchicalMapById<OperatingDay> operatingDays,
+    ReadOnlyHierarchicalMapById<OperatingPeriod_VersionStructure> operatingPeriods,
+    DataImportIssueStore issueStore
+  ) {
+    var mapper = new DayTypeAssignmentMapper(dayType, operatingDays, operatingPeriods, issueStore);
+    for (DayTypeAssignment it : assignments) {
+      mapper.map(it);
+    }
+    return mapper.mergeAndMapDates();
+  }
 
   private static boolean isDayTypeAvailableForAssigment(DayTypeAssignment dta) {
     if (dta.isIsAvailable() == null) {
