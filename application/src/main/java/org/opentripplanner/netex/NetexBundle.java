@@ -198,7 +198,8 @@ public class NetexBundle implements Closeable {
         index,
         doc,
         ignoredFeatures,
-        allowStopPlaceAsPassengerStopAssignment
+        allowStopPlaceAsPassengerStopAssignment,
+        profileSupport
       );
     } catch (JAXBException e) {
       throw new RuntimeException(e.getMessage(), e);

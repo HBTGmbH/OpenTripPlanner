@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nullable;
 import org.opentripplanner.framework.application.OTPFeature;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMapById;
 import org.rutebanken.netex.model.DestinationDisplay;
@@ -25,6 +26,8 @@ import org.rutebanken.netex.model.NetworksInFrame_RelStructure;
 import org.rutebanken.netex.model.PassengerStopAssignment;
 import org.rutebanken.netex.model.Route;
 import org.rutebanken.netex.model.RoutesInFrame_RelStructure;
+import org.rutebanken.netex.model.ScheduledStopPoint;
+import org.rutebanken.netex.model.ScheduledStopPointsInFrame_RelStructure;
 import org.rutebanken.netex.model.ServiceLink;
 import org.rutebanken.netex.model.ServiceLinksInFrame_RelStructure;
 import org.rutebanken.netex.model.Service_VersionFrameStructure;
@@ -63,14 +66,20 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
   private final Collection<ServiceLink> serviceLinks = new ArrayList<>();
 
   private final NoticeParser noticeParser = new NoticeParser();
+  private final Collection<ScheduledStopPoint> scheduledStopPoints = new ArrayList<>();
+
   private final boolean allowStopPlaceAsPassengerStopAssignment;
+
+  private final NetexProfileSupport profileSupport;
 
   ServiceFrameParser(
     ReadOnlyHierarchicalMapById<FlexibleStopPlace> flexibleStopPlaceById,
-    boolean allowStopPlaceAsPassengerStopAssignment
+    boolean allowStopPlaceAsPassengerStopAssignment,
+    NetexProfileSupport profileSupport
   ) {
     this.flexibleStopPlaceById = flexibleStopPlaceById;
     this.allowStopPlaceAsPassengerStopAssignment = allowStopPlaceAsPassengerStopAssignment;
+    this.profileSupport = profileSupport;
   }
 
   @Override
@@ -103,7 +112,11 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
     warnOnMissingMapping(LOG, frame.getRouteLinks());
     warnOnMissingMapping(LOG, frame.getRoutePoints());
     warnOnMissingMapping(LOG, frame.getRoutingConstraintZones());
-    warnOnMissingMapping(LOG, frame.getScheduledStopPoints());
+    if (profileSupport.extendedNetex()) {
+      parseScheduledStopPoints(frame.getScheduledStopPoints());
+    } else {
+      warnOnMissingMapping(LOG, frame.getScheduledStopPoints());
+    }
     warnOnMissingMapping(LOG, frame.getServiceExclusions());
     warnOnMissingMapping(LOG, frame.getServicePatterns());
     warnOnMissingMapping(LOG, frame.getStopAreas());
@@ -131,6 +144,7 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
     noticeParser.setResultOnIndex(index);
     index.quayIdByStopPointRef.addAll(quayIdByStopPointRef);
     index.stopPlaceIdByStopPointRef.addAll(stopPlaceByStopPointRef);
+    index.scheduledStopPointById.addAll(scheduledStopPoints);
     index.flexibleStopPlaceByStopPointRef.addAll(flexibleStopPlaceByStopPointRef);
     index.routeById.addAll(routes);
     index.serviceLinkById.addAll(serviceLinks);
@@ -175,6 +189,16 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
       } else {
         warnOnMissingMapping(LOG, stopAssignment.getValue());
       }
+    }
+  }
+
+  /**
+   * Scheduled stop points carry the position of a stop point in profiles which do not assign the
+   * stop point to a quay, like VDV 462.
+   */
+  private void parseScheduledStopPoints(@Nullable ScheduledStopPointsInFrame_RelStructure points) {
+    if (points != null) {
+      scheduledStopPoints.addAll(points.getScheduledStopPoint());
     }
   }
 

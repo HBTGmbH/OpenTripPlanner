@@ -6,13 +6,16 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import jakarta.xml.bind.JAXBElement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMapById;
 import org.opentripplanner.netex.mapping.MappingSupport;
 import org.rutebanken.netex.model.ObjectFactory;
 import org.rutebanken.netex.model.PassengerStopAssignment;
 import org.rutebanken.netex.model.QuayRefStructure;
+import org.rutebanken.netex.model.ScheduledStopPoint;
 import org.rutebanken.netex.model.ScheduledStopPointRefStructure;
+import org.rutebanken.netex.model.ScheduledStopPointsInFrame_RelStructure;
 import org.rutebanken.netex.model.Service_VersionFrameStructure;
 import org.rutebanken.netex.model.StopPlaceRefStructure;
 
@@ -31,7 +34,11 @@ class ServiceFrameParserTest {
 
   @BeforeEach
   void setUp() {
-    serviceFrameParser = new ServiceFrameParser(new HierarchicalMapById<>(), true);
+    serviceFrameParser = new ServiceFrameParser(
+      new HierarchicalMapById<>(),
+      true,
+      NetexProfileSupport.NORDIC
+    );
     serviceFrame = OBJECT_FACTORY.createService_VersionFrameStructure();
     netexEntityIndex = new NetexEntityIndex();
   }
@@ -71,7 +78,11 @@ class ServiceFrameParserTest {
 
   @Test
   void testPassengerStopAssignmentWithStopPlaceRefIsIgnoredWhenFeatureDisabled() {
-    serviceFrameParser = new ServiceFrameParser(new HierarchicalMapById<>(), false);
+    serviceFrameParser = new ServiceFrameParser(
+      new HierarchicalMapById<>(),
+      false,
+      NetexProfileSupport.NORDIC
+    );
     addPassengerStopAssignment(
       new PassengerStopAssignment()
         .withScheduledStopPointRef(createScheduledStopPointRef(STOP_POINT_REF_2))
@@ -83,6 +94,42 @@ class ServiceFrameParserTest {
 
     assertNull(netexEntityIndex.stopPlaceIdByStopPointRef.lookup(STOP_POINT_REF_2));
     assertNull(netexEntityIndex.quayIdByStopPointRef.lookup(STOP_POINT_REF_2));
+  }
+
+  @Test
+  void parseScheduledStopPointsWithExtendedNetex() {
+    serviceFrameParser = new ServiceFrameParser(
+      new HierarchicalMapById<>(),
+      true,
+      NetexProfileSupport.of(true, false)
+    );
+    serviceFrame.withScheduledStopPoints(
+      new ScheduledStopPointsInFrame_RelStructure().withScheduledStopPoint(
+        new ScheduledStopPoint().withId(STOP_POINT_REF_1)
+      )
+    );
+
+    serviceFrameParser.parse(serviceFrame);
+    serviceFrameParser.setResultOnIndex(netexEntityIndex);
+
+    assertEquals(
+      STOP_POINT_REF_1,
+      netexEntityIndex.scheduledStopPointById.lookup(STOP_POINT_REF_1).getId()
+    );
+  }
+
+  @Test
+  void ignoreScheduledStopPointsForNordicProfile() {
+    serviceFrame.withScheduledStopPoints(
+      new ScheduledStopPointsInFrame_RelStructure().withScheduledStopPoint(
+        new ScheduledStopPoint().withId(STOP_POINT_REF_1)
+      )
+    );
+
+    serviceFrameParser.parse(serviceFrame);
+    serviceFrameParser.setResultOnIndex(netexEntityIndex);
+
+    assertNull(netexEntityIndex.scheduledStopPointById.lookup(STOP_POINT_REF_1));
   }
 
   @Test

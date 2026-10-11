@@ -31,6 +31,7 @@ import org.rutebanken.netex.model.Operator;
 import org.rutebanken.netex.model.Parking;
 import org.rutebanken.netex.model.Quay;
 import org.rutebanken.netex.model.Route;
+import org.rutebanken.netex.model.ScheduledStopPoint;
 import org.rutebanken.netex.model.ServiceJourney;
 import org.rutebanken.netex.model.ServiceJourneyInterchange;
 import org.rutebanken.netex.model.ServiceLink;
@@ -95,6 +96,7 @@ public class NetexEntityIndex {
   public final HierarchicalMapById<Route> routeById;
   public final HierarchicalMapById<ServiceJourney> serviceJourneyById;
   public final HierarchicalMapById<ServiceJourneyInterchange> serviceJourneyInterchangeById;
+  public final HierarchicalMapById<ScheduledStopPoint> scheduledStopPointById;
   public final HierarchicalMapById<ServiceLink> serviceLinkById;
   public final HierarchicalVersionMapById<StopPlace> stopPlaceById;
   public final HierarchicalVersionMapById<TariffZone_VersionStructure> tariffZonesById;
@@ -140,6 +142,7 @@ public class NetexEntityIndex {
     this.quayIdByStopPointRef = new HierarchicalMap<>();
     this.routeById = new HierarchicalMapById<>();
     this.serviceJourneyById = new HierarchicalMapById<>();
+    this.scheduledStopPointById = new HierarchicalMapById<>();
     this.serviceLinkById = new HierarchicalMapById<>();
     this.serviceJourneyInterchangeById = new HierarchicalMapById<>();
     this.stopPlaceById = new HierarchicalVersionMapById<>();
@@ -185,6 +188,7 @@ public class NetexEntityIndex {
     this.quayIdByStopPointRef = new HierarchicalMap<>(parent.quayIdByStopPointRef);
     this.routeById = new HierarchicalMapById<>(parent.routeById);
     this.serviceJourneyById = new HierarchicalMapById<>(parent.serviceJourneyById);
+    this.scheduledStopPointById = new HierarchicalMapById<>(parent.scheduledStopPointById);
     this.serviceLinkById = new HierarchicalMapById<>(parent.serviceLinkById);
     this.serviceJourneyInterchangeById = new HierarchicalMapById<>(
       parent.serviceJourneyInterchangeById
@@ -330,6 +334,11 @@ public class NetexEntityIndex {
       @Override
       public ReadOnlyHierarchicalVersionMapById<Quay> getQuayById() {
         return quayById;
+      }
+
+      @Override
+      public ReadOnlyHierarchicalMapById<ScheduledStopPoint> getScheduledStopPointById() {
+        return scheduledStopPointById;
       }
 
       @Override

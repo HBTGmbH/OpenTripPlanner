@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import org.opentripplanner.netex.config.IgnorableFeature;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.rutebanken.netex.model.Common_VersionFrameStructure;
 import org.rutebanken.netex.model.CompositeFrame;
@@ -36,15 +37,18 @@ public class NetexDocumentParser {
   private final NetexEntityIndex netexIndex;
   private final Set<IgnorableFeature> ignoredFeatures;
   private final boolean allowStopPlaceAsPassengerStopAssignment;
+  private final NetexProfileSupport profileSupport;
 
   private NetexDocumentParser(
     NetexEntityIndex netexIndex,
     Set<IgnorableFeature> ignoredFeatures,
-    boolean allowStopPlaceAsPassengerStopAssignment
+    boolean allowStopPlaceAsPassengerStopAssignment,
+    NetexProfileSupport profileSupport
   ) {
     this.netexIndex = netexIndex;
     this.ignoredFeatures = ignoredFeatures;
     this.allowStopPlaceAsPassengerStopAssignment = allowStopPlaceAsPassengerStopAssignment;
+    this.profileSupport = profileSupport;
   }
 
   /**
@@ -55,11 +59,15 @@ public class NetexDocumentParser {
     NetexEntityIndex index,
     PublicationDeliveryStructure doc,
     Set<IgnorableFeature> ignoredFeatures,
-    boolean allowStopPlaceAsPassengerStopAssignment
+    boolean allowStopPlaceAsPassengerStopAssignment,
+    NetexProfileSupport profileSupport
   ) {
-    new NetexDocumentParser(index, ignoredFeatures, allowStopPlaceAsPassengerStopAssignment).parse(
-      doc
-    );
+    new NetexDocumentParser(
+      index,
+      ignoredFeatures,
+      allowStopPlaceAsPassengerStopAssignment,
+      profileSupport
+    ).parse(doc);
   }
 
   /** Top level parse method - parses the document. */
@@ -85,7 +93,8 @@ public class NetexDocumentParser {
         frame,
         new ServiceFrameParser(
           netexIndex.flexibleStopPlaceById,
-          allowStopPlaceAsPassengerStopAssignment
+          allowStopPlaceAsPassengerStopAssignment,
+          profileSupport
         )
       );
     } else if (value instanceof SiteFrame frame) {

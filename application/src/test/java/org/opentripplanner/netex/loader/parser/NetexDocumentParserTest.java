@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.netex.loader.NetexXmlParser;
 
@@ -41,7 +42,13 @@ class NetexDocumentParserTest {
       new ByteArrayInputStream(COMPOSITE_FRAME_WITHOUT_FRAMES.getBytes(StandardCharsets.UTF_8))
     );
 
-    NetexDocumentParser.parseAndPopulateIndex(index, document, Set.of(), false);
+    NetexDocumentParser.parseAndPopulateIndex(
+      index,
+      document,
+      Set.of(),
+      false,
+      NetexProfileSupport.NORDIC
+    );
 
     assertEquals("Operator 1", index.operatorsById.lookup("OP_1").getName().getValue());
   }

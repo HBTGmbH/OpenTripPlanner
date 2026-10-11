@@ -22,6 +22,7 @@ import org.rutebanken.netex.model.Operator;
 import org.rutebanken.netex.model.Parking;
 import org.rutebanken.netex.model.Quay;
 import org.rutebanken.netex.model.Route;
+import org.rutebanken.netex.model.ScheduledStopPoint;
 import org.rutebanken.netex.model.ServiceJourney;
 import org.rutebanken.netex.model.ServiceJourneyInterchange;
 import org.rutebanken.netex.model.ServiceLink;
@@ -66,6 +67,12 @@ public interface NetexEntityIndexReadOnlyView {
   ReadOnlyHierarchicalMapById<Operator> getOperatorsById();
 
   ReadOnlyHierarchicalVersionMapById<Quay> getQuayById();
+
+  /**
+   * Scheduled stop points are only indexed if extended NeTEx support is enabled, see
+   * {@link org.opentripplanner.netex.config.NetexProfileSupport#extendedNetex()}.
+   */
+  ReadOnlyHierarchicalMapById<ScheduledStopPoint> getScheduledStopPointById();
 
   ReadOnlyHierarchicalMap<String, String> getStopPlaceIdByStopPointRef();
 
