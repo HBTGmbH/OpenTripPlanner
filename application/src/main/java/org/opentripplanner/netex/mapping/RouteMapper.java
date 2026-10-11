@@ -25,6 +25,7 @@ import org.rutebanken.netex.model.BrandingRefStructure;
 import org.rutebanken.netex.model.FlexibleLine_VersionStructure;
 import org.rutebanken.netex.model.GroupOfLinesRefStructure;
 import org.rutebanken.netex.model.Line_VersionStructure;
+import org.rutebanken.netex.model.MultilingualString;
 import org.rutebanken.netex.model.Network;
 import org.rutebanken.netex.model.OperatorRefStructure;
 import org.rutebanken.netex.model.PresentationStructure;
@@ -73,14 +74,30 @@ class RouteMapper {
   }
 
   Route mapRoute(Line_VersionStructure line) {
+    MultilingualString name = line.getName() != null ? line.getName() : line.getShortName();
+    if (name == null && line.getPublicCode() == null) {
+      issueStore.add(
+        "LineWithoutName",
+        "Line %s has neither Name, ShortName nor PublicCode and is skipped.",
+        line.getId()
+      );
+      return null;
+    }
+    if (line.getName() == null) {
+      issueStore.add(
+        "LineWithoutName",
+        "Line %s has no Name, using ShortName or PublicCode instead.",
+        line.getId()
+      );
+    }
+
     RouteBuilder builder = Route.of(idFactory.createId(line.getId()));
 
     builder.getGroupsOfRoutes().addAll(getGroupOfRoutes(line));
     builder.withAgency(findOrCreateAuthority(line));
     builder.withOperator(findOperator(line));
     builder.withBranding(findBranding(line));
-    NonLocalizedString longName = NonLocalizedString.ofNullable(line.getName().getValue());
-    builder.withLongName(longName);
+    builder.withLongName(NonLocalizedString.ofNullable(name, MultilingualString::getValue));
     builder.withShortName(line.getPublicCode());
 
     NetexMainAndSubMode mode;

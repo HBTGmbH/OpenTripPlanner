@@ -127,6 +127,31 @@ class RouteMapperTest {
   }
 
   @Test
+  void mapRouteWithoutNameUsesShortName() {
+    var issueStore = new DefaultDataImportIssueStore();
+    var line = createExampleLine();
+    line.setName(null);
+    line.setShortName(new MultilingualString().withValue("Short 1"));
+
+    Route route = createRouteMapper(new NetexEntityIndex(), issueStore).mapRoute(line);
+
+    assertEquals("Short 1", route.getLongName().toString());
+    assertEquals("L1", route.getShortName());
+    assertThat(listIssueTypes(issueStore)).contains("LineWithoutName");
+  }
+
+  @Test
+  void skipRouteWithoutAnyName() {
+    var issueStore = new DefaultDataImportIssueStore();
+    var line = createExampleLine();
+    line.setName(null);
+    line.setPublicCode(null);
+
+    assertNull(createRouteMapper(new NetexEntityIndex(), issueStore).mapRoute(line));
+    assertThat(listIssueTypes(issueStore)).containsExactly("LineWithoutName");
+  }
+
+  @Test
   void mapRouteWithColor() {
     NetexEntityIndex netexEntityIndex = new NetexEntityIndex();
     Line line = createExampleLine();
