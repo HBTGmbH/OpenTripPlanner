@@ -90,7 +90,12 @@ class StopAndStationMapper {
       siteRepositoryBuilder,
       fallbackCoordinateByStopPlaceId
     );
-    this.quayMapper = new QuayMapper(idFactory, issueStore, siteRepositoryBuilder);
+    this.quayMapper = new QuayMapper(
+      idFactory,
+      issueStore,
+      siteRepositoryBuilder,
+      profileSupport.extendedNetex()
+    );
     this.tariffZoneMapper = tariffZoneMapper;
     this.quayIndex = quayIndex;
     this.issueStore = issueStore;

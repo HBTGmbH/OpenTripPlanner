@@ -333,6 +333,36 @@ class StopAndStationMapperTest {
     ).hasSize(expectedIssues);
   }
 
+  @ParameterizedTest
+  @CsvSource({ "false, 0", "true, 1" })
+  void placeQuayWithoutCoordinatesAtTheStopPlaceWithExtendedNetex(
+    boolean extended,
+    int expectedStops
+  ) {
+    var stopPlace = createStopPlace("ST:StopPlace:1", "Stop place", "1", 59.0, 10.0, null);
+    var quay = createQuay("ST:Quay:1", "Quay1", "1", 0.0, 0.0, "a").withCentroid(null);
+    stopPlace.setQuays(new Quays_RelStructure().withQuayRefOrQuay(objectFactory.createQuay(quay)));
+    var mapper = new StopAndStationMapper(
+      MappingSupport.ID_FACTORY,
+      new HierarchicalVersionMapById<>(),
+      null,
+      SiteRepository.of(),
+      DEFAULT_TIME_ZONE,
+      DataImportIssueStore.NOOP,
+      false,
+      Set.of(),
+      Map.of(),
+      NetexProfileSupport.of(extended, false)
+    );
+
+    mapper.mapParentAndChildStops(List.of(stopPlace));
+
+    assertThat(mapper.resultStops).hasSize(expectedStops);
+    mapper.resultStops.forEach(stop ->
+      assertEquals(mapper.resultStations.getFirst().getCoordinate(), stop.getCoordinate())
+    );
+  }
+
   @Test
   void testRouteToCentroid() {
     var routeToCentroidStopPlaceIds = Set.of(MappingSupport.ID_FACTORY.createId("NSR:StopPlace:1"));

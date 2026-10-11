@@ -30,14 +30,28 @@ class QuayMapper {
 
   private final SiteRepositoryBuilder siteRepositoryBuilder;
 
+  /** Place a quay without coordinates at its parent station, instead of skipping it. */
+  private final boolean useStationCoordinateForQuayWithoutCoordinates;
+
   QuayMapper(
     FeedScopedIdFactory idFactory,
     DataImportIssueStore issueStore,
     SiteRepositoryBuilder siteRepositoryBuilder
   ) {
+    this(idFactory, issueStore, siteRepositoryBuilder, false);
+  }
+
+  QuayMapper(
+    FeedScopedIdFactory idFactory,
+    DataImportIssueStore issueStore,
+    SiteRepositoryBuilder siteRepositoryBuilder,
+    boolean useStationCoordinateForQuayWithoutCoordinates
+  ) {
     this.idFactory = idFactory;
     this.issueStore = issueStore;
     this.siteRepositoryBuilder = siteRepositoryBuilder;
+    this.useStationCoordinateForQuayWithoutCoordinates =
+      useStationCoordinateForQuayWithoutCoordinates;
   }
 
   /**
@@ -67,6 +81,15 @@ class QuayMapper {
   ) {
     var coordinate = WgsCoordinateMapper.mapToDomain(quay.getCentroid());
 
+    if (coordinate == null && useStationCoordinateForQuayWithoutCoordinates) {
+      coordinate = parentStation.getCoordinate();
+      issueStore.add(
+        "QuayLocatedAtStopPlace",
+        "Quay %s does not contain any coordinates. It is placed at its stop place %s.",
+        quay.getId(),
+        parentStation.getId()
+      );
+    }
     if (coordinate == null) {
       issueStore.add(
         "QuayWithoutCoordinates",

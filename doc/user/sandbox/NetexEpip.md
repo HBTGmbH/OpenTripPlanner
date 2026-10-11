@@ -63,6 +63,7 @@ The feature is under development. The following table lists what is supported so
 | Day types defined in a shared file and assigned (`DayTypeAssignment`) in a group file | Supported (a date can not be excluded on another file level than it is assigned) |
 | Lines without `TransportMode` or with mode `unknown`: the mode is derived from the service journeys of the line, else from the stop places they serve (`LineTransportModeDerived`); service journeys with mode `unknown` use the mode of their line | Supported for journeys in the same file level as the line |
 | Scheduled stop points used for boarding or alighting without any passenger stop assignment: a stop without parent station is created at the scheduled stop point (`StopDerivedFromUnassignedScheduledStopPoint`) | Supported |
+| Quays without coordinates are placed at their stop place instead of being skipped (`QuayLocatedAtStopPlace`) | Supported |
 | Data without time zone (`FrameDefaults/DefaultLocale/TimeZone`): the `transitModelTimeZone` of the build configuration is used instead of GMT (`NetexTimeZoneFallback`) | Supported |
 
 ### Known limitations
