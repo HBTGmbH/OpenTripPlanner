@@ -520,11 +520,20 @@ public class NetexMapper {
   }
 
   private void mapNoticeAssignments() {
+    var inlineAssignments = profileSupport.extendedNetex()
+      ? InlineNoticeAssignments.collect(
+          currentNetexIndex.getJourneyPatternsById().localValues(),
+          currentNetexIndex.getLineById().localValues(),
+          currentNetexIndex.getServiceJourneyById().localValues()
+        )
+      : null;
+
     NoticeAssignmentMapper noticeAssignmentMapper = new NoticeAssignmentMapper(
       issueStore,
       idFactory,
       currentNetexIndex.getServiceJourneyById().localValues(),
       currentNetexIndex.getNoticeById(),
+      inlineAssignments == null ? Map.of() : inlineAssignments.noticesById(),
       transitBuilder.getRoutes(),
       transitBuilder.getTripsById(),
       currentMapperIndexes.getStopTimesByNetexId()
@@ -535,6 +544,14 @@ public class NetexMapper {
       Multimap<AbstractTransitEntity, Notice> noticesByElementId;
       noticesByElementId = noticeAssignmentMapper.map(noticeAssignment);
       transitBuilder.getNoticeAssignments().putAll(noticesByElementId);
+    }
+
+    if (inlineAssignments != null) {
+      for (var it : inlineAssignments.assignments()) {
+        transitBuilder
+          .getNoticeAssignments()
+          .putAll(noticeAssignmentMapper.map(it.noticeAssignment(), it.noticedObjectId()));
+      }
     }
   }
 

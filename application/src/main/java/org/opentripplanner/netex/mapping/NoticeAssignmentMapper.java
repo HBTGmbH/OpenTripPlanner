@@ -3,6 +3,7 @@ package org.opentripplanner.netex.mapping;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import java.util.Collection;
+import java.util.Map;
 import javax.annotation.Nullable;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
@@ -35,6 +36,9 @@ class NoticeAssignmentMapper {
 
   private final ReadOnlyHierarchicalMap<String, org.rutebanken.netex.model.Notice> noticesById;
 
+  /** Notices defined inside notice assignments embedded in the noticed element. */
+  private final Map<String, org.rutebanken.netex.model.Notice> inlineNoticesById;
+
   private final EntityById<Route> routesById;
 
   private final EntityById<Trip> tripsById;
@@ -49,6 +53,7 @@ class NoticeAssignmentMapper {
     FeedScopedIdFactory idFactory,
     Collection<ServiceJourney> serviceJourneys,
     ReadOnlyHierarchicalMap<String, org.rutebanken.netex.model.Notice> noticesById,
+    Map<String, org.rutebanken.netex.model.Notice> inlineNoticesById,
     EntityById<Route> routesById,
     EntityById<Trip> tripsById,
     ReadOnlyHierarchicalMap<String, StopTime> stopTimesByNetexId
@@ -57,6 +62,7 @@ class NoticeAssignmentMapper {
     this.idFactory = idFactory;
     this.noticeMapper = new NoticeMapper(idFactory);
     this.noticesById = noticesById;
+    this.inlineNoticesById = inlineNoticesById;
     this.routesById = routesById;
     this.tripsById = tripsById;
     this.stopTimesByNetexId = stopTimesByNetexId;
@@ -70,12 +76,22 @@ class NoticeAssignmentMapper {
   }
 
   Multimap<AbstractTransitEntity, Notice> map(NoticeAssignment noticeAssignment) {
+    return map(noticeAssignment, noticeAssignment.getNoticedObjectRef().getRef());
+  }
+
+  /**
+   * Map a notice assignment to the given noticed object. This is used for assignments embedded in
+   * the noticed element, where the noticed object is given by the context.
+   */
+  Multimap<AbstractTransitEntity, Notice> map(
+    NoticeAssignment noticeAssignment,
+    String noticedObjectId
+  ) {
     // TODO OTP2 - Idealy this should en up as one key,value pair.
     //             The `StopPointInJourneyPattern` which result in more than one key/valye pair,
     //             can be replaced with a new compound key type.
     Multimap<AbstractTransitEntity, Notice> noticiesByEntity = ArrayListMultimap.create();
 
-    String noticedObjectId = noticeAssignment.getNoticedObjectRef().getRef();
     Notice otpNotice = getOrMapNotice(noticeAssignment);
 
     if (otpNotice == null) {
@@ -117,10 +133,14 @@ class NoticeAssignmentMapper {
 
   @Nullable
   private Notice getOrMapNotice(NoticeAssignment assignment) {
-    org.rutebanken.netex.model.Notice notice =
-      assignment.getNotice() != null
-        ? assignment.getNotice()
-        : noticesById.lookup(assignment.getNoticeRef().getRef());
+    org.rutebanken.netex.model.Notice notice = assignment.getNotice();
+    if (notice == null && assignment.getNoticeRef() != null) {
+      String noticeId = assignment.getNoticeRef().getRef();
+      notice = noticesById.lookup(noticeId);
+      if (notice == null) {
+        notice = inlineNoticesById.get(noticeId);
+      }
+    }
 
     return notice == null ? null : noticeMapper.map(notice);
   }

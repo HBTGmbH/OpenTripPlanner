@@ -8,6 +8,7 @@ import java.util.TreeMap;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.ConstantsForTests;
+import org.opentripplanner.framework.application.OTPFeature;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueSummary;
 import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.model.TransitDataImport;
@@ -57,6 +58,44 @@ class NetexImportRegressionTest {
   tripPatterns=4
   trips=110
   """;
+
+  private static final String EPIP_WITH_FEATURE_BASELINE = """
+  agencies=3
+  groupsOfStations=0
+  issues={}
+  multiModalStations=0
+  noticeAssignments=2032
+  operators=2
+  regularStops=31
+  routes=2
+  serviceIds=2
+  stations=20
+  transfers=0
+  tripOnServiceDates=0
+  tripPatterns=4
+  trips=110
+  """;
+
+  /** The profile features only extend the import for constructs the Nordic data does not use. */
+  @Test
+  void nordicImportIsUnchangedWithProfileFeatures() {
+    OTPFeature.NetexEpip.testOn(() ->
+      OTPFeature.NetexVdv462.testOn(() ->
+        assertThat(importSummary(ConstantsForTests::createMinimalNetexNordicBundle)).isEqualTo(
+          NORDIC_BASELINE
+        )
+      )
+    );
+  }
+
+  @Test
+  void epipImportWithNetexEpipFeature() {
+    OTPFeature.NetexEpip.testOn(() ->
+      assertThat(importSummary(ConstantsForTests::createMinimalNetexEpipBundle)).isEqualTo(
+        EPIP_WITH_FEATURE_BASELINE
+      )
+    );
+  }
 
   @Test
   void nordicImportIsUnchanged() {

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.google.common.collect.Multimap;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.model.StopTime;
@@ -29,6 +30,7 @@ import org.rutebanken.netex.model.VersionOfObjectRefStructure;
 public class NoticeAssignmentMapperTest {
 
   private static final String ROUTE_ID = "RUT:Route:1";
+  private static final String TRIP_ID = "RUT:ServiceJourney:1";
   private static final String STOP_POINT_ID = "RUT:StopPointInJourneyPattern:1";
   private static final String NOTICE_ID = "RUT:Notice:1";
   private static final String TIMETABLED_PASSING_TIME1 = "RUT:TimetabledPassingTime:1";
@@ -56,6 +58,7 @@ public class NoticeAssignmentMapperTest {
       MappingSupport.ID_FACTORY,
       List.of(),
       new HierarchicalMapById<>(),
+      Map.of(),
       routesById,
       new DefaultEntityById<>(),
       new HierarchicalMap<>()
@@ -106,6 +109,7 @@ public class NoticeAssignmentMapperTest {
       MappingSupport.ID_FACTORY,
       serviceJourneys,
       noticesById,
+      Map.of(),
       new DefaultEntityById<>(),
       new DefaultEntityById<>(),
       stopTimesById
@@ -130,6 +134,33 @@ public class NoticeAssignmentMapperTest {
 
     assertEquals(NOTICE_ID, notice2a.getId().getId());
     assertEquals(NOTICE_ID, notice2b.getId().getId());
+  }
+
+  @Test
+  public void mapInlineNoticeAssignmentReferencingInlineNotice() {
+    var trip = TransitRepositoryForTest.trip(TRIP_ID).build();
+    var tripsById = new DefaultEntityById<Trip>();
+    tripsById.add(trip);
+
+    NoticeAssignmentMapper noticeAssignmentMapper = new NoticeAssignmentMapper(
+      DataImportIssueStore.NOOP,
+      MappingSupport.ID_FACTORY,
+      List.of(),
+      new HierarchicalMapById<>(),
+      Map.of(NOTICE_ID, NOTICE),
+      new DefaultEntityById<>(),
+      tripsById,
+      new HierarchicalMap<>()
+    );
+
+    // Embedded in the service journey: no noticed object ref, notice given by reference
+    var noticeAssignment = new NoticeAssignment().withNoticeRef(
+      new NoticeRefStructure().withRef(NOTICE_ID)
+    );
+
+    var noticesByElement = noticeAssignmentMapper.map(noticeAssignment, TRIP_ID);
+
+    assertEquals(NOTICE_ID, noticesByElement.get(trip).iterator().next().getId().getId());
   }
 
   private static TimetabledPassingTime createTimetabledPassingTime(String id, String stopPointId) {
