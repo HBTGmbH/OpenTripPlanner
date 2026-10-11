@@ -19,6 +19,7 @@ import org.opentripplanner.model.StopTime;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMap;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMapById;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
+import org.opentripplanner.netex.support.JourneyPatternHelper;
 import org.opentripplanner.transit.model.basic.SubMode;
 import org.opentripplanner.transit.model.basic.TransitMode;
 import org.opentripplanner.transit.model.framework.DataValidationException;
@@ -42,7 +43,6 @@ import org.rutebanken.netex.model.FlexibleLine;
 import org.rutebanken.netex.model.JourneyPattern_VersionStructure;
 import org.rutebanken.netex.model.OperatingDay;
 import org.rutebanken.netex.model.Route;
-import org.rutebanken.netex.model.RouteView;
 import org.rutebanken.netex.model.ServiceJourney;
 import org.rutebanken.netex.model.ServiceLink;
 import org.rutebanken.netex.model.VehicleJourneyRefStructure;
@@ -249,7 +249,7 @@ class TripPatternMapper {
     }
 
     var tripPattern = TripPattern.of(idFactory.createId(journeyPattern.getId()))
-      .withRoute(lookupRoute(journeyPattern))
+      .withRoute(lookupRoute(journeyPattern, trips.get(0)))
       .withStopPattern(stopPattern)
       .withMode(trips.get(0).getMode())
       .withNetexSubmode(trips.get(0).getNetexSubMode())
@@ -363,18 +363,17 @@ class TripPatternMapper {
       .build();
   }
 
+  /**
+   * Find the route of the pattern through its NeTEx Route or RouteView. If the line can not be
+   * resolved this way, use the route of the first trip, which was resolved from the journey.
+   */
   private org.opentripplanner.transit.model.network.Route lookupRoute(
-    JourneyPattern_VersionStructure journeyPattern
+    JourneyPattern_VersionStructure journeyPattern,
+    Trip firstTrip
   ) {
-    String lineId = null;
-    if (journeyPattern.getRouteRef() != null) {
-      Route route = routeById.lookup(journeyPattern.getRouteRef().getRef());
-      lineId = route.getLineRef().getValue().getRef();
-    } else {
-      RouteView routeView = journeyPattern.getRouteView();
-      lineId = routeView.getLineRef().getValue().getRef();
-    }
-    return otpRouteById.get(idFactory.createId(lineId));
+    String lineId = JourneyPatternHelper.getLineFromRoute(routeById, journeyPattern);
+    var route = lineId == null ? null : otpRouteById.get(idFactory.createId(lineId));
+    return route != null ? route : firstTrip.getRoute();
   }
 
   private List<TripTimes<?>> createTripTimes(

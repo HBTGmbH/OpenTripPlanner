@@ -194,9 +194,8 @@ class TripMapper {
       );
       lineRef = JourneyPatternHelper.getLineFromRoute(routeById, journeyPattern);
     }
-    org.opentripplanner.transit.model.network.Route route = otpRouteById.get(
-      idFactory.createId(lineRef)
-    );
+    org.opentripplanner.transit.model.network.Route route =
+      lineRef == null ? null : otpRouteById.get(idFactory.createId(lineRef));
 
     if (route == null) {
       issueStore.add(

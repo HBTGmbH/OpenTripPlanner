@@ -24,6 +24,7 @@ import org.opentripplanner.transit.model.timetable.VehicleAssignment;
 import org.rutebanken.netex.model.DatedServiceJourney;
 import org.rutebanken.netex.model.OperatingDay;
 import org.rutebanken.netex.model.ReplacedJourneys_RelStructure;
+import org.rutebanken.netex.model.RouteRefStructure;
 import org.rutebanken.netex.model.ServiceAlterationEnumeration;
 import org.rutebanken.netex.model.VehicleTypeRefStructure;
 
@@ -90,6 +91,16 @@ class TripPatternMapperTest {
     assertEquals(18240, tripTimes.getDepartureTime(1));
     assertEquals(18600, tripTimes.getDepartureTime(2));
     assertEquals(18900, tripTimes.getDepartureTime(3));
+  }
+
+  @Test
+  void useRouteOfTripIfPatternRouteIsUnknown() {
+    NetexTestDataSample sample = new NetexTestDataSample();
+    sample.getJourneyPattern().withRouteRef(new RouteRefStructure().withRef("RUT:Route:Unknown"));
+
+    TripPatternMapperResult r = mapTripPattern(sample).orElseThrow();
+
+    assertEquals("RUT:Line:1", r.tripPattern().getRoute().getId().getId());
   }
 
   @Test
