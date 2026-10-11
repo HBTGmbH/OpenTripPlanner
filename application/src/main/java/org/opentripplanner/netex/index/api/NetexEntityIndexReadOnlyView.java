@@ -7,6 +7,7 @@ import org.rutebanken.netex.model.DatedServiceJourney;
 import org.rutebanken.netex.model.DayType;
 import org.rutebanken.netex.model.DayTypeAssignment;
 import org.rutebanken.netex.model.DestinationDisplay;
+import org.rutebanken.netex.model.Direction;
 import org.rutebanken.netex.model.FlexibleLine;
 import org.rutebanken.netex.model.FlexibleStopPlace;
 import org.rutebanken.netex.model.GroupOfLines;
@@ -80,6 +81,12 @@ public interface NetexEntityIndexReadOnlyView {
    * {@link org.opentripplanner.netex.config.NetexProfileSupport#extendedNetex()}.
    */
   ReadOnlyHierarchicalMapById<SiteConnection> getSiteConnectionById();
+
+  /**
+   * Directions are only indexed if extended NeTEx support is enabled, see
+   * {@link org.opentripplanner.netex.config.NetexProfileSupport#extendedNetex()}.
+   */
+  ReadOnlyHierarchicalMapById<Direction> getDirectionById();
 
   ReadOnlyHierarchicalMap<String, String> getStopPlaceIdByStopPointRef();
 

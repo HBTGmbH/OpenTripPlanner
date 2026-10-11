@@ -10,6 +10,7 @@ import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMap;
+import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMapById;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.opentripplanner.netex.mapping.support.NetexMainAndSubMode;
 import org.opentripplanner.netex.support.JourneyPatternHelper;
@@ -18,6 +19,8 @@ import org.opentripplanner.transit.model.framework.EntityById;
 import org.opentripplanner.transit.model.organization.Operator;
 import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.VehicleAssignment;
+import org.rutebanken.netex.model.Direction;
+import org.rutebanken.netex.model.DirectionRefStructure;
 import org.rutebanken.netex.model.DirectionTypeEnumeration;
 import org.rutebanken.netex.model.JourneyPattern_VersionStructure;
 import org.rutebanken.netex.model.LineRefStructure;
@@ -46,6 +49,8 @@ class TripMapper {
   private final Map<String, FeedScopedId> serviceIds;
   private final EntityById<Operator> operatorsById;
   private final TransportModeMapper transportModeMapper;
+  private final ReadOnlyHierarchicalMapById<Direction> directionById;
+  private final NetexProfileSupport profileSupport;
   private final EntityById<Trip> mappedTrips = new DefaultEntityById<>();
 
   TripMapper(
@@ -56,9 +61,12 @@ class TripMapper {
     ReadOnlyHierarchicalMap<String, Route> routeById,
     ReadOnlyHierarchicalMap<String, JourneyPattern_VersionStructure> journeyPatternsById,
     Map<String, FeedScopedId> serviceIds,
+    ReadOnlyHierarchicalMapById<Direction> directionById,
     NetexProfileSupport profileSupport
   ) {
     this.transportModeMapper = new TransportModeMapper(profileSupport);
+    this.directionById = directionById;
+    this.profileSupport = profileSupport;
     this.idFactory = idFactory;
     this.issueStore = issueStore;
     this.otpRouteById = otpRouteById;
@@ -158,12 +166,58 @@ class TripMapper {
   }
 
   private DirectionTypeEnumeration resolveDirectionType(ServiceJourney serviceJourney) {
+    if (profileSupport.extendedNetex()) {
+      return resolveDirectionTypeWithExtendedNetex(serviceJourney);
+    }
     Route netexRoute = lookUpNetexRoute(serviceJourney);
     if (netexRoute != null && netexRoute.getDirectionType() != null) {
       return netexRoute.getDirectionType();
     } else {
       return null;
     }
+  }
+
+  /**
+   * The Nordic profile states the direction type on the route. EPIP and VDV 462 state it on the
+   * journey pattern or the service journey, or reference a direction (CEN/TS 16614-4, 7.3.5).
+   * Use the most specific direction type given.
+   */
+  @Nullable
+  private DirectionTypeEnumeration resolveDirectionTypeWithExtendedNetex(
+    ServiceJourney serviceJourney
+  ) {
+    if (serviceJourney.getDirectionType() != null) {
+      return serviceJourney.getDirectionType();
+    }
+    var journeyPattern =
+      serviceJourney.getJourneyPatternRef() == null
+        ? null
+        : journeyPatternsById.lookup(serviceJourney.getJourneyPatternRef().getValue().getRef());
+    if (journeyPattern != null) {
+      var type = directionType(journeyPattern.getDirectionType(), journeyPattern.getDirectionRef());
+      if (type != null) {
+        return type;
+      }
+    }
+    Route netexRoute = lookUpNetexRoute(serviceJourney);
+    return netexRoute == null
+      ? null
+      : directionType(netexRoute.getDirectionType(), netexRoute.getDirectionRef());
+  }
+
+  @Nullable
+  private DirectionTypeEnumeration directionType(
+    @Nullable DirectionTypeEnumeration directionType,
+    @Nullable DirectionRefStructure directionRef
+  ) {
+    if (directionType != null) {
+      return directionType;
+    }
+    if (directionRef == null) {
+      return null;
+    }
+    var direction = directionById.lookup(directionRef.getRef());
+    return direction == null ? null : direction.getDirectionType();
   }
 
   private Route lookUpNetexRoute(ServiceJourney serviceJourney) {

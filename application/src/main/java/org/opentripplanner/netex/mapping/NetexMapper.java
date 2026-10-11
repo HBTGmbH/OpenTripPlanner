@@ -513,6 +513,7 @@ public class NetexMapper {
       serviceIds,
       deduplicator,
       maxStopToShapeSnapDistance,
+      currentNetexIndex.getDirectionById(),
       profileSupport
     );
 

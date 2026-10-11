@@ -21,12 +21,15 @@ import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMap;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMapById;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
+import org.opentripplanner.transit.model.timetable.Direction;
 import org.opentripplanner.transit.model.timetable.Trip;
 import org.opentripplanner.transit.model.timetable.VehicleAssignment;
 import org.opentripplanner.transit.service.SiteRepository;
 import org.rutebanken.netex.model.AccessibilityAssessment;
 import org.rutebanken.netex.model.AccessibilityLimitation;
 import org.rutebanken.netex.model.AccessibilityLimitations_RelStructure;
+import org.rutebanken.netex.model.DirectionRefStructure;
+import org.rutebanken.netex.model.DirectionTypeEnumeration;
 import org.rutebanken.netex.model.JourneyPattern;
 import org.rutebanken.netex.model.JourneyPatternRefStructure;
 import org.rutebanken.netex.model.JourneyPattern_VersionStructure;
@@ -41,6 +44,7 @@ class TripMapperTest {
   private static final String ROUTE_ID = "RUT:Route:1";
   private static final String SERVICE_JOURNEY_ID = NetexTestDataSample.SERVICE_JOURNEY_ID;
   private static final String JOURNEY_PATTERN_ID = "RUT:JourneyPattern:1";
+  private static final String DIRECTION_ID = "RUT:Direction:1";
   private static final FeedScopedId SERVICE_ID = FeedScopedIdForTestFactory.id("S001");
   private static final String VEHICLE_TYPE_REF = "RUT:VehicleType:1";
   private static final DataImportIssueStore ISSUE_STORE = DataImportIssueStore.NOOP;
@@ -69,6 +73,7 @@ class TripMapperTest {
       new HierarchicalMapById<>(),
       new HierarchicalMap<>(),
       Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      new HierarchicalMapById<>(),
       NetexProfileSupport.NORDIC
     );
 
@@ -87,6 +92,57 @@ class TripMapperTest {
   }
 
   @Test
+  void mapDirectionReferencedByTheJourneyPatternWithExtendedNetex() {
+    assertEquals(
+      Direction.INBOUND,
+      mapTripWithPatternDirectionRef(NetexProfileSupport.of(true, false))
+    );
+  }
+
+  @Test
+  void ignoreDirectionReferencedByTheJourneyPatternForTheNordicProfile() {
+    assertEquals(Direction.UNKNOWN, mapTripWithPatternDirectionRef(NetexProfileSupport.NORDIC));
+  }
+
+  private Direction mapTripWithPatternDirectionRef(NetexProfileSupport profileSupport) {
+    var transitBuilder = new TransitDataImportBuilder(new SiteRepository(), ISSUE_STORE);
+    transitBuilder.getRoutes().add(TransitRepositoryForTest.route(ROUTE_ID).build());
+
+    var directions = new HierarchicalMapById<org.rutebanken.netex.model.Direction>();
+    directions.add(
+      new org.rutebanken.netex.model.Direction()
+        .withId(DIRECTION_ID)
+        .withDirectionType(DirectionTypeEnumeration.INBOUND)
+    );
+    var journeyPatterns = new HierarchicalMap<String, JourneyPattern_VersionStructure>();
+    journeyPatterns.add(
+      JOURNEY_PATTERN_ID,
+      new JourneyPattern()
+        .withId(JOURNEY_PATTERN_ID)
+        .withDirectionRef(new DirectionRefStructure().withRef(DIRECTION_ID))
+    );
+
+    TripMapper tripMapper = new TripMapper(
+      ID_FACTORY,
+      ISSUE_STORE,
+      transitBuilder.getOperatorsById(),
+      transitBuilder.getRoutes(),
+      new HierarchicalMapById<>(),
+      journeyPatterns,
+      Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      directions,
+      profileSupport
+    );
+
+    var serviceJourney = createExampleServiceJourney().withJourneyPatternRef(
+      createWrappedRef(JOURNEY_PATTERN_ID, JourneyPatternRefStructure.class)
+    );
+    serviceJourney.setLineRef(LINE_REF);
+
+    return tripMapper.mapServiceJourney(serviceJourney, this::headsign).getDirection();
+  }
+
+  @Test
   void mapTrip() {
     TransitDataImportBuilder transitBuilder = new TransitDataImportBuilder(
       new SiteRepository(),
@@ -102,6 +158,7 @@ class TripMapperTest {
       new HierarchicalMapById<>(),
       new HierarchicalMap<>(),
       Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      new HierarchicalMapById<>(),
       NetexProfileSupport.NORDIC
     );
 
@@ -131,6 +188,7 @@ class TripMapperTest {
       new HierarchicalMapById<>(),
       new HierarchicalMap<>(),
       Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      new HierarchicalMapById<>(),
       NetexProfileSupport.NORDIC
     );
 
@@ -179,6 +237,7 @@ class TripMapperTest {
       routeById,
       journeyPatternById,
       Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      new HierarchicalMapById<>(),
       NetexProfileSupport.NORDIC
     );
 
@@ -200,6 +259,7 @@ class TripMapperTest {
       new HierarchicalMapById<>(),
       new HierarchicalMap<>(),
       Map.of(SERVICE_JOURNEY_ID, SERVICE_ID),
+      new HierarchicalMapById<>(),
       NetexProfileSupport.NORDIC
     );
 

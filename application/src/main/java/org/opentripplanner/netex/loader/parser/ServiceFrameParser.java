@@ -12,6 +12,7 @@ import org.opentripplanner.netex.index.NetexEntityIndex;
 import org.opentripplanner.netex.index.api.ReadOnlyHierarchicalMapById;
 import org.rutebanken.netex.model.DestinationDisplay;
 import org.rutebanken.netex.model.DestinationDisplaysInFrame_RelStructure;
+import org.rutebanken.netex.model.Direction;
 import org.rutebanken.netex.model.FlexibleLine;
 import org.rutebanken.netex.model.FlexibleStopAssignment;
 import org.rutebanken.netex.model.FlexibleStopPlace;
@@ -72,6 +73,8 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
 
   private final Collection<SiteConnection> siteConnections = new ArrayList<>();
 
+  private final Collection<Direction> directions = new ArrayList<>();
+
   private final boolean allowStopPlaceAsPassengerStopAssignment;
 
   private final NetexProfileSupport profileSupport;
@@ -107,7 +110,13 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
     } else {
       warnOnMissingMapping(LOG, frame.getConnections());
     }
-    warnOnMissingMapping(LOG, frame.getDirections());
+    if (profileSupport.extendedNetex()) {
+      if (frame.getDirections() != null) {
+        directions.addAll(frame.getDirections().getDirection());
+      }
+    } else {
+      warnOnMissingMapping(LOG, frame.getDirections());
+    }
     warnOnMissingMapping(LOG, frame.getDisplayAssignments());
     warnOnMissingMapping(LOG, frame.getFlexibleLinkProperties());
     warnOnMissingMapping(LOG, frame.getFlexiblePointProperties());
@@ -154,6 +163,7 @@ class ServiceFrameParser extends NetexParser<Service_VersionFrameStructure> {
     index.stopPlaceIdByStopPointRef.addAll(stopPlaceByStopPointRef);
     index.scheduledStopPointById.addAll(scheduledStopPoints);
     index.siteConnectionById.addAll(siteConnections);
+    index.directionById.addAll(directions);
     index.flexibleStopPlaceByStopPointRef.addAll(flexibleStopPlaceByStopPointRef);
     index.routeById.addAll(routes);
     index.serviceLinkById.addAll(serviceLinks);

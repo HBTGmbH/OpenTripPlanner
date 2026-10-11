@@ -61,6 +61,7 @@ class TripPatternMapperTest {
       Map.of(NetexTestDataSample.SERVICE_JOURNEY_ID, SERVICE_ID),
       new Deduplicator(),
       150,
+      new HierarchicalMapById<>(),
       NetexProfileSupport.NORDIC
     );
 
@@ -260,6 +261,7 @@ class TripPatternMapperTest {
       Map.of(NetexTestDataSample.SERVICE_JOURNEY_ID, SERVICE_ID),
       new Deduplicator(),
       150,
+      new HierarchicalMapById<>(),
       NetexProfileSupport.NORDIC
     );
 

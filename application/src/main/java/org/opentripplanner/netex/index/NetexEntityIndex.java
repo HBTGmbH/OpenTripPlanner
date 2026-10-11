@@ -16,6 +16,7 @@ import org.rutebanken.netex.model.DatedServiceJourney;
 import org.rutebanken.netex.model.DayType;
 import org.rutebanken.netex.model.DayTypeAssignment;
 import org.rutebanken.netex.model.DestinationDisplay;
+import org.rutebanken.netex.model.Direction;
 import org.rutebanken.netex.model.FlexibleLine;
 import org.rutebanken.netex.model.FlexibleStopPlace;
 import org.rutebanken.netex.model.GroupOfLines;
@@ -77,6 +78,7 @@ public class NetexEntityIndex {
   public final HierarchicalMapById<DayType> dayTypeById;
   public final HierarchicalMultimap<String, DayTypeAssignment> dayTypeAssignmentByDayTypeId;
   public final HierarchicalMapById<DestinationDisplay> destinationDisplayById;
+  public final HierarchicalMapById<Direction> directionById;
   public final HierarchicalMapById<FlexibleStopPlace> flexibleStopPlaceById;
   public final HierarchicalMapById<GroupOfLines> groupOfLinesById;
   public final HierarchicalMapById<GroupOfStopPlaces> groupOfStopPlacesById;
@@ -124,6 +126,7 @@ public class NetexEntityIndex {
     this.dayTypeAssignmentByDayTypeId = new HierarchicalMultimap<>();
     this.datedServiceJourneys = new HierarchicalMapById<>();
     this.destinationDisplayById = new HierarchicalMapById<>();
+    this.directionById = new HierarchicalMapById<>();
     this.flexibleStopPlaceById = new HierarchicalMapById<>();
     this.groupOfLinesById = new HierarchicalMapById<>();
     this.groupOfStopPlacesById = new HierarchicalMapById<>();
@@ -169,6 +172,7 @@ public class NetexEntityIndex {
     );
     this.datedServiceJourneys = new HierarchicalMapById<>(parent.datedServiceJourneys);
     this.destinationDisplayById = new HierarchicalMapById<>(parent.destinationDisplayById);
+    this.directionById = new HierarchicalMapById<>(parent.directionById);
     this.flexibleStopPlaceById = new HierarchicalMapById<>(parent.flexibleStopPlaceById);
     this.groupOfLinesById = new HierarchicalMapById<>(parent.groupOfLinesById);
     this.groupOfStopPlacesById = new HierarchicalMapById<>(parent.groupOfStopPlacesById);
@@ -338,6 +342,11 @@ public class NetexEntityIndex {
       @Override
       public ReadOnlyHierarchicalVersionMapById<Quay> getQuayById() {
         return quayById;
+      }
+
+      @Override
+      public ReadOnlyHierarchicalMapById<Direction> getDirectionById() {
+        return directionById;
       }
 
       @Override

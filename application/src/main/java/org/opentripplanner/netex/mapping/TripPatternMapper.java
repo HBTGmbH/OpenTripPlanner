@@ -40,6 +40,7 @@ import org.opentripplanner.transit.model.timetable.TripTimesFactory;
 import org.opentripplanner.transit.model.timetable.VehicleAssignment;
 import org.rutebanken.netex.model.DatedServiceJourney;
 import org.rutebanken.netex.model.DestinationDisplay;
+import org.rutebanken.netex.model.Direction;
 import org.rutebanken.netex.model.FlexibleLine;
 import org.rutebanken.netex.model.JourneyPattern_VersionStructure;
 import org.rutebanken.netex.model.OperatingDay;
@@ -113,6 +114,7 @@ class TripPatternMapper {
     Map<String, FeedScopedId> serviceIds,
     DeduplicatorService deduplicator,
     double maxStopToShapeSnapDistance,
+    ReadOnlyHierarchicalMapById<Direction> directionById,
     NetexProfileSupport profileSupport
   ) {
     this.issueStore = issueStore;
@@ -129,6 +131,7 @@ class TripPatternMapper {
       routeById,
       journeyPatternById,
       serviceIds,
+      directionById,
       profileSupport
     );
     this.stopTimesMapper = new StopTimesMapper(
