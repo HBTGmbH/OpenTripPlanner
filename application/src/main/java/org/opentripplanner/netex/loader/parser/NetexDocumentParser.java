@@ -111,6 +111,10 @@ public class NetexDocumentParser {
 
     netexIndex.timeZone.set(resolveTimeZone(frame.getFrameDefaults()));
 
+    // A composite frame without nested frames is valid NeTEx, it may only carry metadata
+    if (frame.getFrames() == null) {
+      return;
+    }
     frames = frame.getFrames().getCommonFrame();
 
     for (JAXBElement<? extends Common_VersionFrameStructure> it : frames) {
