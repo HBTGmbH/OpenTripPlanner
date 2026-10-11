@@ -204,7 +204,7 @@ public class DayTypeAssignmentMapper {
       LocalDateTime endDate = uicOperatingPeriod.getToDate().plusDays(1);
       LocalDateTime date = uicOperatingPeriod.getFromDate();
 
-      addDates(uicOperatingPeriod.getValidDayBits(), isAvailable, endDate, date);
+      addDates(uicOperatingPeriod, isAvailable, endDate, date);
     }
   }
 
@@ -259,19 +259,30 @@ public class DayTypeAssignmentMapper {
     }
   }
 
+  /**
+   * A day is valid if its bit is '1'. A missing bit means the day is valid as well (CEN/TS 16614-4
+   * EPIP: "If bit is missing, assume available."). Any other character than '0' and '1' is
+   * invalid; the day is treated as not valid and the period is reported once.
+   */
   private void addDates(
-    String validDayBits,
+    UicOperatingPeriod period,
     boolean isAvailable,
     LocalDateTime endDate,
     LocalDateTime date
   ) {
+    String validDayBits = period.getValidDayBits();
+    boolean invalidBitReported = false;
     for (int i = 0; i < ChronoUnit.DAYS.between(date.toLocalDate(), endDate.toLocalDate()); i++) {
       if (i >= validDayBits.length() || validDayBits.charAt(i) == '1') {
         addDate(isAvailable, date.plusDays(i));
-      } else if (validDayBits.charAt(i) != '0') {
-        throw new IllegalArgumentException(
-          "Invalid character '" + validDayBits.charAt(i) + "' in validDayBits"
+      } else if (validDayBits.charAt(i) != '0' && !invalidBitReported) {
+        issueStore.add(
+          "InvalidValidDayBits",
+          "UicOperatingPeriod %s contains the invalid character '%s' in ValidDayBits. Days with an invalid bit are treated as not valid.",
+          period.getId(),
+          validDayBits.charAt(i)
         );
+        invalidBitReported = true;
       }
     }
   }

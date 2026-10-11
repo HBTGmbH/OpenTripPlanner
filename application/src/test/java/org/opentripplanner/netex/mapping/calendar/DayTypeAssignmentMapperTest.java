@@ -562,6 +562,50 @@ class DayTypeAssignmentMapperTest {
     assertThat(listIssueTypes(issueStore)).contains("DayTypeAssignmentIgnored");
   }
 
+  @Test
+  void treatInvalidValidDayBitAsNotValid() {
+    var dayTypes = new HierarchicalMapById<DayType>();
+    var assignments = new HierarchicalMultimap<String, DayTypeAssignment>();
+    var periods = new HierarchicalMapById<OperatingPeriod_VersionStructure>();
+    var issueStore = new DefaultDataImportIssueStore();
+
+    dayTypes.add(createDayType(DAY_TYPE_1, EVERYDAY));
+    periods.add(createUicOperatingPeriod(OP_1, D2020_11_01, D2020_11_03, "1x1"));
+    assignments.add(DAY_TYPE_1, createDayTypeAssignmentWithPeriod(DAY_TYPE_1, OP_1, AVAILABLE));
+
+    Map<String, Set<LocalDate>> result = DayTypeAssignmentMapper.mapDayTypes(
+      dayTypes,
+      assignments,
+      EMPTY_OPERATING_DAYS,
+      periods,
+      issueStore
+    );
+
+    assertEquals("[2020-11-01, 2020-11-03]", toStr(result, DAY_TYPE_1));
+    assertThat(listIssueTypes(issueStore)).containsExactly("InvalidValidDayBits");
+  }
+
+  @Test
+  void treatMissingValidDayBitsAsValid() {
+    var dayTypes = new HierarchicalMapById<DayType>();
+    var assignments = new HierarchicalMultimap<String, DayTypeAssignment>();
+    var periods = new HierarchicalMapById<OperatingPeriod_VersionStructure>();
+
+    dayTypes.add(createDayType(DAY_TYPE_1, EVERYDAY));
+    periods.add(createUicOperatingPeriod(OP_1, D2020_11_01, D2020_11_03, "0"));
+    assignments.add(DAY_TYPE_1, createDayTypeAssignmentWithPeriod(DAY_TYPE_1, OP_1, AVAILABLE));
+
+    Map<String, Set<LocalDate>> result = DayTypeAssignmentMapper.mapDayTypes(
+      dayTypes,
+      assignments,
+      EMPTY_OPERATING_DAYS,
+      periods,
+      DataImportIssueStore.NOOP
+    );
+
+    assertEquals("[2020-11-02, 2020-11-03]", toStr(result, DAY_TYPE_1));
+  }
+
   /* private helper methods */
 
   private String toStr(Map<String, Set<LocalDate>> result, String key) {
