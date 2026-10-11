@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hand-built EPIP test data: tram line B from Kreuz to Beta on working days. The operator is given
+  as the only additional operator. Kreuz is the transfer stop from bus line A; both lines use the
+  same scheduled stop point there.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="ntx:1.1">
+  <PublicationTimestamp>2025-01-01T00:00:00</PublicationTimestamp>
+  <ParticipantRef>DE</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="DE::CompositeFrame_EU_PI_LINE_OFFER:TST-B" version="1">
+      <ValidBetween>
+        <FromDate>2025-01-01T00:00:00</FromDate>
+        <ToDate>2025-12-31T00:00:00</ToDate>
+      </ValidBetween>
+      <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="1.0"/>
+      <codespaces>
+        <Codespace id="epip_data">
+          <Xmlns>epd</Xmlns>
+          <XmlnsUrl>http://netex-cen.eu/epip_data</XmlnsUrl>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="epip_data"/>
+        <DefaultLocationSystem>urn:ogc:def:crs:EPSG::4326</DefaultLocationSystem>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="DE::ResourceFrame_EU_PI_COMMON:TST-B" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_COMMON" versionRef="1.0"/>
+          <organisations>
+            <Authority id="DE::Authority:Testverbund::" version="1">
+              <Name>Testverbund</Name>
+              <OrganisationType>authority</OrganisationType>
+            </Authority>
+            <Operator id="DE::Operator:Testtram::" version="1">
+              <Name>Testtram AG</Name>
+              <OrganisationType>operator</OrganisationType>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <ServiceCalendarFrame id="DE::ServiceCalendarFrame_EU_PI_CALENDAR:TST-B" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_CALENDAR" versionRef="1.0"/>
+          <ServiceCalendar id="DE::ServiceCalendar:TST-B::" version="1">
+            <FromDate>2025-01-01</FromDate>
+            <ToDate>2025-12-31</ToDate>
+            <dayTypes>
+              <DayType id="DE::DayType:TST-B-Weekdays::" version="1">
+                <properties>
+                  <PropertyOfDay>
+                    <DaysOfWeek>Monday Tuesday Wednesday Thursday Friday</DaysOfWeek>
+                  </PropertyOfDay>
+                </properties>
+              </DayType>
+            </dayTypes>
+            <operatingPeriods>
+              <OperatingPeriod id="DE::OperatingPeriod:TST-B-2025::" version="1">
+                <FromDate>2025-01-01T00:00:00</FromDate>
+                <ToDate>2025-12-31T00:00:00</ToDate>
+              </OperatingPeriod>
+            </operatingPeriods>
+            <dayTypeAssignments>
+              <DayTypeAssignment id="DE::DayTypeAssignment:TST-B-Weekdays::" order="1" version="1">
+                <OperatingPeriodRef ref="DE::OperatingPeriod:TST-B-2025::" version="1"/>
+                <DayTypeRef ref="DE::DayType:TST-B-Weekdays::" version="1"/>
+                <isAvailable>true</isAvailable>
+              </DayTypeAssignment>
+            </dayTypeAssignments>
+          </ServiceCalendar>
+        </ServiceCalendarFrame>
+        <ServiceFrame id="DE::ServiceFrame_EU_PI_NETWORK:TST-B" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_NETWORK" versionRef="1.0"/>
+          <lines>
+            <Line id="DE::Line:TST-B::" version="1">
+              <Name>Tram B</Name>
+              <TransportMode>tram</TransportMode>
+              <PublicCode>B</PublicCode>
+              <AuthorityRef ref="DE::Authority:Testverbund::" version="1"/>
+              <additionalOperators>
+                <OperatorRef ref="DE::Operator:Testtram::" version="1"/>
+              </additionalOperators>
+            </Line>
+          </lines>
+          <destinationDisplays>
+            <DestinationDisplay id="DE::DestinationDisplay:TST-B-Beta::" version="1">
+              <FrontText>Beta</FrontText>
+            </DestinationDisplay>
+          </destinationDisplays>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:Kreuz-1::" version="1">
+              <Name>Kreuz</Name>
+              <Location>
+                <Longitude>10.0101</Longitude>
+                <Latitude>53.5501</Latitude>
+              </Location>
+              <StopType>onstreetTram</StopType>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:Beta-1::" version="1">
+              <Name>Beta</Name>
+              <Location>
+                <Longitude>10.0201</Longitude>
+                <Latitude>53.5501</Latitude>
+              </Location>
+              <StopType>onstreetTram</StopType>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <stopAssignments>
+            <PassengerStopAssignment id="DE::PassengerStopAssignment:Kreuz-1-B::" order="1" version="1">
+              <ScheduledStopPointRef ref="DE::ScheduledStopPoint:Kreuz-1::" version="1"/>
+              <StopPlaceRef ref="DE::StopPlace:Kreuz::" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="DE::PassengerStopAssignment:Beta-1::" order="2" version="1">
+              <ScheduledStopPointRef ref="DE::ScheduledStopPoint:Beta-1::" version="1"/>
+              <StopPlaceRef ref="DE::StopPlace:Beta::" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="DE::ServiceJourneyPattern:TST-B-1::" version="1">
+              <RouteView>
+                <LineRef ref="DE::Line:TST-B::" version="1"/>
+              </RouteView>
+              <DestinationDisplayRef ref="DE::DestinationDisplay:TST-B-Beta::" version="1"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:TST-B-1-1::" order="1" version="1">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:Kreuz-1::" version="1"/>
+                  <ForAlighting>false</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:TST-B-1-2::" order="2" version="1">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:Beta-1::" version="1"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>false</ForBoarding>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <TimetableFrame id="DE::TimetableFrame_EU_PI_TIMETABLE:TST-B" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_TIMETABLE" versionRef="1.0"/>
+          <vehicleJourneys>
+            <ServiceJourney id="DE::ServiceJourney:TST-B-0805::" version="1">
+              <TransportMode>tram</TransportMode>
+              <dayTypes>
+                <DayTypeRef ref="DE::DayType:TST-B-Weekdays::" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="DE::ServiceJourneyPattern:TST-B-1::" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:TST-B-0805-1::" version="1">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:TST-B-1-1::" version="1"/>
+                  <DepartureTime>08:05:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:TST-B-0805-2::" version="1">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:TST-B-1-2::" version="1"/>
+                  <ArrivalTime>08:15:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="DE::ServiceJourney:TST-B-0820::" version="1">
+              <TransportMode>tram</TransportMode>
+              <dayTypes>
+                <DayTypeRef ref="DE::DayType:TST-B-Weekdays::" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="DE::ServiceJourneyPattern:TST-B-1::" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:TST-B-0820-1::" version="1">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:TST-B-1-1::" version="1"/>
+                  <DepartureTime>08:20:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime id="DE::TimetabledPassingTime:TST-B-0820-2::" version="1">
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:TST-B-1-2::" version="1"/>
+                  <ArrivalTime>08:30:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

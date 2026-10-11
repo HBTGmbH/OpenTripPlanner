@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hand-built EPIP test data: the stop places of the routing integration test. The stop places
+  have no quays (EPIP: StopPlaceRef 1:1, QuayRef 0:1), and the frame defaults state no time zone.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="ntx:1.1">
+  <PublicationTimestamp>2025-01-01T00:00:00</PublicationTimestamp>
+  <ParticipantRef>DE</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="DE::CompositeFrame_EU_PI_STOP_OFFER:TEST" version="1">
+      <ValidBetween>
+        <FromDate>2025-01-01T00:00:00</FromDate>
+        <ToDate>2025-12-31T00:00:00</ToDate>
+      </ValidBetween>
+      <TypeOfFrameRef ref="epip:EU_PI_STOP_OFFER" versionRef="1.0"/>
+      <codespaces>
+        <Codespace id="epip_data">
+          <Xmlns>epd</Xmlns>
+          <XmlnsUrl>http://netex-cen.eu/epip_data</XmlnsUrl>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="epip_data"/>
+        <DefaultLocationSystem>urn:ogc:def:crs:EPSG::4326</DefaultLocationSystem>
+      </FrameDefaults>
+      <frames>
+        <SiteFrame id="DE::SiteFrame_EU_PI_STOP:TEST" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_STOP" versionRef="1.0"/>
+          <stopPlaces>
+            <StopPlace id="DE::StopPlace:Alpha::" version="1">
+              <Name>Alpha</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>10.000</Longitude>
+                  <Latitude>53.550</Latitude>
+                </Location>
+              </Centroid>
+              <StopPlaceType>onstreetBus</StopPlaceType>
+            </StopPlace>
+            <StopPlace id="DE::StopPlace:Kreuz::" version="1">
+              <Name>Kreuz</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>10.010</Longitude>
+                  <Latitude>53.550</Latitude>
+                </Location>
+              </Centroid>
+              <AccessibilityAssessment id="DE::AccessibilityAssessment:Kreuz::" version="1">
+                <MobilityImpairedAccess>true</MobilityImpairedAccess>
+              </AccessibilityAssessment>
+              <StopPlaceType>onstreetTram</StopPlaceType>
+            </StopPlace>
+            <StopPlace id="DE::StopPlace:KreuzBahnhof::" version="1">
+              <Name>Kreuz Bahnhof</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>10.012</Longitude>
+                  <Latitude>53.551</Latitude>
+                </Location>
+              </Centroid>
+              <StopPlaceType>railStation</StopPlaceType>
+            </StopPlace>
+            <StopPlace id="DE::StopPlace:Beta::" version="1">
+              <Name>Beta</Name>
+              <Centroid>
+                <Location>
+                  <Longitude>10.020</Longitude>
+                  <Latitude>53.550</Latitude>
+                </Location>
+              </Centroid>
+              <StopPlaceType>onstreetTram</StopPlaceType>
+            </StopPlace>
+          </stopPlaces>
+        </SiteFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>

@@ -1,0 +1,8 @@
+{
+  "transitModelTimeZone": "Europe/Berlin",
+  "transitServiceStart": "2025-01-01",
+  "transitServiceEnd": "2025-12-31",
+  "netexDefaults": {
+    "feedId": "EP"
+  }
+}

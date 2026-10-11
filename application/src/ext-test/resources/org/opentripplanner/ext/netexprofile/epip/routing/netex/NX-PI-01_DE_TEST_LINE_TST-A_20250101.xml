@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hand-built EPIP test data: bus line A from Alpha to Kreuz on working days. The line has an
+  operator but no authority, an inline notice assignment and a destination display on the journey
+  pattern. The scheduled stop points are assigned to stop places only, and the timetabled passing
+  times have no id.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="ntx:1.1">
+  <PublicationTimestamp>2025-01-01T00:00:00</PublicationTimestamp>
+  <ParticipantRef>DE</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="DE::CompositeFrame_EU_PI_LINE_OFFER:TST-A" version="1">
+      <ValidBetween>
+        <FromDate>2025-01-01T00:00:00</FromDate>
+        <ToDate>2025-12-31T00:00:00</ToDate>
+      </ValidBetween>
+      <TypeOfFrameRef ref="epip:EU_PI_LINE_OFFER" versionRef="1.0"/>
+      <codespaces>
+        <Codespace id="epip_data">
+          <Xmlns>epd</Xmlns>
+          <XmlnsUrl>http://netex-cen.eu/epip_data</XmlnsUrl>
+        </Codespace>
+      </codespaces>
+      <FrameDefaults>
+        <DefaultCodespaceRef ref="epip_data"/>
+        <DefaultLocationSystem>urn:ogc:def:crs:EPSG::4326</DefaultLocationSystem>
+      </FrameDefaults>
+      <frames>
+        <ResourceFrame id="DE::ResourceFrame_EU_PI_COMMON:TST-A" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_COMMON" versionRef="1.0"/>
+          <organisations>
+            <Operator id="DE::Operator:Testbus::" version="1">
+              <Name>Testbus GmbH</Name>
+              <OrganisationType>operator</OrganisationType>
+            </Operator>
+          </organisations>
+        </ResourceFrame>
+        <ServiceCalendarFrame id="DE::ServiceCalendarFrame_EU_PI_CALENDAR:TST-A" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_CALENDAR" versionRef="1.0"/>
+          <ServiceCalendar id="DE::ServiceCalendar:TST-A::" version="1">
+            <FromDate>2025-01-01</FromDate>
+            <ToDate>2025-12-31</ToDate>
+            <dayTypes>
+              <DayType id="DE::DayType:TST-A-Weekdays::" version="1">
+                <properties>
+                  <PropertyOfDay>
+                    <DaysOfWeek>Monday Tuesday Wednesday Thursday Friday</DaysOfWeek>
+                  </PropertyOfDay>
+                </properties>
+              </DayType>
+            </dayTypes>
+            <operatingPeriods>
+              <OperatingPeriod id="DE::OperatingPeriod:TST-A-2025::" version="1">
+                <FromDate>2025-01-01T00:00:00</FromDate>
+                <ToDate>2025-12-31T00:00:00</ToDate>
+              </OperatingPeriod>
+            </operatingPeriods>
+            <dayTypeAssignments>
+              <DayTypeAssignment id="DE::DayTypeAssignment:TST-A-Weekdays::" order="1" version="1">
+                <OperatingPeriodRef ref="DE::OperatingPeriod:TST-A-2025::" version="1"/>
+                <DayTypeRef ref="DE::DayType:TST-A-Weekdays::" version="1"/>
+                <isAvailable>true</isAvailable>
+              </DayTypeAssignment>
+            </dayTypeAssignments>
+          </ServiceCalendar>
+        </ServiceCalendarFrame>
+        <ServiceFrame id="DE::ServiceFrame_EU_PI_NETWORK:TST-A" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_NETWORK" versionRef="1.0"/>
+          <lines>
+            <Line id="DE::Line:TST-A::" version="1">
+              <Name>Bus A</Name>
+              <TransportMode>bus</TransportMode>
+              <PublicCode>A</PublicCode>
+              <OperatorRef ref="DE::Operator:Testbus::" version="1"/>
+              <noticeAssignments>
+                <NoticeAssignment id="DE::NoticeAssignment:TST-A-Bikes::" order="1" version="1">
+                  <Notice id="DE::Notice:Bikes::" version="1">
+                    <Text lang="de">Fahrradmitnahme möglich</Text>
+                    <PublicCode>RAD</PublicCode>
+                  </Notice>
+                </NoticeAssignment>
+              </noticeAssignments>
+            </Line>
+          </lines>
+          <destinationDisplays>
+            <DestinationDisplay id="DE::DestinationDisplay:TST-A-Kreuz::" version="1">
+              <FrontText>Kreuz</FrontText>
+            </DestinationDisplay>
+          </destinationDisplays>
+          <scheduledStopPoints>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:Alpha-1::" version="1">
+              <Name>Alpha</Name>
+              <Location>
+                <Longitude>10.0001</Longitude>
+                <Latitude>53.5501</Latitude>
+              </Location>
+              <StopType>onstreetBus</StopType>
+            </ScheduledStopPoint>
+            <ScheduledStopPoint id="DE::ScheduledStopPoint:Kreuz-1::" version="1">
+              <Name>Kreuz</Name>
+              <Location>
+                <Longitude>10.0101</Longitude>
+                <Latitude>53.5501</Latitude>
+              </Location>
+              <StopType>onstreetTram</StopType>
+            </ScheduledStopPoint>
+          </scheduledStopPoints>
+          <connections>
+            <SiteConnection id="DE::SiteConnection:Kreuz-KreuzBahnhof::" version="1">
+              <WalkTransferDuration>
+                <DefaultDuration>PT3M</DefaultDuration>
+              </WalkTransferDuration>
+              <BothWays>true</BothWays>
+              <From>
+                <StopPlaceRef ref="DE::StopPlace:Kreuz::" version="1"/>
+              </From>
+              <To>
+                <StopPlaceRef ref="DE::StopPlace:KreuzBahnhof::" version="1"/>
+              </To>
+            </SiteConnection>
+          </connections>
+          <stopAssignments>
+            <PassengerStopAssignment id="DE::PassengerStopAssignment:Alpha-1::" order="1" version="1">
+              <ScheduledStopPointRef ref="DE::ScheduledStopPoint:Alpha-1::" version="1"/>
+              <StopPlaceRef ref="DE::StopPlace:Alpha::" version="1"/>
+            </PassengerStopAssignment>
+            <PassengerStopAssignment id="DE::PassengerStopAssignment:Kreuz-1::" order="2" version="1">
+              <ScheduledStopPointRef ref="DE::ScheduledStopPoint:Kreuz-1::" version="1"/>
+              <StopPlaceRef ref="DE::StopPlace:Kreuz::" version="1"/>
+            </PassengerStopAssignment>
+          </stopAssignments>
+          <journeyPatterns>
+            <ServiceJourneyPattern id="DE::ServiceJourneyPattern:TST-A-1::" version="1">
+              <RouteView>
+                <LineRef ref="DE::Line:TST-A::" version="1"/>
+              </RouteView>
+              <DestinationDisplayRef ref="DE::DestinationDisplay:TST-A-Kreuz::" version="1"/>
+              <pointsInSequence>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:TST-A-1-1::" order="1" version="1">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:Alpha-1::" version="1"/>
+                  <ForAlighting>false</ForAlighting>
+                  <ForBoarding>true</ForBoarding>
+                </StopPointInJourneyPattern>
+                <StopPointInJourneyPattern id="DE::StopPointInJourneyPattern:TST-A-1-2::" order="2" version="1">
+                  <ScheduledStopPointRef ref="DE::ScheduledStopPoint:Kreuz-1::" version="1"/>
+                  <ForAlighting>true</ForAlighting>
+                  <ForBoarding>false</ForBoarding>
+                </StopPointInJourneyPattern>
+              </pointsInSequence>
+            </ServiceJourneyPattern>
+          </journeyPatterns>
+        </ServiceFrame>
+        <TimetableFrame id="DE::TimetableFrame_EU_PI_TIMETABLE:TST-A" version="1">
+          <TypeOfFrameRef ref="epip:EU_PI_TIMETABLE" versionRef="1.0"/>
+          <vehicleJourneys>
+            <ServiceJourney id="DE::ServiceJourney:TST-A-0800::" version="1">
+              <TransportMode>bus</TransportMode>
+              <dayTypes>
+                <DayTypeRef ref="DE::DayType:TST-A-Weekdays::" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="DE::ServiceJourneyPattern:TST-A-1::" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime>
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:TST-A-1-1::" version="1"/>
+                  <DepartureTime>08:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime>
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:TST-A-1-2::" version="1"/>
+                  <ArrivalTime>08:10:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+            <ServiceJourney id="DE::ServiceJourney:TST-A-0900::" version="1">
+              <TransportMode>bus</TransportMode>
+              <dayTypes>
+                <DayTypeRef ref="DE::DayType:TST-A-Weekdays::" version="1"/>
+              </dayTypes>
+              <ServiceJourneyPatternRef ref="DE::ServiceJourneyPattern:TST-A-1::" version="1"/>
+              <passingTimes>
+                <TimetabledPassingTime>
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:TST-A-1-1::" version="1"/>
+                  <DepartureTime>09:00:00</DepartureTime>
+                </TimetabledPassingTime>
+                <TimetabledPassingTime>
+                  <StopPointInJourneyPatternRef ref="DE::StopPointInJourneyPattern:TST-A-1-2::" version="1"/>
+                  <ArrivalTime>09:10:00</ArrivalTime>
+                </TimetabledPassingTime>
+              </passingTimes>
+            </ServiceJourney>
+          </vehicleJourneys>
+        </TimetableFrame>
+      </frames>
+    </CompositeFrame>
+  </dataObjects>
+</PublicationDelivery>
