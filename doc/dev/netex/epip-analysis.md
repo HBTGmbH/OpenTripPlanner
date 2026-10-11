@@ -365,16 +365,17 @@ and is out of scope.
 | D6  | Profile-neutral gaps go into core behind `NetexProfileSupport.extendedNetex()`; profile-specific parts into `ext/netexprofile`.                                                                  |
 | D7  | V4 (`epd:` codespace prefix) is deferred: in all reference data sets the prefix only occurs on frame ids, which are never referenced.                                                            |
 | D8  | J9 (passing times without id) is fixed in core without a flag, like the increment 1 fixes: it only changes the result for data without ids, where notices were attached to arbitrary stop times. |
+| D9  | EPIP line and network offers are grouped by directory, country and provider (DELFI: one group per operating unit), see §8.                                                                       |
 
-| #   | Open question                                                                                                                                  |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Q4  | ID of derived stops (S1): `<ScheduledStopPoint id>` or `<StopPlace id>` + suffix? _Implemented: the scheduled stop point id; to be confirmed._ |
-| Q5  | Swapped coordinates (L7): issue only, or an opt-in automatic swap?                                                                             |
-| Q6  | Lines with mode `other`/`lift` (M1): drop (current) or map to a default mode (e.g. `BUS`)? Lines without mode (M3): _implemented as proposed._ |
-| Q7  | `SiteConnection` → `minTransferTime` constrained transfers (I4): acceptable approximation? _Implemented this way; to be confirmed._            |
-| Q9  | Headsign when no `DestinationDisplay` exists (DE, LU, CZ): leave empty (current) or derive from the last stop name?                            |
-| Q10 | VDV 462 activation: fallbacks only where the core would drop data (current proposal), or a per-feed `profile` build-config parameter?          |
-| Q11 | Family C (VDV 452 mapping, `ServicePattern`/`VehicleJourney`): part of `NetexVdv462` later, or out of scope?                                   |
+| #   | Open question                                                                                                                                                                                                     |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q4  | ID of derived stops (S1): `<ScheduledStopPoint id>` or `<StopPlace id>` + suffix? _Implemented: the scheduled stop point id; to be confirmed._                                                                    |
+| Q5  | Swapped coordinates (L7): issue only, or an opt-in automatic swap?                                                                                                                                                |
+| Q6  | Lines with mode `other`/`lift` (M1): drop (current) or map to a default mode (e.g. `BUS`)? Lines without mode (M3): _implemented as proposed._ DELFI: `unknown` on AST lines (Hamburg: 23 lines, 3 302 journeys). |
+| Q7  | `SiteConnection` → `minTransferTime` constrained transfers (I4): acceptable approximation? _Implemented this way; to be confirmed._                                                                               |
+| Q9  | Headsign when no `DestinationDisplay` exists (DE, LU, CZ): leave empty (current) or derive from the last stop name? DELFI: no destination display on Hamburg bus lines; recommendation: last stop name.           |
+| Q10 | VDV 462 activation: fallbacks only where the core would drop data (current proposal), or a per-feed `profile` build-config parameter?                                                                             |
+| Q11 | Family C (VDV 452 mapping, `ServicePattern`/`VehicleJourney`): part of `NetexVdv462` later, or out of scope?                                                                                                      |
 
 ## 7. Implementation status
 
@@ -449,3 +450,65 @@ Effect on the test data sets: Nordic unchanged with both features on. EPIP (HVV)
 032 notice assignments (before 0), 2 routes with operator (before 0), 4 transfers from site
 connections, no issues. Freiburg export with `NetexVdv462`: 92 stations and 204 derived stops; trips
 still need J3 (`VehicleJourney`) from increment 5.
+
+### Increment 4 – hand-built EPIP data set and integration test (done)
+
+`ext-test/.../netexprofile/epip/routing`: a stop file and two line files with EPIP file names,
+schema-checked against `NeTEx_publication-NoConstraint.xsd` (the files reference stop places of
+another file). `EpipRoutingIntegrationTest` builds a graph with `NetexEpip` and plans a trip with
+one transfer (bus A → tram B at a stop place without quays).
+
+## 8. Real data: German DELFI data set (October 2026)
+
+Source: `20261005_fahrplaene_gesamtdeutschland.zip` (DELFI e.V., "NeTEx EU-Profil (final draft
+04/2019)", validity 19.09.–12.12.2026), 2.0 GB zipped, 79 GB unpacked.
+
+### 8.1 Structure
+
+| Observation                                                                                                                                          | Consequence                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| One directory per operating unit (1 366), 28 289 `NX-PI-01_DE_NAP_LINE_…` files, plus a PDF description and a 490 MB export log                      | EPIP patterns accept a directory prefix; zip directory entries and non-XML files are ignored                                       |
+| No `STOP` files: every line file has its own `SiteFrame`; all 4 067 `StopPlaceRef` and 2 728 `QuayRef` of a 100-file sample resolve in the same file | No shared files needed. The national stop register (zHV) uses DHIDs, not these ids                                                 |
+| Stop place ids are per operating unit (`DE::StopPlace:20200_vgn_d::`), the DHID is only in `keyList` `GlobalID`                                      | The same physical stop exists once per operating unit; merging by DHID is possible future work                                     |
+| Interchanges: 228 816 within the file, 239 981 within the directory (other file), 1 635 (0.35 %) across directories                                  | Group = directory (D9). One group per file would lose half of the interchanges; one group for the country does not fit into memory |
+| 33 % of the passenger stop assignments have no `QuayRef`                                                                                             | Derived stops (S1) are essential                                                                                                   |
+| Some scheduled stop points have no passenger stop assignment at all                                                                                  | S8: stop without parent station at the scheduled stop point                                                                        |
+| Journey wide notices are repeated on every `StopPointInJourneyPattern` (99.6 % of the notices on stop points)                                        | Treated as journey pattern notices (J7)                                                                                            |
+| `TransportMode` `unknown` on AST (call-collective taxi) lines, stop places of type `other`                                                           | Not derivable; lines dropped (`UnsupportedModeInLine`), see Q6                                                                     |
+| Bus lines have no `DestinationDisplay` at all (Hamburg: HHA-B, VHH, KVG); the U-Bahn has                                                             | No headsign for buses, see Q9                                                                                                      |
+| `Direction` elements without `DirectionType`                                                                                                         | Trip direction stays unknown                                                                                                       |
+
+### 8.2 Hamburg (17 `hvv_d_*` operating units, 1 359 files, 2.9 GB)
+
+| Measure                              | Before the DELFI fixes | After        |
+| ------------------------------------ | ---------------------- | ------------ |
+| Service journeys imported            | 231 657                | 243 732      |
+| Trips lost by unassigned stop points | 12 075                 | 0            |
+| Notice assignments                   | 28.5 million           | 1.35 million |
+| Heap after import (after GC)         | 2.6 GB                 | 0.8 GB       |
+| Import time (NeTEx only)             | 33 s                   | 29 s         |
+
+Remaining issues: 3 302 AST journeys with mode `unknown` (and their notices), 62 site connections
+without duration or with unknown end. A graph build with the Hamburg OSM extract takes 55 s (graph
+206 MB); trip planning works, including bus–U-Bahn transfers. About 20 000 stops lie outside the
+Hamburg OSM extract and are not linked.
+
+### 8.3 Germany (complete data set, 28 289 files)
+
+NeTEx import only (no street graph), `-Xmx28G`, 12 CPU cores:
+
+| Measure                                  | Before the DELFI fixes | After              |
+| ---------------------------------------- | ---------------------- | ------------------ |
+| Service journeys imported                | 4 534 644              | 4 749 866          |
+| Lines                                    | 25 807                 | 27 350             |
+| Journeys dropped for mode `unknown`      | 188 081                | 0                  |
+| Journeys dropped for unresolved stops    | 8 683                  | 908                |
+| Journeys of lines without any mode (AST) | 147 353                | 127 987            |
+| Import time / heap after GC              | 12.4 min / 17.1 GB     | 11.9 min / 17.5 GB |
+
+Stops: 532 157 (151 515 derived from scheduled stop points, 24 767 without assignment), 257 004
+stations, 3.5 million constrained transfers (interchanges and site connections). The remaining 50.7
+million notice assignments are notices on a part of the stop points of a pattern, mostly
+accessibility details of the stop (ramps, tactile paving, step height); they are attached to every
+stop time. Attaching them to the stop point in journey pattern would need a model change (out of
+scope), but is a candidate for reducing memory.
