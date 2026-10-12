@@ -2,7 +2,12 @@ package org.opentripplanner.netex.mapping;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import jakarta.xml.bind.JAXBElement;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -11,6 +16,10 @@ import org.opentripplanner.netex.index.api.NetexEntityIndexReadOnlyView;
 import org.opentripplanner.netex.support.JourneyPatternHelper;
 import org.rutebanken.netex.model.AllVehicleModesOfTransportEnumeration;
 import org.rutebanken.netex.model.JourneyPattern_VersionStructure;
+import org.rutebanken.netex.model.Line_VersionStructure;
+import org.rutebanken.netex.model.Notice;
+import org.rutebanken.netex.model.NoticeAssignment;
+import org.rutebanken.netex.model.NoticeAssignments_RelStructure;
 import org.rutebanken.netex.model.ServiceJourney;
 import org.rutebanken.netex.model.StopPlace;
 import org.rutebanken.netex.model.StopPointInJourneyPattern;
@@ -71,6 +80,77 @@ class LineTransportModeResolver {
         .map(StopPlace::getTransportMode)
     );
     return stopPlaceMode == null ? null : new DerivedMode(stopPlaceMode, null, "stop places");
+  }
+
+  /** The number of service journeys of the line in the current file level. */
+  int numberOfServiceJourneys(String lineId) {
+    return serviceJourneysByLineId().get(lineId).size();
+  }
+
+  /**
+   * The distinct texts of the notices assigned to the line, its service journeys, their journey
+   * patterns and the stop points of the patterns. Used to report hints in the data, see
+   * {@link org.opentripplanner.netex.issues.LineWithoutTransportMode}.
+   */
+  List<String> noticeTexts(Line_VersionStructure line) {
+    var assignments = new ArrayList<NoticeAssignment>();
+    addNoticeAssignments(assignments, line.getNoticeAssignments());
+    var serviceJourneys = serviceJourneysByLineId().get(line.getId());
+    for (ServiceJourney serviceJourney : serviceJourneys) {
+      addNoticeAssignments(assignments, serviceJourney.getNoticeAssignments());
+    }
+    serviceJourneys
+      .stream()
+      .map(this::journeyPattern)
+      .filter(Objects::nonNull)
+      .distinct()
+      .forEach(journeyPattern -> {
+        addNoticeAssignments(assignments, journeyPattern.getNoticeAssignments());
+        if (journeyPattern.getPointsInSequence() != null) {
+          for (var point : journeyPattern
+            .getPointsInSequence()
+            .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()) {
+            if (point instanceof StopPointInJourneyPattern stopPoint) {
+              addNoticeAssignments(assignments, stopPoint.getNoticeAssignments());
+            }
+          }
+        }
+      });
+
+    Map<String, Notice> inlineNotices = new HashMap<>();
+    for (NoticeAssignment it : assignments) {
+      if (it.getNotice() != null && it.getNotice().getId() != null) {
+        inlineNotices.putIfAbsent(it.getNotice().getId(), it.getNotice());
+      }
+    }
+    var result = new LinkedHashSet<String>();
+    for (NoticeAssignment it : assignments) {
+      var notice = it.getNotice();
+      if (notice == null && it.getNoticeRef() != null) {
+        notice = inlineNotices.get(it.getNoticeRef().getRef());
+        if (notice == null) {
+          notice = index.getNoticeById().lookup(it.getNoticeRef().getRef());
+        }
+      }
+      if (notice != null && notice.getText() != null && notice.getText().getValue() != null) {
+        result.add(notice.getText().getValue().strip());
+      }
+    }
+    return List.copyOf(result);
+  }
+
+  private static void addNoticeAssignments(
+    List<NoticeAssignment> result,
+    @Nullable NoticeAssignments_RelStructure container
+  ) {
+    if (container == null) {
+      return;
+    }
+    for (JAXBElement<?> element : container.getNoticeAssignment_OrNoticeAssignmentView()) {
+      if (element.getValue() instanceof NoticeAssignment noticeAssignment) {
+        result.add(noticeAssignment);
+      }
+    }
   }
 
   private Multimap<String, ServiceJourney> serviceJourneysByLineId() {

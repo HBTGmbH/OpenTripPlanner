@@ -2,6 +2,7 @@ package org.opentripplanner.netex.mapping;
 
 import com.google.common.collect.Multimap;
 import jakarta.xml.bind.annotation.adapters.HexBinaryAdapter;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -10,9 +11,11 @@ import java.util.Set;
 import javax.annotation.Nullable;
 import org.opentripplanner.core.model.i18n.NonLocalizedString;
 import org.opentripplanner.core.model.id.FeedScopedId;
+import org.opentripplanner.ext.netexprofile.epip.DelfiNoticeHints;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
 import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.api.NetexEntityIndexReadOnlyView;
+import org.opentripplanner.netex.issues.LineWithoutTransportMode;
 import org.opentripplanner.netex.mapping.support.FeedScopedIdFactory;
 import org.opentripplanner.netex.mapping.support.NetexMainAndSubMode;
 import org.opentripplanner.transit.model.framework.EntityById;
@@ -134,12 +137,16 @@ class RouteMapper {
     try {
       mode = transportModeMapper.map(transportMode, transportSubmode);
     } catch (TransportModeMapper.UnsupportedModeException e) {
-      issueStore.add(
-        "UnsupportedModeInLine",
-        "Unsupported mode in Line. Mode: %s, line: %s",
-        e.mode,
-        line.getId()
-      );
+      if (profileSupport.extendedNetex() && isMissingOrUnknown(transportMode)) {
+        issueStore.add(lineWithoutTransportMode(line, name));
+      } else {
+        issueStore.add(
+          "UnsupportedModeInLine",
+          "Unsupported mode in Line. Mode: %s, line: %s",
+          e.mode,
+          line.getId()
+        );
+      }
       return null;
     }
 
@@ -186,6 +193,46 @@ class RouteMapper {
    * The Nordic profile uses the mode water for ferries; EPIP also has the mode ferry, which is
    * supported with extended NeTEx support.
    */
+  private static boolean isMissingOrUnknown(@Nullable AllVehicleModesOfTransportEnumeration mode) {
+    return mode == null || mode == AllVehicleModesOfTransportEnumeration.UNKNOWN;
+  }
+
+  /**
+   * Report a line which is dropped, because no mode is known, with the hints found in the data and
+   * how the line should be described. The notice hints are specific to the German DELFI data set.
+   */
+  private LineWithoutTransportMode lineWithoutTransportMode(
+    Line_VersionStructure line,
+    @Nullable MultilingualString name
+  ) {
+    var hints = new ArrayList<String>();
+    var expectedMode = "<TransportMode> of the line, for example bus or taxi";
+    boolean bookingRequired = false;
+    if (profileSupport.epip()) {
+      var lineHints = DelfiNoticeHints.lineHints(lineTransportModeResolver.noticeTexts(line));
+      if (lineHints.gtfsRouteType() != null) {
+        hints.add(
+          "notice 'GTFS Route Type : " +
+            lineHints.gtfsRouteType() +
+            "'" +
+            (lineHints.description() == null ? "" : " (" + lineHints.description() + ")")
+        );
+      }
+      lineHints.bookingNotices().forEach(it -> hints.add("notice '" + it + "'"));
+      expectedMode = lineHints.expectedMode();
+      bookingRequired = lineHints.bookingRequired();
+    }
+    return new LineWithoutTransportMode(
+      line.getId(),
+      name == null ? line.getPublicCode() : name.getValue(),
+      line.getTransportMode() == null ? "missing" : line.getTransportMode().value(),
+      lineTransportModeResolver.numberOfServiceJourneys(line.getId()),
+      hints,
+      expectedMode,
+      bookingRequired
+    );
+  }
+
   private boolean isFerry(@Nullable AllVehicleModesOfTransportEnumeration mode) {
     return (
       mode == AllVehicleModesOfTransportEnumeration.WATER ||

@@ -40,6 +40,9 @@ import org.rutebanken.netex.model.Line;
 import org.rutebanken.netex.model.LineRefStructure;
 import org.rutebanken.netex.model.MultilingualString;
 import org.rutebanken.netex.model.Network;
+import org.rutebanken.netex.model.Notice;
+import org.rutebanken.netex.model.NoticeAssignment;
+import org.rutebanken.netex.model.NoticeAssignments_RelStructure;
 import org.rutebanken.netex.model.OperatorRefStructure;
 import org.rutebanken.netex.model.PointsInJourneyPattern_RelStructure;
 import org.rutebanken.netex.model.PresentationStructure;
@@ -301,6 +304,49 @@ class RouteMapperTest {
 
     assertEquals(TransitMode.BUS, route.getMode());
     assertNull(createRouteMapper(index, DataImportIssueStore.NOOP).mapRoute(line));
+  }
+
+  @Test
+  void reportLineWithUnknownModeWithTheHintsInTheData() {
+    var line = createExampleLine();
+    line.setTransportMode(AllVehicleModesOfTransportEnumeration.UNKNOWN);
+    line.setNoticeAssignments(
+      new NoticeAssignments_RelStructure().withNoticeAssignment_OrNoticeAssignmentView(
+        createJaxbElement(notice("N-1", "GTFS Route Type : 1501")),
+        createJaxbElement(notice("N-2", "Rufbus: Anmeldung bis 60 Min. vor Abfahrt"))
+      )
+    );
+    var index = new NetexEntityIndex();
+    index.serviceJourneyById.add(
+      serviceJourneyOfLine("SJ-1", AllVehicleModesOfTransportEnumeration.UNKNOWN)
+    );
+    var issueStore = new DefaultDataImportIssueStore();
+
+    var route = createRouteMapper(
+      index,
+      new TransitDataImportBuilder(new SiteRepository(), issueStore),
+      issueStore,
+      NetexProfileSupport.of(true, false)
+    ).mapRoute(line);
+
+    assertNull(route);
+    var issue = issueStore
+      .listIssues()
+      .stream()
+      .filter(it -> it.getType().equals("LineWithoutTransportMode"))
+      .findFirst()
+      .orElseThrow();
+    assertThat(issue.getMessage()).contains("dropped with its 1 service journeys");
+    assertThat(issue.getMessage()).contains("'GTFS Route Type : 1501' (communal taxi service)");
+    assertThat(issue.getMessage()).contains("'Rufbus: Anmeldung bis 60 Min. vor Abfahrt'");
+    assertThat(issue.getMessage()).contains("<TaxiSubmode>communalTaxi</TaxiSubmode>");
+    assertThat(issue.getMessage()).contains("<BookingArrangements>");
+  }
+
+  private static NoticeAssignment notice(String id, String text) {
+    return new NoticeAssignment().withNotice(
+      new Notice().withId(id).withText(new MultilingualString().withValue(text))
+    );
   }
 
   @Test
