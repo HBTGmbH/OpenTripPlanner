@@ -7,6 +7,9 @@
   transport mode, and a depot run.
   Tram line 1 runs A -> B -> C. Running time group 1 (normal traffic): A->B 5 min, B->C 6 min,
   wait time at B 1 min. Running time group 2 (peak): A->B 7 min, B->C 8 min.
+  Running time group 3 (night) has no run times, like most of the Freiburg export: journeys VJ_5
+  (A -> C at 08:00) and VJ_6 (C -> A at 08:20) are run by the same vehicle (block BL_1), and the
+  service links give the lengths A-B 1000 m and B-C 2000 m. Their run times can only be estimated.
 -->
 <PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.0">
   <PublicationTimestamp>2025-01-01T00:00:00</PublicationTimestamp>
@@ -51,6 +54,12 @@
         <ScheduledStopPoint id="SSP_C" version="1"><Name>C</Name><Location><Longitude>48.000</Longitude><Latitude>7.860</Latitude></Location><PublicCode>1003</PublicCode></ScheduledStopPoint>
         <ScheduledStopPoint id="SSP_D" version="1"><Name>Depot</Name><Location><Longitude>47.985</Longitude><Latitude>7.830</Latitude></Location></ScheduledStopPoint>
       </scheduledStopPoints>
+      <serviceLinks>
+        <ServiceLink id="SL_AB" version="1"><Distance>1000</Distance><FromPointRef ref="SSP_A" version="1"/><ToPointRef ref="SSP_B" version="1"/></ServiceLink>
+        <ServiceLink id="SL_BC" version="1"><Distance>2000</Distance><FromPointRef ref="SSP_B" version="1"/><ToPointRef ref="SSP_C" version="1"/></ServiceLink>
+        <ServiceLink id="SL_CB" version="1"><Distance>2000</Distance><FromPointRef ref="SSP_C" version="1"/><ToPointRef ref="SSP_B" version="1"/></ServiceLink>
+        <ServiceLink id="SL_BA" version="1"><Distance>1000</Distance><FromPointRef ref="SSP_B" version="1"/><ToPointRef ref="SSP_A" version="1"/></ServiceLink>
+      </serviceLinks>
       <servicePatterns>
         <ServicePattern id="SP_1" version="1">
           <RouteRef ref="RT_1" version="1"/>
@@ -80,6 +89,24 @@
           <pointsInSequence>
             <StopPointInJourneyPattern id="SPJP_4" version="1"><ScheduledStopPointRef ref="SSP_B" version="1"/></StopPointInJourneyPattern>
             <StopPointInJourneyPattern id="SPJP_5" version="1"><ScheduledStopPointRef ref="SSP_C" version="1"/></StopPointInJourneyPattern>
+          </pointsInSequence>
+        </ServicePattern>
+        <ServicePattern id="SP_4" version="1">
+          <RouteRef ref="RT_1" version="1"/>
+          <TypeOfJourneyPatternRef ref="TOJP_1" version="1"/>
+          <pointsInSequence>
+            <StopPointInJourneyPattern id="SPJP_8" version="1"><ScheduledStopPointRef ref="SSP_A" version="1"/></StopPointInJourneyPattern>
+            <StopPointInJourneyPattern id="SPJP_9" version="1"><ScheduledStopPointRef ref="SSP_B" version="1"/></StopPointInJourneyPattern>
+            <StopPointInJourneyPattern id="SPJP_10" version="1"><ScheduledStopPointRef ref="SSP_C" version="1"/></StopPointInJourneyPattern>
+          </pointsInSequence>
+        </ServicePattern>
+        <ServicePattern id="SP_5" version="1">
+          <RouteRef ref="RT_1" version="1"/>
+          <TypeOfJourneyPatternRef ref="TOJP_1" version="1"/>
+          <pointsInSequence>
+            <StopPointInJourneyPattern id="SPJP_11" version="1"><ScheduledStopPointRef ref="SSP_C" version="1"/></StopPointInJourneyPattern>
+            <StopPointInJourneyPattern id="SPJP_12" version="1"><ScheduledStopPointRef ref="SSP_B" version="1"/></StopPointInJourneyPattern>
+            <StopPointInJourneyPattern id="SPJP_13" version="1"><ScheduledStopPointRef ref="SSP_A" version="1"/></StopPointInJourneyPattern>
           </pointsInSequence>
         </ServicePattern>
         <ServicePattern id="SP_3" version="1">
@@ -129,6 +156,7 @@
         <TimeDemandType id="TDS_2" version="1"><Name>02 - HVZ = Hauptverkehrszeit</Name><PrivateCode>2</PrivateCode></TimeDemandType>
         <TimeDemandType id="TDT_1" version="1"><Name>01 - NV = Normalverkehr</Name><PrivateCode>1</PrivateCode></TimeDemandType>
         <TimeDemandType id="TDT_2" version="1"><Name>02 - HVZ = Hauptverkehrszeit</Name><PrivateCode>2</PrivateCode></TimeDemandType>
+        <TimeDemandType id="TDT_3" version="1"><Name>03 - NVZ = Nachtverkehr</Name><PrivateCode>3</PrivateCode></TimeDemandType>
       </timeDemandTypes>
       <vehicleJourneys>
         <VehicleJourney id="VJ_1" version="1">
@@ -158,7 +186,30 @@
           <ServicePatternRef ref="SP_3" version="1"/>
           <timeDemandTypes><TimeDemandTypeRef ref="TDT_1" version="1"/></timeDemandTypes>
         </VehicleJourney>
+        <VehicleJourney id="VJ_5" version="1">
+          <DepartureTime>08:00:00</DepartureTime>
+          <dayTypes><DayTypeRef ref="DT_1" version="1"/></dayTypes>
+          <ServicePatternRef ref="SP_4" version="1"/>
+          <timeDemandTypes><TimeDemandTypeRef ref="TDT_3" version="1"/></timeDemandTypes>
+        </VehicleJourney>
+        <VehicleJourney id="VJ_6" version="1">
+          <DepartureTime>08:20:00</DepartureTime>
+          <dayTypes><DayTypeRef ref="DT_1" version="1"/></dayTypes>
+          <ServicePatternRef ref="SP_5" version="1"/>
+          <timeDemandTypes><TimeDemandTypeRef ref="TDT_3" version="1"/></timeDemandTypes>
+        </VehicleJourney>
       </vehicleJourneys>
     </TimetableFrame>
+    <VehicleScheduleFrame id="VSF_1" version="1">
+      <blocks>
+        <Block id="BL_1" version="1">
+          <dayTypes><DayTypeRef ref="DT_1" version="1"/></dayTypes>
+          <journeys>
+            <VehicleJourneyRef ref="VJ_5" version="1"/>
+            <VehicleJourneyRef ref="VJ_6" version="1"/>
+          </journeys>
+        </Block>
+      </blocks>
+    </VehicleScheduleFrame>
   </dataObjects>
 </PublicationDelivery>

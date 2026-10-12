@@ -24,6 +24,7 @@ Every correction and every gap in the data is reported, so the data can be fixed
 import argparse
 import collections
 import datetime
+import math
 import re
 import statistics
 import sys
@@ -136,6 +137,12 @@ def coordinate_value(value):
   digits = f"{abs(int(number)):010d}"
   degrees, minutes, millis = int(digits[:3]), int(digits[3:5]), int(digits[5:])
   return sign * (degrees + minutes / 60 + millis / 3600000)
+
+
+def haversine(a, b):
+  lat1, lon1, lat2, lon2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+  h = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
+  return 2 * 6371000 * math.asin(math.sqrt(h))
 
 
 def inside(lat, lon):
@@ -322,79 +329,276 @@ class Converter:
 
   def convert_journeys(self):
     self.journeys = []
+    self.estimated_journeys = set()
+    self.stop_place_by_ssp = {
+      ref(psa, "ScheduledStopPointRef"): ref(psa, "StopPlaceRef")
+      for psa in self.by_id["PassengerStopAssignment"].values()
+    }
+    to_estimate = []
     for journey_id, journey in self.by_id["VehicleJourney"].items():
-      pattern = self.by_id["ServicePattern"].get(ref(journey, "ServicePatternRef"))
-      if pattern is None:
-        pattern = self.by_id["ServiceJourneyPattern"].get(ref(journey, "ServiceJourneyPatternRef"))
-      if pattern is None:
-        self.report.add("journey-without-pattern", "VehicleJourney references no pattern; dropped", journey_id)
+      candidate = self.journey_candidate(journey_id, journey)
+      if candidate is None:
         continue
-      if not self.is_passenger_pattern(pattern):
+      runs = self.known_run_times(candidate)
+      if all(run is not None for run in runs):
+        self.journeys.append((journey, candidate["pattern"], self.passing_times(candidate, runs)))
+      elif self.args.estimate_run_times_from_blocks:
+        to_estimate.append((candidate, runs))
+      else:
+        i = runs.index(None)
         self.report.add(
-          "depot-run-skipped",
-          "Journey on a depot run pattern (ROUTE_TYPE 2-4) is not a passenger journey; skipped",
-          journey_id,
+          "run-time-missing",
+          "No run time for a route section and the time demand type of the journey; journey dropped. "
+          "VDV 452 TRAVEL_TIME (SEL_FZT_FELD) is missing",
+          f"{candidate['ssps'][i]} -> {candidate['ssps'][i + 1]} / {candidate['tdt']} (journey {journey_id})",
         )
-        continue
-      departure = text(journey, "DepartureTime")
-      if departure is None:
-        self.report.add("journey-without-departure", "VehicleJourney has no DepartureTime; dropped", journey_id)
-        continue
-      start = parse_time(departure)
-      if self.args.day_offset_before is not None and start < self.args.day_offset_before:
-        start += 86400
-        self.report.add(
-          "departure-after-midnight",
-          "Departure before --day-offset-before belongs to the previous operating day; day offset 1 is set",
-          f"{journey_id}: {departure}",
-        )
-      tdt_ref = ref(journey, "TimeDemandTypeRef")
-      types = journey.find(NS + "timeDemandTypes")
-      if tdt_ref is None and types is not None and types.find(NS + "TimeDemandTypeRef") is not None:
-        tdt_ref = types.find(NS + "TimeDemandTypeRef").get("ref")
-      tdt = self.time_demand_type(tdt_ref, journey_id)
+    if to_estimate:
+      self.estimate(to_estimate)
 
-      points = [p for p in pattern.find(NS + "pointsInSequence") if local(p) == "StopPointInJourneyPattern"]
-      if any(p.get("order") for p in points):
-        points.sort(key=lambda p: int(p.get("order") or 0))
-      ssps = [ref(p, "ScheduledStopPointRef") for p in points]
-      times = []
-      time = start
-      ok = True
-      for i, ssp in enumerate(ssps):
-        arrival = None
+  def journey_candidate(self, journey_id, journey):
+    """The pattern, stop points, start time and running time group of a passenger journey."""
+    pattern = self.by_id["ServicePattern"].get(ref(journey, "ServicePatternRef"))
+    if pattern is None:
+      pattern = self.by_id["ServiceJourneyPattern"].get(ref(journey, "ServiceJourneyPatternRef"))
+    if pattern is None:
+      self.report.add("journey-without-pattern", "VehicleJourney references no pattern; dropped", journey_id)
+      return None
+    if not self.is_passenger_pattern(pattern):
+      self.report.add(
+        "depot-run-skipped",
+        "Journey on a depot run pattern (ROUTE_TYPE 2-4) is not a passenger journey; skipped",
+        journey_id,
+      )
+      return None
+    departure = text(journey, "DepartureTime")
+    if departure is None:
+      self.report.add("journey-without-departure", "VehicleJourney has no DepartureTime; dropped", journey_id)
+      return None
+    start = parse_time(departure)
+    if self.args.day_offset_before is not None and start < self.args.day_offset_before:
+      start += 86400
+      self.report.add(
+        "departure-after-midnight",
+        "Departure before --day-offset-before belongs to the previous operating day; day offset 1 is set",
+        f"{journey_id}: {departure}",
+      )
+    tdt_ref = ref(journey, "TimeDemandTypeRef")
+    types = journey.find(NS + "timeDemandTypes")
+    if tdt_ref is None and types is not None and types.find(NS + "TimeDemandTypeRef") is not None:
+      tdt_ref = types.find(NS + "TimeDemandTypeRef").get("ref")
+    points = [p for p in pattern.find(NS + "pointsInSequence") if local(p) == "StopPointInJourneyPattern"]
+    if any(p.get("order") for p in points):
+      points.sort(key=lambda p: int(p.get("order") or 0))
+    return {
+      "id": journey_id,
+      "journey": journey,
+      "pattern": pattern,
+      "points": points,
+      "ssps": [ref(p, "ScheduledStopPointRef") for p in points],
+      "start": start,
+      "tdt": self.time_demand_type(tdt_ref, journey_id),
+    }
+
+  def known_run_times(self, candidate):
+    """The run time of each route section, None if unknown."""
+    ssps, tdt, journey_id = candidate["ssps"], candidate["tdt"], candidate["id"]
+    runs = []
+    for a, b in zip(ssps, ssps[1:]):
+      run = self.journey_run_times.get((journey_id, a, b, tdt))
+      if run is None:
+        run = self.run_times.get((a, b, tdt))
+      if run == 0:
+        if self.args.estimate_run_times_from_blocks:
+          self.report.add(
+            "run-time-zero-ignored",
+            "Run time 0 for a route section between two stop points is treated as missing and estimated",
+            f"{a} -> {b} / {tdt}",
+          )
+          run = None
+        else:
+          self.report.add(
+            "run-time-zero",
+            "Run time 0 for a route section; the arrival equals the previous departure",
+            f"{a} -> {b} / {tdt}",
+          )
+      runs.append(run)
+    return runs
+
+  def wait_time(self, candidate, ssp):
+    wait = self.journey_wait_times.get((candidate["id"], ssp))
+    return self.wait_times.get((ssp, candidate["tdt"]), 0) if wait is None else wait
+
+  def passing_times(self, candidate, runs):
+    """Arrival and departure times from the start time, the run times and the wait times."""
+    ssps = candidate["ssps"]
+    times = []
+    time = candidate["start"]
+    for i, ssp in enumerate(ssps):
+      arrival = None
+      if i > 0:
+        time += runs[i - 1]
+        arrival = round(time)
+      departure = None
+      if i < len(ssps) - 1:
         if i > 0:
-          run = self.journey_run_times.get((journey_id, ssps[i - 1], ssp, tdt))
-          if run is None:
-            run = self.run_times.get((ssps[i - 1], ssp, tdt))
-          if run is None:
-            self.report.add(
-              "run-time-missing",
-              "No run time for a route section and the time demand type of the journey; journey dropped. "
-              "VDV 452 TRAVEL_TIME (SEL_FZT_FELD) is missing",
-              f"{ssps[i - 1]} -> {ssp} / {tdt} (journey {journey_id})",
-            )
-            ok = False
-            break
-          if run == 0:
-            self.report.add(
-              "run-time-zero",
-              "Run time 0 for a route section; the arrival equals the previous departure",
-              f"{ssps[i - 1]} -> {ssp} / {tdt}",
-            )
-          time += run
-          arrival = time
-        departure_time = None
-        if i < len(ssps) - 1:
-          if i > 0:
-            wait = self.journey_wait_times.get((journey_id, ssp))
-            if wait is None:
-              wait = self.wait_times.get((ssp, tdt), 0)
-            time += wait
-          departure_time = time
-        times.append((points[i], arrival, departure_time))
-      if ok:
-        self.journeys.append((journey, pattern, times))
+          time += self.wait_time(candidate, ssp)
+        departure = round(time)
+      times.append((candidate["points"][i], arrival, departure))
+    return times
+
+  # ----------------------------------------------------------------------------------------
+  # Estimation from vehicle blocks (opt-in)
+  # ----------------------------------------------------------------------------------------
+
+  def estimate(self, to_estimate):
+    """
+    Estimate missing run times from the vehicle blocks. If the vehicle runs another journey from
+    the end stop of a journey, the difference of their departure times is the run time plus the
+    wait times plus the layover at the end stop. That total is distributed over the route sections
+    without run time in proportion to their length. For a pattern without such a pair of journeys,
+    the median speed of the other patterns is used.
+    """
+    self.next_in_block = {}
+    for block in self.by_id["Block"].values():
+      journeys = block.find(NS + "journeys")
+      ids = [] if journeys is None else [r.get("ref") for r in journeys]
+      for a, b in zip(ids, ids[1:]):
+        self.next_in_block[a] = b
+    if not self.next_in_block:
+      self.report.add("no-blocks", "The data has no vehicle blocks; run times can not be estimated", None)
+
+    candidates = {c["id"]: c for c, _ in to_estimate}
+    all_candidates = dict(candidates)
+    for journey_id, journey in self.by_id["VehicleJourney"].items():
+      if journey_id not in all_candidates and self.next_in_block.get(journey_id):
+        candidate = self.journey_candidate_quietly(journey_id, journey)
+        if candidate is not None:
+          all_candidates[journey_id] = candidate
+
+    run_totals = {}
+    for journey_id, candidate in all_candidates.items():
+      total = self.run_total_from_block(candidate)
+      if total is not None:
+        run_totals[journey_id] = total
+    shortest = {}
+    for journey_id, total in run_totals.items():
+      pattern_id = all_candidates[journey_id]["pattern"].get("id")
+      shortest[pattern_id] = min(total, shortest.get(pattern_id, total))
+
+    speeds = []
+    for pattern_id, total in sorted(shortest.items()):
+      some = next(c for c in all_candidates.values() if c["pattern"].get("id") == pattern_id)
+      length = self.length(some["ssps"])
+      speed = length / total * 3.6
+      self.report.add(
+        "pattern-speed-from-blocks",
+        "Shortest run time of a pattern from the vehicle blocks (length, time, mean speed)",
+        f"{pattern_id}: {length:.0f} m in {total} s = {speed:.1f} km/h",
+      )
+      if 5 <= speed <= 80:
+        speeds.append(speed)
+      else:
+        self.report.add(
+          "pattern-speed-implausible",
+          "Mean speed from the vehicle blocks is implausible; the pattern uses the median speed",
+          f"{pattern_id}: {speed:.1f} km/h",
+        )
+        del shortest[pattern_id]
+    median_speed = statistics.median(speeds) if speeds else None
+
+    for candidate, runs in to_estimate:
+      self.estimate_journey(candidate, runs, run_totals, shortest, median_speed)
+
+  def journey_candidate_quietly(self, journey_id, journey):
+    """A journey candidate without reporting, used for the following journeys in a block."""
+    report = self.report
+    self.report = Report()
+    try:
+      return self.journey_candidate(journey_id, journey)
+    finally:
+      self.report = report
+
+  def run_total_from_block(self, candidate):
+    """Run time of all route sections from the departure of the next journey of the vehicle."""
+    next_id = self.next_in_block.get(candidate["id"])
+    next_journey = self.by_id["VehicleJourney"].get(next_id)
+    if next_journey is None or text(next_journey, "DepartureTime") is None:
+      return None
+    next_pattern = self.by_id["ServicePattern"].get(ref(next_journey, "ServicePatternRef"))
+    if next_pattern is None:
+      return None
+    first = [p for p in next_pattern.find(NS + "pointsInSequence") if local(p) == "StopPointInJourneyPattern"]
+    end, next_start = candidate["ssps"][-1], ref(first[0], "ScheduledStopPointRef") if first else None
+    same_place = self.stop_place_by_ssp.get(end) is not None and self.stop_place_by_ssp.get(
+      end
+    ) == self.stop_place_by_ssp.get(next_start)
+    if end != next_start and not same_place:
+      return None
+    gap = (parse_time(text(next_journey, "DepartureTime")) - candidate["start"]) % 86400
+    waits = sum(self.wait_time(candidate, s) for s in candidate["ssps"][1:-1])
+    total = gap - waits - self.args.min_layover
+    return total if total > 0 else None
+
+  def length(self, ssps):
+    return sum(self.section_length(a, b) for a, b in zip(ssps, ssps[1:]))
+
+  def section_length(self, a, b):
+    if not hasattr(self, "service_link_lengths"):
+      self.service_link_lengths = {}
+      for link in self.by_id["ServiceLink"].values():
+        distance = text(link, "Distance")
+        if distance:
+          self.service_link_lengths[(ref(link, "FromPointRef"), ref(link, "ToPointRef"))] = float(distance)
+    length = self.service_link_lengths.get((a, b))
+    if length:
+      return length
+    if a in self.coordinates and b in self.coordinates:
+      self.report.add(
+        "section-length-from-coordinates",
+        "No ServiceLink Distance for a route section; 1.3 times the straight line distance is used",
+        f"{a} -> {b}",
+      )
+      return 1.3 * haversine(self.coordinates[a], self.coordinates[b])
+    self.report.add("section-length-unknown", "No length for a route section; 500 m are assumed", f"{a} -> {b}")
+    return 500.0
+
+  def estimate_journey(self, candidate, runs, run_totals, shortest, median_speed):
+    journey_id, pattern_id, ssps = candidate["id"], candidate["pattern"].get("id"), candidate["ssps"]
+    own, pattern_total = run_totals.get(journey_id), shortest.get(pattern_id)
+    if own is not None and pattern_total is not None and own <= 1.3 * pattern_total:
+      total, method = own, "block"
+    elif pattern_total is not None:
+      total, method = pattern_total, "pattern"
+    elif median_speed is not None:
+      total, method = self.length(ssps) / (median_speed / 3.6), "speed"
+    else:
+      self.report.add(
+        "run-time-not-estimated", "Run times can not be estimated for the journey; journey dropped", journey_id
+      )
+      return
+    known = sum(run for run in runs if run is not None)
+    unknown_sections = [i for i, run in enumerate(runs) if run is None]
+    unknown_length = sum(self.section_length(ssps[i], ssps[i + 1]) for i in unknown_sections)
+    remaining = total - known
+    if remaining <= 0 or unknown_length <= 0:
+      self.report.add(
+        "run-time-not-estimated",
+        "The given run times exceed the estimated total; journey dropped",
+        f"{journey_id}: {known} s given, {total:.0f} s estimated",
+      )
+      return
+    estimated = list(runs)
+    for i in unknown_sections:
+      estimated[i] = remaining * self.section_length(ssps[i], ssps[i + 1]) / unknown_length
+    self.report.add(
+      f"run-times-estimated-{method}",
+      "Run times ESTIMATED (not for passenger information); the journey is marked with a notice. "
+      + ESTIMATION_METHODS[method],
+      f"{journey_id}: {len(unknown_sections)} of {len(runs)} sections, {total:.0f} s"
+      + (f" at {median_speed:.1f} km/h" if method == "speed" else ""),
+    )
+    self.estimated_journeys.add(journey_id)
+    self.journeys.append((candidate["journey"], candidate["pattern"], self.passing_times(candidate, estimated)))
 
   # ----------------------------------------------------------------------------------------
   # Output
@@ -445,7 +649,9 @@ class Converter:
     self.resource_frame(frames)
     self.site_frame(frames, used_ssps, stop_place_by_ssp)
     self.calendar_frame(frames)
-    self.service_frame(frames, lines, used_patterns, used_ssps, stop_place_by_ssp)
+    service_frame = self.service_frame(frames, lines, used_patterns, used_ssps, stop_place_by_ssp)
+    if self.estimated_journeys:
+      self.estimated_notice(service_frame)
     self.timetable_frame(frames, lines)
     return root
 
@@ -619,6 +825,18 @@ class Converter:
         self.reference(sp, "ScheduledStopPointRef", "ScheduledStopPoint", ref(point, "ScheduledStopPointRef"))
         if ref(point, "DestinationDisplayRef") in self.by_id["DestinationDisplay"]:
           self.reference(sp, "DestinationDisplayRef", "DestinationDisplay", ref(point, "DestinationDisplayRef"))
+    return frame
+
+  ESTIMATED_NOTICE_TEXT = (
+    "Fahrzeiten geschätzt aus Fahrzeugumläufen und Streckenlängen – nicht für die Fahrgastinformation"
+  )
+
+  def estimated_notice(self, service_frame):
+    """The notice marking journeys with estimated run times."""
+    notices = ET.SubElement(service_frame, NS + "notices")
+    notice = self.element(notices, "Notice", "Notice", "EstimatedRunTimes")
+    ET.SubElement(notice, NS + "Text", {"lang": "de"}).text = self.ESTIMATED_NOTICE_TEXT
+    ET.SubElement(notice, NS + "PublicCode").text = "ESTIMATED"
 
   def timetable_frame(self, frames, lines):
     frame = self.element(frames, "TimetableFrame", "TimetableFrame", "1")
@@ -628,6 +846,13 @@ class Converter:
       line_id, _ = self.pattern_line(pattern)
       out = self.element(journeys, "ServiceJourney", "ServiceJourney", journey_id)
       ET.SubElement(out, NS + "TransportMode").text = lines[line_id][1]
+      if journey_id in self.estimated_journeys:
+        assignment = ET.SubElement(
+          ET.SubElement(out, NS + "noticeAssignments"),
+          NS + "NoticeAssignment",
+          {"id": self.nid("NoticeAssignment", journey_id), "version": "1", "order": "1"},
+        )
+        self.reference(assignment, "NoticeRef", "Notice", "EstimatedRunTimes")
       day_types = ET.SubElement(out, NS + "dayTypes")
       for day_type in journey.iter(NS + "DayTypeRef"):
         self.reference(day_types, "DayTypeRef", "DayType", day_type.get("ref"))
@@ -653,6 +878,14 @@ class Converter:
           ET.SubElement(passing, NS + f"{name}Time").text = clock
           if day:
             ET.SubElement(passing, NS + f"{name}DayOffset").text = str(day)
+
+
+ESTIMATION_METHODS = {
+  "block": "Total from the departure of the next journey of the vehicle at the end stop",
+  "pattern": "Total from the shortest run time of the pattern in the vehicle blocks (the own block "
+  "gap is missing or more than 30 % longer)",
+  "speed": "No block gap for the pattern; total from the median speed of the other patterns",
+}
 
 
 def mode_map(values):
@@ -686,10 +919,23 @@ def main():
     metavar="HH:MM",
     help="journeys departing before this time belong to the previous operating day (e.g. 03:00)",
   )
+  parser.add_argument(
+    "--estimate-run-times-from-blocks",
+    action="store_true",
+    help="ESTIMATE missing run times from the vehicle blocks (not for passenger information, see README)",
+  )
+  parser.add_argument(
+    "--min-layover",
+    type=float,
+    default=0,
+    metavar="MINUTES",
+    help="layover at the end stop subtracted when estimating run times from the blocks (default: 0)",
+  )
   parser.add_argument("--report", help="write the report to this file instead of stderr")
   args = parser.parse_args()
   args.mode_map = mode_map(args.mode)
   args.day_offset_before = parse_time(args.day_offset_before) if args.day_offset_before else None
+  args.min_layover = round(args.min_layover * 60)
 
   report = Report()
   ET.register_namespace("", NETEX)
