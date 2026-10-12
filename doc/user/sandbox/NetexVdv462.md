@@ -63,6 +63,7 @@ The feature is under development. The following table lists what is supported so
 | Lines whose mode can not be derived are dropped with a warning per line (`LineWithoutTransportMode`) that tells why, and how the mode and the booking conditions must be given in the data. | Supported |
 | Scheduled stop points used for boarding or alighting without any passenger stop assignment: a stop without parent station is created at the scheduled stop point (`StopDerivedFromUnassignedScheduledStopPoint`) | Supported |
 | Quays without coordinates are placed at their stop place instead of being skipped (`QuayLocatedAtStopPlace`) | Supported |
+| Stop places without centroid (optional in EPIP) take the mean position of their quays, reported as information (`StationLocatedAtQuays`); `StationWithoutCoordinates` only if the quays have no position either | Supported |
 | Data without time zone (`FrameDefaults/DefaultLocale/TimeZone`): the `transitModelTimeZone` of the build configuration is used instead of GMT (`NetexTimeZoneFallback`) | Supported |
 | Timing model: journeys without passing times get them from their `DepartureTime`, the run times of the journey pattern links and the wait times at its stop points for the `TimeDemandTypeRef` of the journey, including journey-specific run and wait times (`PassingTimesDerivedFromTimingModel`, `PassingTimesNotDerived`) | Supported for run times on the journey pattern links; run times given only on the time demand type are not supported |
 

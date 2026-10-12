@@ -48,6 +48,12 @@ class StationMapper {
    */
   private final Map<String, WgsCoordinate> fallbackCoordinateByStopPlaceId;
 
+  /**
+   * The centroid of a stop place is optional (EPIP: {@code Centroid} 0:1); a stop place without
+   * centroid whose quays have a position is then only reported as information.
+   */
+  private final boolean centroidIsOptional;
+
   StationMapper(
     DataImportIssueStore issueStore,
     FeedScopedIdFactory idFactory,
@@ -57,6 +63,28 @@ class StationMapper {
     SiteRepositoryBuilder siteRepositoryBuilder,
     Map<String, WgsCoordinate> fallbackCoordinateByStopPlaceId
   ) {
+    this(
+      issueStore,
+      idFactory,
+      defaultTimeZone,
+      noTransfersOnIsolatedStops,
+      routeToCentroidStopPlaceIds,
+      siteRepositoryBuilder,
+      fallbackCoordinateByStopPlaceId,
+      false
+    );
+  }
+
+  StationMapper(
+    DataImportIssueStore issueStore,
+    FeedScopedIdFactory idFactory,
+    ZoneId defaultTimeZone,
+    boolean noTransfersOnIsolatedStops,
+    Set<FeedScopedId> routeToCentroidStopPlaceIds,
+    SiteRepositoryBuilder siteRepositoryBuilder,
+    Map<String, WgsCoordinate> fallbackCoordinateByStopPlaceId,
+    boolean centroidIsOptional
+  ) {
     this.issueStore = issueStore;
     this.idFactory = idFactory;
     this.defaultTimeZone = defaultTimeZone;
@@ -64,6 +92,7 @@ class StationMapper {
     this.routeToCentroidStopPlaceIds = routeToCentroidStopPlaceIds;
     this.siteRepositoryBuilder = siteRepositoryBuilder;
     this.fallbackCoordinateByStopPlaceId = fallbackCoordinateByStopPlaceId;
+    this.centroidIsOptional = centroidIsOptional;
   }
 
   /**
@@ -159,24 +188,38 @@ class StationMapper {
     if (centroid != null) {
       return centroid;
     }
+    if (!centroidIsOptional) {
+      reportWithoutCoordinates(stopPlace);
+    }
+    List<WgsCoordinate> coordinates =
+      stopPlace.getQuays() == null
+        ? List.of()
+        : JAXBUtils.streamJAXBElementValue(Quay.class, stopPlace.getQuays().getQuayRefOrQuay())
+            .map(Zone_VersionStructure::getCentroid)
+            .filter(Objects::nonNull)
+            .map(WgsCoordinateMapper::mapToDomain)
+            .toList();
+    if (!coordinates.isEmpty()) {
+      if (centroidIsOptional) {
+        issueStore.add(
+          "StationLocatedAtQuays",
+          "Station %s has no centroid; the mean position of its quays is used.",
+          stopPlace.getId()
+        );
+      }
+      return WgsCoordinate.mean(coordinates);
+    }
+    if (centroidIsOptional) {
+      reportWithoutCoordinates(stopPlace);
+    }
+    return fallbackCoordinateByStopPlaceId.get(stopPlace.getId());
+  }
+
+  private void reportWithoutCoordinates(StopPlace stopPlace) {
     issueStore.add(
       "StationWithoutCoordinates",
       "Station %s does not contain any coordinates.",
       stopPlace.getId() + " " + stopPlace.getName()
     );
-    if (stopPlace.getQuays() == null) {
-      return fallbackCoordinateByStopPlaceId.get(stopPlace.getId());
-    }
-    List<WgsCoordinate> coordinates = JAXBUtils.streamJAXBElementValue(
-      Quay.class,
-      stopPlace.getQuays().getQuayRefOrQuay()
-    )
-      .map(Zone_VersionStructure::getCentroid)
-      .filter(Objects::nonNull)
-      .map(WgsCoordinateMapper::mapToDomain)
-      .toList();
-    return coordinates.isEmpty()
-      ? fallbackCoordinateByStopPlaceId.get(stopPlace.getId())
-      : WgsCoordinate.mean(coordinates);
   }
 }

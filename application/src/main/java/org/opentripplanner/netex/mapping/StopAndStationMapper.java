@@ -88,7 +88,8 @@ class StopAndStationMapper {
       noTransfersOnIsolatedStops,
       routeToCentroidStopPlaceIds,
       siteRepositoryBuilder,
-      fallbackCoordinateByStopPlaceId
+      fallbackCoordinateByStopPlaceId,
+      profileSupport.extendedNetex()
     );
     this.quayMapper = new QuayMapper(
       idFactory,

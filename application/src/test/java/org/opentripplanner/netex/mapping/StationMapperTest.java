@@ -7,6 +7,7 @@ import static org.opentripplanner.netex.NetexTestDataSupport.createQuay;
 import static org.opentripplanner.netex.NetexTestDataSupport.createStopPlace;
 
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -94,5 +95,40 @@ class StationMapperTest {
     Station station = stationMapper.map(stopPlace);
     assertEquals(NetexTestDataSupport.QUAY_LAT, station.getLat());
     assertEquals(NetexTestDataSupport.QUAY_LON, station.getLon());
+  }
+
+  @Test
+  void reportStationWithoutCentroidOnlyAsInformationIfTheQuaysHaveAPosition() {
+    StopPlace stopPlace = createStopPlace(createQuay());
+    stopPlace.withCentroid(null);
+
+    assertThat(issueTypes(stopPlace, false)).containsExactly("StationWithoutCoordinates");
+    assertThat(issueTypes(stopPlace, true)).containsExactly("StationLocatedAtQuays");
+  }
+
+  @Test
+  void reportStationWithoutAnyPositionWithOptionalCentroid() {
+    StopPlace stopPlace = createStopPlace();
+    stopPlace.withCentroid(null);
+
+    assertThat(issueTypes(stopPlace, true)).containsExactly(
+      "StationWithoutCoordinates",
+      "StopPlaceWithoutCoordinates"
+    );
+  }
+
+  private static List<String> issueTypes(StopPlace stopPlace, boolean centroidIsOptional) {
+    var issueStore = new DefaultDataImportIssueStore();
+    new StationMapper(
+      issueStore,
+      new FeedScopedIdFactory("FEED_ID"),
+      ZoneId.of("UTC"),
+      false,
+      Set.of(),
+      SiteRepository.of(),
+      Map.of(),
+      centroidIsOptional
+    ).map(stopPlace);
+    return issueStore.listIssues().stream().map(DataImportIssue::getType).toList();
   }
 }
