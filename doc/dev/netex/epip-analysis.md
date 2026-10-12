@@ -367,6 +367,7 @@ and is out of scope.
 | D8  | J9 (passing times without id) is fixed in core without a flag, like the increment 1 fixes: it only changes the result for data without ids, where notices were attached to arbitrary stop times.                                                                                                                                                                                       |
 | D9  | EPIP line and network offers are grouped by directory, country and provider (DELFI: one group per operating unit), see §8.                                                                                                                                                                                                                                                             |
 | D10 | Lines without a known mode (DELFI: mostly AST and on-demand buses) are dropped, not derived from notice texts. A `LineWithoutTransportMode` warning per line names the hints in the data (`GTFS Route Type` notice, booking notices) and the NeTEx elements to fill (`TransportMode`/submode, `BookingArrangements`). Data quality is to be fixed at the source (decision 2026-10-12). |
+| D11 | Family C (VDV 452 mapping) is not imported by OTP; the standalone converter `script/netex-vdv452-converter` turns it into EPIP-like NeTEx. The Freiburg example lacks run times for 205 of 221 route sections, so no journey can be converted (decision 2026-10-12).                                                                                                                   |
 
 | #   | Open question                                                                                                                                                                                                     |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -479,7 +480,7 @@ All with `NetexEpip` or `NetexVdv462` enabled; details and numbers in §8.
 | J1      | Done: passing times derived from the timing model (`ext/netexprofile/vdv462/TimingModelPassingTimes`), with a hand-built VDV 462 data set and import test. |
 | I5      | Deferred: expanding `InterchangeRule`s (stop, line, direction, time band) to journeys needs real VDV 462 data to get the semantics right.                  |
 | L5      | Deferred for the same reason; journeys are restricted by their day types, so merged frames with disjoint validity mainly affect versioned stops and lines. |
-| J3      | Open (Q11): family C (`VehicleJourney` + `ServicePattern`).                                                                                                |
+| J3      | Solved outside OTP (D11): standalone converter `script/netex-vdv452-converter` (family C → EPIP-like NeTEx with passing times).                            |
 
 ## 8. Real data: German DELFI data set (October 2026)
 

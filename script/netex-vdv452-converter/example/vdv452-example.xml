@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Small example in the structure of a VDV 452 -> NeTEx export (like the VAG Freiburg export of
+  2012): VehicleJourney + ServicePattern, run times and wait times instead of passing times, and
+  the same quirks: every running time group exported twice (TDS_/TDT_ with the same PrivateCode),
+  swapped coordinates, negative zero durations, a line with an operational context instead of a
+  transport mode, and a depot run.
+  Tram line 1 runs A -> B -> C. Running time group 1 (normal traffic): A->B 5 min, B->C 6 min,
+  wait time at B 1 min. Running time group 2 (peak): A->B 7 min, B->C 8 min.
+-->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="1.0">
+  <PublicationTimestamp>2025-01-01T00:00:00</PublicationTimestamp>
+  <ParticipantRef>EXAMPLE</ParticipantRef>
+  <dataObjects>
+    <CompositeFrame id="CF_1" version="1">
+      <Name>Example</Name>
+    </CompositeFrame>
+    <ResourceFrame id="RF_1" version="1">
+      <typesOfValue>
+        <ValueSet id="ValueSet" version="1">
+          <values>
+            <TypeOfJourneyPattern id="TOJP_1" version="1"><Name>Normal profile</Name><PrivateCode>1</PrivateCode></TypeOfJourneyPattern>
+            <TypeOfJourneyPattern id="TOJP_2" version="1"><Name>Depot access</Name><PrivateCode>2</PrivateCode></TypeOfJourneyPattern>
+          </values>
+        </ValueSet>
+      </typesOfValue>
+      <organisations>
+        <Operator id="OP_1" version="1"><Name>Example Verkehrs-AG</Name><ShortName>EXA</ShortName></Operator>
+      </organisations>
+      <operationalContexts>
+        <OperationalContext id="OPC_3" version="1"><Name>Strassenbahn</Name><ShortName>TRAM</ShortName></OperationalContext>
+      </operationalContexts>
+    </ResourceFrame>
+    <ServiceFrame>
+      <directions>
+        <Direction id="DIR_1" version="1"><Name>Direction A</Name><DirectionType>outbound</DirectionType></Direction>
+      </directions>
+      <routes>
+        <Route id="RT_1" version="1"><Name>A - C</Name><LineRef ref="LI_1" version="1"/><DirectionRef ref="DIR_1" version="1"/></Route>
+        <Route id="RT_2" version="1"><Name>Depot - A</Name><LineRef ref="LI_1" version="1"/><DirectionRef ref="DIR_1" version="1"/></Route>
+      </routes>
+      <lines>
+        <Line id="LI_1" version="1"><Name>1</Name><ShortName>1</ShortName><OperationalContextRef ref="OPC_3" version="1"/></Line>
+      </lines>
+      <destinationDisplays>
+        <DestinationDisplay id="DD_1" version="1"><SideText>C</SideText><FrontText>C</FrontText></DestinationDisplay>
+      </destinationDisplays>
+      <scheduledStopPoints>
+        <ScheduledStopPoint id="SSP_A" version="1"><Name>A</Name><Location><Longitude>47.990</Longitude><Latitude>7.840</Latitude></Location><PublicCode>1001</PublicCode></ScheduledStopPoint>
+        <ScheduledStopPoint id="SSP_B" version="1"><Name>B</Name><Location><Longitude>47.995</Longitude><Latitude>7.850</Latitude></Location><PublicCode>1002</PublicCode></ScheduledStopPoint>
+        <ScheduledStopPoint id="SSP_C" version="1"><Name>C</Name><Location><Longitude>48.000</Longitude><Latitude>7.860</Latitude></Location><PublicCode>1003</PublicCode></ScheduledStopPoint>
+        <ScheduledStopPoint id="SSP_D" version="1"><Name>Depot</Name><Location><Longitude>47.985</Longitude><Latitude>7.830</Latitude></Location></ScheduledStopPoint>
+      </scheduledStopPoints>
+      <servicePatterns>
+        <ServicePattern id="SP_1" version="1">
+          <RouteRef ref="RT_1" version="1"/>
+          <TypeOfJourneyPatternRef ref="TOJP_1" version="1"/>
+          <runTimes>
+            <JourneyPatternRunTime id="JRT_1" version="1"><TimeDemandTypeRef ref="TDT_1" version="1"/><TimingLinkRef ref="TL_AB" version="1"/><RunTime>PT5M</RunTime></JourneyPatternRunTime>
+            <JourneyPatternRunTime id="JRT_2" version="1"><TimeDemandTypeRef ref="TDT_2" version="1"/><TimingLinkRef ref="TL_AB" version="1"/><RunTime>PT7M</RunTime></JourneyPatternRunTime>
+          </runTimes>
+          <waitTimes>
+            <JourneyPatternWaitTime id="JWT_1" version="1"><TimeDemandTypeRef ref="TDS_1" version="1"/><TimingPointRef ref="SSP_B" version="1"/><WaitTime>PT1M</WaitTime></JourneyPatternWaitTime>
+            <JourneyPatternWaitTime id="JWT_2" version="1"><TimeDemandTypeRef ref="TDS_2" version="1"/><TimingPointRef ref="SSP_B" version="1"/><WaitTime>-P0Y0M0DT0H0M0S</WaitTime></JourneyPatternWaitTime>
+          </waitTimes>
+          <pointsInSequence>
+            <StopPointInJourneyPattern id="SPJP_1" version="1"><ScheduledStopPointRef ref="SSP_A" version="1"/><DestinationDisplayRef ref="DD_1" version="1"/></StopPointInJourneyPattern>
+            <StopPointInJourneyPattern id="SPJP_2" version="1"><ScheduledStopPointRef ref="SSP_B" version="1"/></StopPointInJourneyPattern>
+            <StopPointInJourneyPattern id="SPJP_3" version="1"><ScheduledStopPointRef ref="SSP_C" version="1"/></StopPointInJourneyPattern>
+          </pointsInSequence>
+        </ServicePattern>
+        <ServicePattern id="SP_2" version="1">
+          <RouteRef ref="RT_1" version="1"/>
+          <TypeOfJourneyPatternRef ref="TOJP_1" version="1"/>
+          <runTimes>
+            <!-- Run times of a route section are not specific to a pattern (VDV 452 SEL_FZT_FELD) -->
+            <JourneyPatternRunTime id="JRT_3" version="1"><TimeDemandTypeRef ref="TDT_1" version="1"/><TimingLinkRef ref="TL_BC" version="1"/><RunTime>PT6M</RunTime></JourneyPatternRunTime>
+            <JourneyPatternRunTime id="JRT_4" version="1"><TimeDemandTypeRef ref="TDT_2" version="1"/><TimingLinkRef ref="TL_BC" version="1"/><RunTime>PT8M</RunTime></JourneyPatternRunTime>
+          </runTimes>
+          <pointsInSequence>
+            <StopPointInJourneyPattern id="SPJP_4" version="1"><ScheduledStopPointRef ref="SSP_B" version="1"/></StopPointInJourneyPattern>
+            <StopPointInJourneyPattern id="SPJP_5" version="1"><ScheduledStopPointRef ref="SSP_C" version="1"/></StopPointInJourneyPattern>
+          </pointsInSequence>
+        </ServicePattern>
+        <ServicePattern id="SP_3" version="1">
+          <RouteRef ref="RT_2" version="1"/>
+          <TypeOfJourneyPatternRef ref="TOJP_2" version="1"/>
+          <pointsInSequence>
+            <StopPointInJourneyPattern id="SPJP_6" version="1"><ScheduledStopPointRef ref="SSP_D" version="1"/></StopPointInJourneyPattern>
+            <StopPointInJourneyPattern id="SPJP_7" version="1"><ScheduledStopPointRef ref="SSP_A" version="1"/></StopPointInJourneyPattern>
+          </pointsInSequence>
+        </ServicePattern>
+      </servicePatterns>
+      <stopAssignments>
+        <PassengerStopAssignment id="PSA_A" version="1"><ScheduledStopPointRef ref="SSP_A" version="1"/><StopPlaceRef ref="SP_A" version="1"/></PassengerStopAssignment>
+        <PassengerStopAssignment id="PSA_B" version="1"><ScheduledStopPointRef ref="SSP_B" version="1"/><StopPlaceRef ref="SP_B" version="1"/></PassengerStopAssignment>
+        <PassengerStopAssignment id="PSA_C" version="1"><ScheduledStopPointRef ref="SSP_C" version="1"/><StopPlaceRef ref="SP_C" version="1"/></PassengerStopAssignment>
+      </stopAssignments>
+      <timingLinks>
+        <TimingLink id="TL_AB" version="1"><FromPointRef ref="SSP_A" version="1"/><ToPointRef ref="SSP_B" version="1"/></TimingLink>
+        <TimingLink id="TL_BC" version="1"><FromPointRef ref="SSP_B" version="1"/><ToPointRef ref="SSP_C" version="1"/></TimingLink>
+      </timingLinks>
+    </ServiceFrame>
+    <ServiceCalendarFrame id="SCF_1" version="1">
+      <ServiceCalendar id="SC_1" version="1">
+        <FromDate>2025-06-01</FromDate>
+        <ToDate>2025-06-30</ToDate>
+        <dayTypes>
+          <DayType id="DT_1" version="1"><Name>Montag</Name><PrivateCode>1</PrivateCode></DayType>
+        </dayTypes>
+        <operatingDays>
+          <OperatingDay id="OD_1" version="1"><CalendarDate>2025-06-02</CalendarDate></OperatingDay>
+        </operatingDays>
+        <dayTypeAssignments>
+          <DayTypeAssignment id="DTA_1" version="1"><OperatingDayRef ref="OD_1" version="1"/><DayTypeRef ref="DT_1" version="1"/></DayTypeAssignment>
+        </dayTypeAssignments>
+      </ServiceCalendar>
+    </ServiceCalendarFrame>
+    <SiteFrame id="SF_1" version="1">
+      <stopPlaces>
+        <StopPlace id="SP_A" version="1"><Name>A</Name></StopPlace>
+        <StopPlace id="SP_B" version="1"><Name>B</Name></StopPlace>
+        <StopPlace id="SP_C" version="1"><Name>C</Name></StopPlace>
+      </stopPlaces>
+    </SiteFrame>
+    <TimetableFrame id="TF_1" version="1">
+      <timeDemandTypes>
+        <TimeDemandType id="TDS_1" version="1"><Name>01 - NV = Normalverkehr</Name><PrivateCode>1</PrivateCode></TimeDemandType>
+        <TimeDemandType id="TDS_2" version="1"><Name>02 - HVZ = Hauptverkehrszeit</Name><PrivateCode>2</PrivateCode></TimeDemandType>
+        <TimeDemandType id="TDT_1" version="1"><Name>01 - NV = Normalverkehr</Name><PrivateCode>1</PrivateCode></TimeDemandType>
+        <TimeDemandType id="TDT_2" version="1"><Name>02 - HVZ = Hauptverkehrszeit</Name><PrivateCode>2</PrivateCode></TimeDemandType>
+      </timeDemandTypes>
+      <vehicleJourneys>
+        <VehicleJourney id="VJ_1" version="1">
+          <DepartureTime>08:00:00</DepartureTime>
+          <dayTypes><DayTypeRef ref="DT_1" version="1"/></dayTypes>
+          <ServicePatternRef ref="SP_1" version="1"/>
+          <timeDemandTypes><TimeDemandTypeRef ref="TDT_2" version="1"/></timeDemandTypes>
+        </VehicleJourney>
+        <VehicleJourney id="VJ_2" version="1">
+          <DepartureTime>20:00:00</DepartureTime>
+          <dayTypes><DayTypeRef ref="DT_1" version="1"/></dayTypes>
+          <ServicePatternRef ref="SP_1" version="1"/>
+          <timeDemandTypes><TimeDemandTypeRef ref="TDT_1" version="1"/></timeDemandTypes>
+          <waitTimes>
+            <VehicleJourneyWaitTime id="VJWT_1"><ScheduledStopPointRef ref="SSP_B" version="1"/><WaitTime>PT3M</WaitTime></VehicleJourneyWaitTime>
+          </waitTimes>
+        </VehicleJourney>
+        <VehicleJourney id="VJ_3" version="1">
+          <DepartureTime>00:30:00</DepartureTime>
+          <dayTypes><DayTypeRef ref="DT_1" version="1"/></dayTypes>
+          <ServicePatternRef ref="SP_1" version="1"/>
+          <timeDemandTypes><TimeDemandTypeRef ref="TDT_1" version="1"/></timeDemandTypes>
+        </VehicleJourney>
+        <VehicleJourney id="VJ_4" version="1">
+          <DepartureTime>05:00:00</DepartureTime>
+          <dayTypes><DayTypeRef ref="DT_1" version="1"/></dayTypes>
+          <ServicePatternRef ref="SP_3" version="1"/>
+          <timeDemandTypes><TimeDemandTypeRef ref="TDT_1" version="1"/></timeDemandTypes>
+        </VehicleJourney>
+      </vehicleJourneys>
+    </TimetableFrame>
+  </dataObjects>
+</PublicationDelivery>
