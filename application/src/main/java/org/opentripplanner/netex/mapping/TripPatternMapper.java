@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.opentripplanner.core.model.deduplicator.DeduplicatorService;
 import org.opentripplanner.core.model.id.FeedScopedId;
@@ -90,6 +91,10 @@ class TripPatternMapper {
 
   private final DeduplicatorService deduplicator;
 
+  private final NetexProfileSupport profileSupport;
+
+  private final Set<String> linesWithHeadsignFromLastStop = new HashSet<>();
+
   TripPatternMapper(
     DataImportIssueStore issueStore,
     FeedScopedIdFactory idFactory,
@@ -158,6 +163,7 @@ class TripPatternMapper {
       maxStopToShapeSnapDistance
     );
     this.deduplicator = deduplicator;
+    this.profileSupport = profileSupport;
 
     this.datedServiceJourneyById = datedServiceJourneyById;
     this.serviceJourneyById = serviceJourneyById;
@@ -429,6 +435,34 @@ class TripPatternMapper {
       return HEADSIGN_EMPTY;
     }
     String headsign = stopTimesMapper.findTripHeadsign(journeyPattern, times.get(0));
+    if (
+      headsign == null &&
+      profileSupport.extendedNetex() &&
+      stopTimesMapper.hasNoDestinationDisplay(journeyPattern)
+    ) {
+      headsign = stopTimesMapper.lastStopName(journeyPattern);
+      if (headsign != null) {
+        reportHeadsignFromLastStop(journeyPattern, serviceJourney);
+      }
+    }
     return headsign == null ? HEADSIGN_EMPTY : headsign;
+  }
+
+  /** Report once per line that the headsign is the name of the last stop. */
+  private void reportHeadsignFromLastStop(
+    JourneyPattern_VersionStructure journeyPattern,
+    ServiceJourney serviceJourney
+  ) {
+    String lineId =
+      serviceJourney.getLineRef() != null
+        ? serviceJourney.getLineRef().getValue().getRef()
+        : JourneyPatternHelper.getLineFromRoute(routeById, journeyPattern);
+    if (linesWithHeadsignFromLastStop.add(lineId == null ? journeyPattern.getId() : lineId)) {
+      issueStore.add(
+        "HeadsignFromLastStop",
+        "Line %s has journey patterns without DestinationDisplay; the name of the last stop is used as headsign of their journeys. Give a DestinationDisplay with FrontText on the journey pattern or its stop points.",
+        lineId == null ? journeyPattern.getId() : lineId
+      );
+    }
   }
 }

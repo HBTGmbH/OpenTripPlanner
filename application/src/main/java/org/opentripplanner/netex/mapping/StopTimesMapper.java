@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.opentripplanner.core.model.i18n.I18NString;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
@@ -257,6 +258,46 @@ class StopTimesMapper {
   }
 
   @Nullable
+  /** The journey pattern has no destination display, neither on the pattern nor on a stop point. */
+  boolean hasNoDestinationDisplay(JourneyPattern_VersionStructure journeyPattern) {
+    return (
+      findPatternDestinationDisplay(journeyPattern) == null &&
+      stopPoints(journeyPattern).noneMatch(it -> it.getDestinationDisplayRef() != null)
+    );
+  }
+
+  /**
+   * The name of the last stop of the journey pattern where passengers may alight: the name of its
+   * station, or of the stop if it has no station. A stop point name often names the platform only.
+   */
+  @Nullable
+  String lastStopName(JourneyPattern_VersionStructure journeyPattern) {
+    var last = stopPoints(journeyPattern)
+      .filter(it -> !Boolean.FALSE.equals(it.isForAlighting()))
+      .reduce((first, second) -> second)
+      .orElse(null);
+    var stop = lookUpStopLocation(last);
+    if (stop == null) {
+      return null;
+    }
+    var name = stop.getParentStation() != null ? stop.getParentStation().getName() : stop.getName();
+    return name == null ? null : name.toString();
+  }
+
+  private static Stream<StopPointInJourneyPattern> stopPoints(
+    JourneyPattern_VersionStructure journeyPattern
+  ) {
+    if (journeyPattern.getPointsInSequence() == null) {
+      return Stream.empty();
+    }
+    return journeyPattern
+      .getPointsInSequence()
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
+      .stream()
+      .filter(StopPointInJourneyPattern.class::isInstance)
+      .map(StopPointInJourneyPattern.class::cast);
+  }
+
   private static StopPointInJourneyPattern findStopPoint(
     String pointInJourneyPatterRef,
     JourneyPattern_VersionStructure journeyPattern

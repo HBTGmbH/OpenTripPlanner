@@ -1,9 +1,11 @@
 package org.opentripplanner.netex.mapping;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigInteger;
 import java.time.Duration;
@@ -27,6 +29,7 @@ import org.opentripplanner.transit.model.site.RegularStop;
 import org.opentripplanner.transit.model.site.Station;
 import org.opentripplanner.transit.model.timetable.Trip;
 import org.rutebanken.netex.model.DestinationDisplayRefStructure;
+import org.rutebanken.netex.model.JourneyPattern_VersionStructure;
 import org.rutebanken.netex.model.StopPointInJourneyPattern;
 import org.rutebanken.netex.model.TimetabledPassingTime;
 
@@ -346,6 +349,54 @@ public class StopTimesMapperTest {
         sample.getTimetabledPassingTimes().getFirst()
       )
     );
+  }
+
+  @Test
+  public void lastStopNameOfJourneyPatternWithoutDestinationDisplay() {
+    NetexTestDataSample sample = new NetexTestDataSample();
+    var journeyPattern = sample.getJourneyPattern();
+    var stopTimesMapper = new StopTimesMapper(
+      DataImportIssueStore.NOOP,
+      MappingSupport.ID_FACTORY,
+      sample.getStopsById(),
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      sample.getDestinationDisplayById(),
+      new HierarchicalMap<>(),
+      sample.getQuayIdByStopPointRef(),
+      new HierarchicalMap<>(),
+      new HierarchicalMapById<>(),
+      new HierarchicalMap<>(),
+      NetexProfileSupport.of(true, false)
+    );
+
+    assertFalse(stopTimesMapper.hasNoDestinationDisplay(journeyPattern));
+
+    journeyPattern
+      .getPointsInSequence()
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern()
+      .forEach(point -> ((StopPointInJourneyPattern) point).setDestinationDisplayRef(null));
+
+    assertTrue(stopTimesMapper.hasNoDestinationDisplay(journeyPattern));
+    var lastStop = sample
+      .getStopsById()
+      .get(
+        MappingSupport.ID_FACTORY.createId(
+          sample.getQuayIdByStopPointRef().lookup(lastStopPointRef(journeyPattern))
+        )
+      );
+    assertEquals(lastStop.getName().toString(), stopTimesMapper.lastStopName(journeyPattern));
+  }
+
+  private static String lastStopPointRef(JourneyPattern_VersionStructure journeyPattern) {
+    var points = journeyPattern
+      .getPointsInSequence()
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern();
+    return ((StopPointInJourneyPattern) points.getLast())
+      .getScheduledStopPointRef()
+      .getValue()
+      .getRef();
   }
 
   @Test
