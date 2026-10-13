@@ -69,7 +69,7 @@ class NetexImportRegressionTest {
   private static final String EPIP_WITH_FEATURE_BASELINE = """
   agencies=3
   groupsOfStations=0
-  issues={HeadsignFromLastStop=2}
+  issues={HeadsignFromLastStop=2, SiteConnectionWithinSite=2}
   multiModalStations=0
   noticeAssignments=2032
   operators=2
@@ -78,7 +78,7 @@ class NetexImportRegressionTest {
   routesWithOperator=2
   serviceIds=2
   stations=20
-  transfers=4
+  transfers=2
   tripOnServiceDates=0
   tripPatterns=4
   trips=110

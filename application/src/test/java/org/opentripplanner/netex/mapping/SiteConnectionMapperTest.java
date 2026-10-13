@@ -27,6 +27,7 @@ class SiteConnectionMapperTest {
   private static final String STOP_PLACE_A = "DE::StopPlace:A::";
   private static final String STOP_PLACE_B = "DE::StopPlace:B::";
   private static final String QUAY_A1 = "DE::Quay:A1::";
+  private static final String QUAY_A2 = "DE::Quay:A2::";
 
   private final TransitRepositoryForTest testModel = TransitRepositoryForTest.of();
   private final DefaultDataImportIssueStore issueStore = new DefaultDataImportIssueStore();
@@ -56,23 +57,56 @@ class SiteConnectionMapperTest {
   }
 
   @Test
-  void connectionWithinOneStopPlaceIsMappedOnce() {
+  void connectionBetweenTwoQuaysOfOneStopPlace() {
+    var station = addStation(STOP_PLACE_A);
+    var quayA1 = addQuay(QUAY_A1, station);
+    var quayA2 = addQuay(QUAY_A2, station);
+
+    var transfers = subject.map(connection(quay(QUAY_A1), quay(QUAY_A2), true));
+
+    assertEquals(2, transfers.size());
+    assertEquals(quayA1, ((StopTransferPoint) transfers.get(0).getFrom()).getStop());
+    assertEquals(quayA2, ((StopTransferPoint) transfers.get(0).getTo()).getStop());
+    assertThat(issueStore.listIssues()).isEmpty();
+  }
+
+  @Test
+  void ignoreConnectionWithinOneStopPlace() {
     addStation(STOP_PLACE_A);
 
     var transfers = subject.map(connection(stopPlace(STOP_PLACE_A), stopPlace(STOP_PLACE_A), true));
 
-    assertEquals(1, transfers.size());
+    assertThat(transfers).isEmpty();
+    assertThat(listIssueTypes()).containsExactly("SiteConnectionWithinSite");
   }
 
   @Test
-  void connectionFromAQuay() {
-    var station = addStation(STOP_PLACE_A);
-    var quay = testModel.stop(QUAY_A1).withParentStation(station).build();
-    stops.add(quay);
+  void ignoreConnectionWithinOneQuay() {
+    addQuay(QUAY_A1, addStation(STOP_PLACE_A));
 
-    var transfers = subject.map(connection(quay(QUAY_A1), stopPlace(STOP_PLACE_A), false));
+    assertThat(subject.map(connection(quay(QUAY_A1), quay(QUAY_A1), false))).isEmpty();
+    assertThat(listIssueTypes()).containsExactly("SiteConnectionWithinSite");
+  }
 
+  @Test
+  void ignoreConnectionFromAQuayToItsStopPlace() {
+    addQuay(QUAY_A1, addStation(STOP_PLACE_A));
+
+    assertThat(subject.map(connection(quay(QUAY_A1), stopPlace(STOP_PLACE_A), false))).isEmpty();
+    assertThat(subject.map(connection(stopPlace(STOP_PLACE_A), quay(QUAY_A1), false))).isEmpty();
+    assertThat(listIssueTypes()).containsExactly("SiteConnectionWithinSite");
+  }
+
+  @Test
+  void connectionFromAQuayToAnotherStopPlace() {
+    var quay = addQuay(QUAY_A1, addStation(STOP_PLACE_A));
+    var stationB = addStation(STOP_PLACE_B);
+
+    var transfers = subject.map(connection(quay(QUAY_A1), stopPlace(STOP_PLACE_B), false));
+
+    assertEquals(1, transfers.size());
     assertEquals(quay, ((StopTransferPoint) transfers.getFirst().getFrom()).getStop());
+    assertEquals(stationB, ((StationTransferPoint) transfers.getFirst().getTo()).getStation());
   }
 
   @Test
@@ -92,6 +126,12 @@ class SiteConnectionMapperTest {
     var station = testModel.station(id).build();
     stations.add(station);
     return station;
+  }
+
+  private RegularStop addQuay(String id, Station station) {
+    var quay = testModel.stop(id).withParentStation(station).build();
+    stops.add(quay);
+    return quay;
   }
 
   private static SiteConnection connection(
