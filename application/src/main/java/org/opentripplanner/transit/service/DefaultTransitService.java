@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -271,7 +272,10 @@ public class DefaultTransitService implements TransitService {
 
   @Override
   public Collection<Route> findRoutes(FindRoutesRequest request) {
-    Matcher<Route> matcher = RouteMatcherFactory.of(request, this.getFlexIndex()::contains);
+    // There is no flex index if flex routing is off; then no route is flexible
+    var flexIndex = getFlexIndex();
+    Predicate<Route> isFlexRoute = flexIndex == null ? route -> false : flexIndex::contains;
+    Matcher<Route> matcher = RouteMatcherFactory.of(request, isFlexRoute);
     return listRoutes().stream().filter(matcher::match).toList();
   }
 

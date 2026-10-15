@@ -30,6 +30,7 @@ import org.opentripplanner.model.calendar.CalendarServiceData;
 import org.opentripplanner.routing.algorithm.raptoradapter.transit.RaptorTransitDataTestFactory;
 import org.opentripplanner.street.geometry.WgsCoordinate;
 import org.opentripplanner.transit.api.model.FilterValues;
+import org.opentripplanner.transit.api.request.FindRoutesRequest;
 import org.opentripplanner.transit.api.request.TripOnServiceDateRequest;
 import org.opentripplanner.transit.model._data.TransitRepositoryForTest;
 import org.opentripplanner.transit.model.basic.MainAndSubMode;
@@ -250,6 +251,15 @@ class DefaultTransitServiceTest {
   void modeFromPatterns() {
     var modes = service.findTransitModes(STOP_B);
     assertEquals(List.of(RAIL, FERRY), modes);
+  }
+
+  @Test
+  void findRoutesWithoutFlexRouting() {
+    var routes = service.findRoutes(FindRoutesRequest.of().build());
+    assertThat(routes).contains(RAIL_PATTERN.getRoute());
+
+    var flexibleRoutes = service.findRoutes(FindRoutesRequest.of().withFlexibleOnly(true).build());
+    assertThat(flexibleRoutes).isEmpty();
   }
 
   @Test
