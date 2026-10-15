@@ -60,6 +60,7 @@ The feature is under development. The following table lists what is supported so
 | Trip direction from the service journey, the journey pattern or a referenced `Direction` (`DirectionRef`), not only from the route | Supported |
 | Destination display on the journey pattern, used as headsign until a stop point states another one | Supported |
 | Journey patterns without any destination display: the name of the station of the last stop is used as headsign, reported once per line (`HeadsignFromLastStop`) | Supported |
+| Journey patterns whose first stop points have no destination display: the first destination display of a later stop point is used as headsign for them, reported once per line (`HeadsignFromLaterStopPoint`) | Supported |
 | Wheelchair accessibility from the overall `MobilityImpairedAccess` assessment (`true`/`false`) when no `WheelchairAccess` limitation is given (stop places, quays, service journeys) | Supported |
 | Interchanges at a stop point served several times: `FromVisitNumber`/`ToVisitNumber` select the visit | Supported |
 | Day types defined in a shared file and assigned (`DayTypeAssignment`) in a group file | Supported (a date can not be excluded on another file level than it is assigned) |

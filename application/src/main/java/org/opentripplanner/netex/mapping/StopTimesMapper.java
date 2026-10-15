@@ -288,6 +288,23 @@ class StopTimesMapper {
     return name == null ? null : name.toString();
   }
 
+  /**
+   * The front text of the first destination display stated by a stop point of the journey
+   * pattern. Used as headsign for the stop points before it, if they have none.
+   */
+  @Nullable
+  String firstStopPointDestinationDisplay(JourneyPattern_VersionStructure journeyPattern) {
+    return stopPoints(journeyPattern)
+      .map(StopPointInJourneyPattern::getDestinationDisplayRef)
+      .filter(Objects::nonNull)
+      .map(ref -> destinationDisplayById.lookup(ref.getRef()))
+      .filter(Objects::nonNull)
+      .map(it -> MultilingualStringMapper.nullableValueOf(it.getFrontText()))
+      .filter(Objects::nonNull)
+      .findFirst()
+      .orElse(null);
+  }
+
   private static Stream<StopPointInJourneyPattern> stopPoints(
     JourneyPattern_VersionStructure journeyPattern
   ) {

@@ -1,5 +1,6 @@
 package org.opentripplanner.netex.mapping;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -12,7 +13,9 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.core.model.id.FeedScopedId;
 import org.opentripplanner.core.model.id.FeedScopedIdForTestFactory;
+import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssueStore;
+import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
 import org.opentripplanner.netex.config.NetexProfileSupport;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMap;
 import org.opentripplanner.netex.index.hierarchy.HierarchicalMapById;
@@ -27,6 +30,7 @@ import org.rutebanken.netex.model.OperatingDay;
 import org.rutebanken.netex.model.ReplacedJourneys_RelStructure;
 import org.rutebanken.netex.model.RouteRefStructure;
 import org.rutebanken.netex.model.ServiceAlterationEnumeration;
+import org.rutebanken.netex.model.StopPointInJourneyPattern;
 import org.rutebanken.netex.model.VehicleTypeRefStructure;
 
 class TripPatternMapperTest {
@@ -94,6 +98,61 @@ class TripPatternMapperTest {
     assertEquals(18240, tripTimes.getDepartureTime(1));
     assertEquals(18600, tripTimes.getDepartureTime(2));
     assertEquals(18900, tripTimes.getDepartureTime(3));
+  }
+
+  /**
+   * EPIP data may state the destination display only from a later stop point on. With extended
+   * NeTEx support its front text is the journey headsign, which applies to the stop points before.
+   */
+  @Test
+  void headsignFromLaterStopPoint() {
+    NetexTestDataSample sample = new NetexTestDataSample();
+    var points = sample
+      .getJourneyPattern()
+      .getPointsInSequence()
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern();
+    ((StopPointInJourneyPattern) points.get(0)).setDestinationDisplayRef(null);
+    ((StopPointInJourneyPattern) points.get(1)).setDestinationDisplayRef(null);
+    var issueStore = new DefaultDataImportIssueStore();
+
+    var tripPatternMapper = new TripPatternMapper(
+      issueStore,
+      MappingSupport.ID_FACTORY,
+      new DefaultEntityById<>(),
+      sample.getStopsById(),
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      sample.getOtpRouteByid(),
+      sample.getRouteById(),
+      sample.getJourneyPatternById(),
+      new HierarchicalMap<>(),
+      sample.getQuayIdByStopPointRef(),
+      new HierarchicalMap<>(),
+      sample.getDestinationDisplayById(),
+      sample.getServiceJourneyById(),
+      new HierarchicalMapById<>(),
+      new HierarchicalMapById<>(),
+      new HierarchicalMapById<>(),
+      new HierarchicalMapById<>(),
+      ArrayListMultimap.create(),
+      Map.of(NetexTestDataSample.SERVICE_JOURNEY_ID, SERVICE_ID),
+      new Deduplicator(),
+      150,
+      new HierarchicalMapById<>(),
+      NetexProfileSupport.of(true, false)
+    );
+
+    var pattern = tripPatternMapper.mapTripPattern(sample.getJourneyPattern()).get().tripPattern();
+    var trip = pattern.scheduledTripsAsStream().findFirst().get();
+    var tripTimes = pattern.getScheduledTimetable().getTripTimes().getFirst();
+
+    assertEquals("Stavanger", trip.getHeadsign().toString());
+    assertEquals("Stavanger", tripTimes.getHeadsign(0).toString());
+    assertEquals("Stavanger", tripTimes.getHeadsign(3).toString());
+    assertThat(
+      issueStore.listIssues().stream().map(DataImportIssue::getType).toList()
+    ).containsExactly("HeadsignFromLaterStopPoint");
   }
 
   @Test
