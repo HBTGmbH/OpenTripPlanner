@@ -305,6 +305,49 @@ public class StopTimesMapperTest {
   }
 
   /**
+   * The mapper is used for all journeys of a file group. A destination display of one journey must
+   * not become the headsign of the first stops of the next journey, if these have none.
+   */
+  @Test
+  public void headsignIsNotCarriedOverToTheNextJourney() {
+    NetexTestDataSample sample = new NetexTestDataSample();
+    var journeyPattern = sample.getJourneyPattern();
+    StopTimesMapper stopTimesMapper = new StopTimesMapper(
+      DataImportIssueStore.NOOP,
+      MappingSupport.ID_FACTORY,
+      sample.getStopsById(),
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      new DefaultEntityById<>(),
+      sample.getDestinationDisplayById(),
+      new HierarchicalMap<>(),
+      sample.getQuayIdByStopPointRef(),
+      new HierarchicalMap<>(),
+      new HierarchicalMapById<>(),
+      new HierarchicalMap<>(),
+      NetexProfileSupport.NORDIC
+    );
+    var first = stopTimesMapper
+      .mapToStopTimes(journeyPattern, TRIP, sample.getTimetabledPassingTimes(), null)
+      .stopTimes;
+    assertEquals("Stavanger", first.getLast().getStopHeadsign().toString());
+
+    // The next journey states its destination display from the third stop point on
+    var points = journeyPattern
+      .getPointsInSequence()
+      .getPointInJourneyPatternOrStopPointInJourneyPatternOrTimingPointInJourneyPattern();
+    ((StopPointInJourneyPattern) points.get(0)).setDestinationDisplayRef(null);
+    ((StopPointInJourneyPattern) points.get(1)).setDestinationDisplayRef(null);
+    var next = stopTimesMapper
+      .mapToStopTimes(journeyPattern, TRIP, sample.getTimetabledPassingTimes(), null)
+      .stopTimes;
+
+    assertNull(next.get(0).getStopHeadsign());
+    assertNull(next.get(1).getStopHeadsign());
+    assertEquals("Stavanger", next.get(2).getStopHeadsign().toString());
+  }
+
+  /**
    * EPIP allows the destination display on the journey pattern. With extended NeTEx support it is
    * used until a stop point states another destination display.
    */

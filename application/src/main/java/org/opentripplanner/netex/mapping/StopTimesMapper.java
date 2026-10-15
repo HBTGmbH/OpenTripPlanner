@@ -135,6 +135,10 @@ class StopTimesMapper {
     StopTimesMapperResult result = new StopTimesMapperResult();
     List<String> scheduledStopPointIds = new ArrayList<>();
 
+    // A destination display applies until a later stop point states another one, but never to the
+    // next journey: the mapper is used for all journeys of a file group.
+    currentHeadSign = null;
+    currentHeadSignVias = null;
     var patternDestinationDisplay = findPatternDestinationDisplay(journeyPattern);
     if (patternDestinationDisplay != null) {
       currentHeadSign = headsignMapper.map(patternDestinationDisplay);
