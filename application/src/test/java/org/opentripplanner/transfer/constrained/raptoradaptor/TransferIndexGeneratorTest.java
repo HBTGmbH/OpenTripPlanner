@@ -1,5 +1,6 @@
 package org.opentripplanner.transfer.constrained.raptoradaptor;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -108,5 +109,35 @@ class TransferIndexGeneratorTest {
     // Pattern1 alights at STOP_C (position 2), so reverse transfers should exist there
     var fromPattern1 = result.fromStop(pattern1.getRoutingTripPattern().patternIndex());
     assertNotNull(fromPattern1, "Should have reverse transfers for pattern1");
+  }
+
+  /**
+   * All arrivals at a stop or station share one source point matcher, so a transfer from the stop
+   * gives one entry per boarding point, not one per pair of arrival and boarding.
+   */
+  @Test
+  void addEachEntryOfAStopTransferOnce() {
+    var route3 = TestRouteData.of(
+      "R3",
+      TransitMode.BUS,
+      List.of(STOP_A, STOP_B, STOP_D),
+      "10:00 10:12 10:30"
+    );
+    var pattern3 = route3.getTripPattern();
+    var tx = new ConstrainedTransfer(ID, STOP_B_TX, STOP_B_TX, GUARANTEED);
+    var subject = new TransferIndexGenerator(List.of(tx), List.of(pattern1, pattern2, pattern3));
+
+    var result = subject.generateTransfers();
+
+    // Patterns 1 and 3 arrive at B; pattern 2 departs from B at position 0
+    assertEquals(1, result.toStop(index(pattern2)).get(0).size());
+    // Pattern 1 departs from B at position 1; only pattern 3 arrives there from another point
+    assertEquals(1, result.toStop(index(pattern1)).get(1).size());
+    // Pattern 1 arrives at B; patterns 2 and 3 depart from there
+    assertEquals(1, result.fromStop(index(pattern1)).get(1).size());
+  }
+
+  private static int index(TripPattern pattern) {
+    return pattern.getRoutingTripPattern().patternIndex();
   }
 }

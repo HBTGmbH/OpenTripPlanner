@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,6 +41,13 @@ public class TransferIndexGenerator {
   private final Map<Route, Set<RoutingTripPattern>> patternsByRoute = new HashMap<>();
   private final Map<Trip, Set<RoutingTripPattern>> patternsByTrip = new HashMap<>();
 
+  /**
+   * One source point matcher per station and stop, shared by all transfers. A station matcher
+   * holds the set of the stops of the station.
+   */
+  private final Map<Station, TransferPointMatcher> stationSourcePoints = new HashMap<>();
+  private final Map<Integer, TransferPointMatcher> stopSourcePoints = new HashMap<>();
+
   private boolean dirty = false;
   private int prevProcessedNumberOfPatterns = 0;
   private ConstrainedTransfersForPatterns cachedResult = null;
@@ -72,16 +80,12 @@ public class TransferIndexGenerator {
       }
 
       try {
-        findTPoints(tx.getFrom(), ALIGHT)
+        var fromPoints = findTPoints(tx.getFrom(), ALIGHT)
           .stream()
           .filter(TPoint::canAlight)
-          .forEachOrdered(fromPoint -> {
-            for (var toPoint : findTPoints(tx.getTo(), BOARD)) {
-              if (toPoint.canBoard() && !fromPoint.equals(toPoint)) {
-                fromPoint.addTransferConstraints(tx, toPoint, forwardTransfers, reverseTransfers);
-              }
-            }
-          });
+          .toList();
+        var toPoints = findTPoints(tx.getTo(), BOARD).stream().filter(TPoint::canBoard).toList();
+        addTransferConstraints(tx, fromPoints, toPoints, forwardTransfers, reverseTransfers);
       } catch (Exception e) {
         LOG.error("Unable to generate transfers: {}. Affected transfer: {}", e, tx);
       }
@@ -136,6 +140,55 @@ public class TransferIndexGenerator {
     this.dirty = false;
     this.prevProcessedNumberOfPatterns = nPatterns;
     return cachedResult;
+  }
+
+  /**
+   * Add the transfer between all from and to points, except from a point to itself.
+   * <p>
+   * The entry of a forward search is stored at the to point and contains the source point matcher
+   * of the from point, not the from point itself; the entry of a reverse search is stored at the
+   * from point and contains the matcher of the to point. Station and stop transfer points use one
+   * matcher for all their points, so all from points of a station give the same entry at a to
+   * point. Each distinct entry is added once: the number of entries grows with the number of
+   * points, not with the number of pairs. A station to station transfer at a stop served by
+   * thousands of pattern stops would otherwise create millions of identical entries.
+   */
+  private static void addTransferConstraints(
+    ConstrainedTransfer tx,
+    List<TPoint> fromPoints,
+    List<TPoint> toPoints,
+    TransferForPatternByStopPos[] forwardTransfers,
+    TransferForPatternByStopPos[] reverseTransfers
+  ) {
+    var fromGroups = groupBySourcePoint(fromPoints);
+    var toGroups = groupBySourcePoint(toPoints);
+    for (var toPoint : toPoints) {
+      for (var from : fromGroups) {
+        if (containsOtherPoint(from, toPoint)) {
+          toPoint.addForwardTransfer(tx, from.getFirst().sourcePoint, forwardTransfers);
+        }
+      }
+    }
+    for (var fromPoint : fromPoints) {
+      for (var to : toGroups) {
+        if (containsOtherPoint(to, fromPoint)) {
+          fromPoint.addReverseTransfer(tx, to.getFirst().sourcePoint, reverseTransfers);
+        }
+      }
+    }
+  }
+
+  /** The points by their source point matcher (identity), in the order of the points. */
+  private static Collection<List<TPoint>> groupBySourcePoint(List<TPoint> points) {
+    Map<TransferPointMatcher, List<TPoint>> result = new LinkedHashMap<>();
+    for (var point : points) {
+      result.computeIfAbsent(point.sourcePoint, k -> new ArrayList<>()).add(point);
+    }
+    return result.values();
+  }
+
+  private static boolean containsOtherPoint(List<TPoint> points, TPoint point) {
+    return points.size() > 1 || !points.getFirst().equals(point);
   }
 
   /**
@@ -203,7 +256,10 @@ public class TransferIndexGenerator {
       return List.of();
     }
 
-    var sourcePoint = TransferPointForPatternFactory.createTransferPointForPattern(station);
+    var sourcePoint = stationSourcePoints.computeIfAbsent(
+      station,
+      TransferPointForPatternFactory::createTransferPointForPattern
+    );
     var result = new ArrayList<TPoint>();
 
     for (RoutingTripPattern pattern : patterns) {
@@ -225,7 +281,10 @@ public class TransferIndexGenerator {
       return List.of();
     }
 
-    var sourcePoint = TransferPointForPatternFactory.createTransferPointForPattern(stop.getIndex());
+    var sourcePoint = stopSourcePoints.computeIfAbsent(
+      stop.getIndex(),
+      TransferPointForPatternFactory::createTransferPointForPattern
+    );
     var result = new ArrayList<TPoint>();
 
     for (RoutingTripPattern pattern : patterns) {
@@ -410,30 +469,43 @@ public class TransferIndexGenerator {
       return stopPosition != 0 && pattern.alightingPossibleAt(stopPosition);
     }
 
-    void addTransferConstraints(
+    /** Add the entry of a forward search for a transfer from the given source to this point. */
+    void addForwardTransfer(
       ConstrainedTransfer tx,
-      TPoint to,
-      TransferForPatternByStopPos[] forwardTransfers,
+      TransferPointMatcher fromSourcePoint,
+      TransferForPatternByStopPos[] forwardTransfers
+    ) {
+      if (forwardTransfers[pattern.patternIndex()] == null) {
+        forwardTransfers[pattern.patternIndex()] = new TransferForPatternByStopPos();
+      }
+      forwardTransfers[pattern.patternIndex()].add(
+        stopPosition,
+        new TransferForPattern(
+          fromSourcePoint,
+          trip,
+          tx.getSpecificityRanking(),
+          tx.getTransferConstraint()
+        )
+      );
+    }
+
+    /** Add the entry of a reverse search for a transfer from this point to the given target. */
+    void addReverseTransfer(
+      ConstrainedTransfer tx,
+      TransferPointMatcher toSourcePoint,
       TransferForPatternByStopPos[] reverseTransfers
     ) {
-      int rank = tx.getSpecificityRanking();
-      var c = tx.getTransferConstraint();
-
-      // Forward search
-      if (forwardTransfers[to.pattern.patternIndex()] == null) {
-        forwardTransfers[to.pattern.patternIndex()] = new TransferForPatternByStopPos();
-      }
-      forwardTransfers[to.pattern.patternIndex()].add(
-        to.stopPosition,
-        new TransferForPattern(sourcePoint, to.trip, rank, c)
-      );
-      // Reverse search
       if (reverseTransfers[pattern.patternIndex()] == null) {
         reverseTransfers[pattern.patternIndex()] = new TransferForPatternByStopPos();
       }
       reverseTransfers[pattern.patternIndex()].add(
         stopPosition,
-        new TransferForPattern(to.sourcePoint, trip, rank, c)
+        new TransferForPattern(
+          toSourcePoint,
+          trip,
+          tx.getSpecificityRanking(),
+          tx.getTransferConstraint()
+        )
       );
     }
   }
