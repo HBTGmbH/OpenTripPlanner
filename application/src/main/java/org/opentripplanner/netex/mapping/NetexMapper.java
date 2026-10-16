@@ -75,6 +75,9 @@ public class NetexMapper {
   private final boolean noTransfersOnIsolatedStops;
   private final NetexProfileSupport profileSupport;
 
+  /** The site connections mapped in all file groups, see {@link SiteConnectionMapper}. */
+  private final Set<String> mappedSiteConnections = new HashSet<>();
+
   /**
    * Map entries that cross reference entities in the shared files, for example Interchanges. The
    * Nordic profile does not allow timetable data in shared files, but other profiles may deliver
@@ -688,7 +691,8 @@ public class NetexMapper {
       idFactory,
       issueStore,
       transitBuilder.siteRepository().stationById(),
-      transitBuilder.siteRepository().regularStopsById()
+      transitBuilder.siteRepository().regularStopsById(),
+      mappedSiteConnections
     );
     for (var connection : currentNetexIndex.getSiteConnectionById().localValues()) {
       transitBuilder.getTransfers().addAll(mapper.map(connection));

@@ -6,7 +6,9 @@ import static org.opentripplanner.netex.mapping.MappingSupport.ID_FACTORY;
 import static org.opentripplanner.netex.mapping.MappingSupport.createWrappedRef;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.opentripplanner.graph_builder.issue.api.DataImportIssue;
 import org.opentripplanner.graph_builder.issue.service.DefaultDataImportIssueStore;
@@ -33,11 +35,13 @@ class SiteConnectionMapperTest {
   private final DefaultDataImportIssueStore issueStore = new DefaultDataImportIssueStore();
   private final DefaultEntityById<Station> stations = new DefaultEntityById<>();
   private final DefaultEntityById<RegularStop> stops = new DefaultEntityById<>();
+  private final Set<String> mappedConnections = new HashSet<>();
   private final SiteConnectionMapper subject = new SiteConnectionMapper(
     ID_FACTORY,
     issueStore,
     stations,
-    stops
+    stops,
+    mappedConnections
   );
 
   @Test
@@ -71,30 +75,50 @@ class SiteConnectionMapperTest {
   }
 
   @Test
-  void ignoreConnectionWithinOneStopPlace() {
-    addStation(STOP_PLACE_A);
+  void connectionWithinOneStopPlaceIsMappedOnce() {
+    var station = addStation(STOP_PLACE_A);
 
     var transfers = subject.map(connection(stopPlace(STOP_PLACE_A), stopPlace(STOP_PLACE_A), true));
 
-    assertThat(transfers).isEmpty();
-    assertThat(listIssueTypes()).containsExactly("SiteConnectionWithinSite");
+    assertEquals(1, transfers.size());
+    assertEquals(station, ((StationTransferPoint) transfers.getFirst().getFrom()).getStation());
+    assertEquals(station, ((StationTransferPoint) transfers.getFirst().getTo()).getStation());
+    assertEquals(120, transfers.getFirst().getTransferConstraint().getMinTransferTime());
   }
 
   @Test
-  void ignoreConnectionWithinOneQuay() {
-    addQuay(QUAY_A1, addStation(STOP_PLACE_A));
+  void connectionFromAQuayToItsStopPlace() {
+    var station = addStation(STOP_PLACE_A);
+    var quay = addQuay(QUAY_A1, station);
 
-    assertThat(subject.map(connection(quay(QUAY_A1), quay(QUAY_A1), false))).isEmpty();
-    assertThat(listIssueTypes()).containsExactly("SiteConnectionWithinSite");
+    var transfers = subject.map(connection(quay(QUAY_A1), stopPlace(STOP_PLACE_A), false));
+
+    assertEquals(1, transfers.size());
+    assertEquals(quay, ((StopTransferPoint) transfers.getFirst().getFrom()).getStop());
   }
 
+  /** The German data repeats a site connection in the files of every operating unit. */
   @Test
-  void ignoreConnectionFromAQuayToItsStopPlace() {
-    addQuay(QUAY_A1, addStation(STOP_PLACE_A));
+  void sameConnectionOfAnotherFileGroupIsMappedOnce() {
+    addStation(STOP_PLACE_A);
+    var mapperOfOtherGroup = new SiteConnectionMapper(
+      ID_FACTORY,
+      issueStore,
+      stations,
+      stops,
+      mappedConnections
+    );
+    var connection = connection(stopPlace(STOP_PLACE_A), stopPlace(STOP_PLACE_A), true);
 
-    assertThat(subject.map(connection(quay(QUAY_A1), stopPlace(STOP_PLACE_A), false))).isEmpty();
-    assertThat(subject.map(connection(stopPlace(STOP_PLACE_A), quay(QUAY_A1), false))).isEmpty();
-    assertThat(listIssueTypes()).containsExactly("SiteConnectionWithinSite");
+    assertEquals(1, subject.map(connection).size());
+    assertThat(mapperOfOtherGroup.map(connection.withId("DE::SiteConnection:2::"))).isEmpty();
+    var longer = connection
+      .withId("DE::SiteConnection:3::")
+      .withWalkTransferDuration(
+        new TransferDurationStructure().withDefaultDuration(Duration.ofMinutes(5))
+      );
+    assertEquals(1, mapperOfOtherGroup.map(longer).size());
+    assertThat(issueStore.listIssues()).isEmpty();
   }
 
   @Test

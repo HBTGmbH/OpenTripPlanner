@@ -54,8 +54,7 @@ The feature is under development. The following table lists what is supported so
 | Stop place without centroid and quays: located at the mean position of its scheduled stop points | Supported |
 | Stop place hierarchy (CEN/TS 16614-4, 6.1): a stop place without quays which is referenced as `ParentSiteRef` or typed `epip:general` becomes a multimodal station grouping its child stop places | Supported |
 | Operating days inside the `ServiceCalendar` | Supported |
-| Site connections (`SiteConnection` with walk transfer duration) between stop places or quays: mapped to constrained transfers with a minimum transfer time | Supported |
-| Site connections within one stop place or quay, or from a quay to its own stop place | Not supported, reported once per stop place (`SiteConnectionWithinSite`): OTP has no minimum transfer time within a stop place |
+| Site connections (`SiteConnection` with walk transfer duration) between or within stop places and quays: mapped to constrained transfers with a minimum transfer time; a connection repeated in several files with the same ends and duration is mapped once | Supported |
 | Transport modes `ferry`, `trolleyBus`, `urbanRail` and `intercityRail` on lines and service journeys | Supported (`lift` and `other` are not supported) |
 | Trip direction from the service journey, the journey pattern or a referenced `Direction` (`DirectionRef`), not only from the route | Supported |
 | Destination display on the journey pattern, used as headsign until a stop point states another one | Supported |
