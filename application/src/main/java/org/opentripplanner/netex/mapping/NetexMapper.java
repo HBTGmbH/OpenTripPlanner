@@ -242,7 +242,13 @@ public class NetexMapper {
     if (level != LEVEL_GROUP) {
       return;
     }
-    this.groupMapper = new GroupNetexMapper(idFactory, issueStore, transitBuilder, profileSupport);
+    this.groupMapper = new GroupNetexMapper(
+      idFactory,
+      issueStore,
+      transitBuilder,
+      profileSupport,
+      sharedGroupMapper
+    );
   }
 
   /**

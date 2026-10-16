@@ -63,6 +63,7 @@ The feature is under development. The following table lists what is supported so
 | Journey patterns whose first stop points have no destination display: the first destination display of a later stop point is used as headsign for them, reported once per line (`HeadsignFromLaterStopPoint`) | Supported |
 | Wheelchair accessibility from the overall `MobilityImpairedAccess` assessment (`true`/`false`) when no `WheelchairAccess` limitation is given (stop places, quays, service journeys) | Supported |
 | Interchanges at a stop point served several times: `FromVisitNumber`/`ToVisitNumber` select the visit | Supported |
+| Interchanges referencing a journey of another file group (the German data has one per operating unit): resolved after all file groups are mapped | Supported |
 | Day types defined in a shared file and assigned (`DayTypeAssignment`) in a group file | Supported (a date can not be excluded on another file level than it is assigned) |
 | Lines without `TransportMode` or with mode `unknown`: the mode is derived from the service journeys of the line, else from the stop places they serve (`LineTransportModeDerived`); service journeys with mode `unknown` use the mode of their line | Supported for journeys in the same file level as the line |
 | Lines whose mode can not be derived are dropped with a warning per line (`LineWithoutTransportMode`) that tells why, and how the mode and the booking conditions must be given in the data. For the German DELFI data set the warning names the `GTFS Route Type` and booking notices found in the data. | Supported |

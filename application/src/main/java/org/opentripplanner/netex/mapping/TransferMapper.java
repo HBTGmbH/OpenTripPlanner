@@ -30,7 +30,7 @@ public class TransferMapper {
 
   private final FeedScopedIdFactory idFactory;
   private final DataImportIssueStore issueStore;
-  private final Map<String, List<String>> scheduledStopPointsIndex;
+  private final StopSequences stopSequences;
   private final EntityById<Trip> trips;
   private final NetexProfileSupport profileSupport;
 
@@ -50,11 +50,54 @@ public class TransferMapper {
     EntityById<Trip> trips,
     NetexProfileSupport profileSupport
   ) {
+    this(
+      idFactory,
+      issueStore,
+      StopSequences.ofScheduledStopPoints(scheduledStopPointsIndex),
+      trips,
+      profileSupport
+    );
+  }
+
+  TransferMapper(
+    FeedScopedIdFactory idFactory,
+    DataImportIssueStore issueStore,
+    StopSequences stopSequences,
+    EntityById<Trip> trips,
+    NetexProfileSupport profileSupport
+  ) {
     this.idFactory = idFactory;
     this.issueStore = issueStore;
-    this.scheduledStopPointsIndex = scheduledStopPointsIndex;
+    this.stopSequences = stopSequences;
     this.trips = trips;
     this.profileSupport = profileSupport;
+  }
+
+  /**
+   * The stops of a service journey in order, and the element of a scheduled stop point in this
+   * sequence. The position of an interchange point is the position of this element.
+   */
+  interface StopSequences {
+    @Nullable
+    List<?> ofJourney(String serviceJourneyId);
+
+    @Nullable
+    Object ofScheduledStopPoint(String scheduledStopPointId);
+
+    /** The scheduled stop point ids of the journeys of one file group. */
+    static StopSequences ofScheduledStopPoints(Map<String, List<String>> scheduledStopPointsIndex) {
+      return new StopSequences() {
+        @Override
+        public List<?> ofJourney(String serviceJourneyId) {
+          return scheduledStopPointsIndex.get(serviceJourneyId);
+        }
+
+        @Override
+        public Object ofScheduledStopPoint(String scheduledStopPointId) {
+          return scheduledStopPointId;
+        }
+      };
+    }
   }
 
   /**
@@ -198,17 +241,20 @@ public class TransferMapper {
     @Nullable BigInteger visitNumber
   ) {
     String sspId = scheduledStopPointRef.getRef();
-    var scheduledStopPoints = scheduledStopPointsIndex.get(sjId);
+    var stops = stopSequences.ofJourney(sjId);
+    var stop = stopSequences.ofScheduledStopPoint(sspId);
     String errorMessage;
 
-    if (scheduledStopPoints != null) {
+    if (stops != null) {
       var index =
-        visitNumber == null
-          ? switch (label) {
-              case Label.TO -> scheduledStopPoints.indexOf(sspId);
-              case Label.FROM -> scheduledStopPoints.lastIndexOf(sspId);
-            }
-          : indexOfVisit(scheduledStopPoints, sspId, visitNumber);
+        stop == null
+          ? -1
+          : visitNumber == null
+            ? switch (label) {
+                case Label.TO -> stops.indexOf(stop);
+                case Label.FROM -> stops.lastIndexOf(stop);
+              }
+            : indexOfVisit(stops, stop, visitNumber);
       if (index >= 0) {
         return index;
       }
@@ -237,14 +283,10 @@ public class TransferMapper {
    * The visit number selects the visit if the journey serves the stop point several times, for
    * example on a loop. The first visit has number 1.
    */
-  private static int indexOfVisit(
-    List<String> scheduledStopPoints,
-    String sspId,
-    BigInteger visit
-  ) {
+  private static int indexOfVisit(List<?> stops, Object stop, BigInteger visit) {
     int remaining = visit.signum() > 0 ? visit.intValue() : 1;
-    for (int i = 0; i < scheduledStopPoints.size(); i++) {
-      if (scheduledStopPoints.get(i).equals(sspId) && --remaining == 0) {
+    for (int i = 0; i < stops.size(); i++) {
+      if (stops.get(i).equals(stop) && --remaining == 0) {
         return i;
       }
     }
